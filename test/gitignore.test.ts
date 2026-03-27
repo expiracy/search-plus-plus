@@ -97,8 +97,11 @@ describe('GitIgnoreManager', () => {
     expect(manager.isIgnored('docs/README.md')).toBe(false);
   });
 
-  test('getExcludeGlob returns expected pattern', () => {
-    expect(manager.getExcludeGlob()).toBe('{**/node_modules/**,**/.git/**}');
+  test('getExcludeGlob includes gitignore directory patterns', () => {
+    const glob = manager.getExcludeGlob()!;
+    expect(glob).toContain('**/node_modules/**');
+    expect(glob).toContain('**/.git/**');
+    expect(glob).toContain('**/build/**');
   });
 
   test('isIgnored handles backslashes (Windows paths)', () => {

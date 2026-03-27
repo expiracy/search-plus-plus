@@ -9,7 +9,9 @@ export interface FileEntry {
 
 export class FileIndex implements vscode.Disposable {
   private entries: FileEntry[] = [];
+  private filteredEntries: FileEntry[] = [];
   private fzfInstance: Fzf<FileEntry> | null = null;
+  private unfilteredFzfInstance: Fzf<FileEntry> | null = null;
   private watcher: vscode.FileSystemWatcher | null = null;
   private disposables: vscode.Disposable[] = [];
 
@@ -23,6 +25,9 @@ export class FileIndex implements vscode.Disposable {
   private eventWindowStart = Date.now();
   private _isStale = false;
   private rescanTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Cancellation for in-progress builds
+  private buildCts: vscode.CancellationTokenSource | null = null;
 
   private _onDidBecomeStale = new vscode.EventEmitter<void>();
   readonly onDidBecomeStale = this._onDidBecomeStale.event;
@@ -38,13 +43,28 @@ export class FileIndex implements vscode.Disposable {
   }
 
   get fileCount(): number {
-    return this.entries.length;
+    return this.filteredEntries.length;
   }
 
   async build(): Promise<void> {
+    // Cancel any in-progress build
+    if (this.buildCts) {
+      this.buildCts.cancel();
+      this.buildCts.dispose();
+    }
+    this.buildCts = new vscode.CancellationTokenSource();
+    const token = this.buildCts.token;
+
     this._isStale = false;
     this.entries = [];
+    this.filteredEntries = [];
     this.fzfInstance = null;
+    this.unfilteredFzfInstance = null;
+
+    // Clear any pending batch state to prevent stale updates
+    this.pendingAdds = [];
+    this.pendingRemoves.clear();
+    if (this.batchTimer) { clearTimeout(this.batchTimer); this.batchTimer = undefined; }
 
     const folders = vscode.workspace.workspaceFolders;
     if (!folders) return;
@@ -52,34 +72,54 @@ export class FileIndex implements vscode.Disposable {
     const uris = await vscode.workspace.findFiles(
       '**/*',
       this.gitIgnore.getExcludeGlob(),
+      undefined,
+      token,
     );
+
+    if (token.isCancellationRequested) return;
 
     this.entries = uris.map((uri) => ({
       relativePath: vscode.workspace.asRelativePath(uri),
       uri,
     }));
 
+    this.filteredEntries = this.entries.filter(
+      (e) => !this.gitIgnore.isIgnored(e.relativePath),
+    );
+
     this.rebuildFzf();
     this.setupWatcher();
   }
 
   find(query: string, limit = 200, excludeGitIgnored = true): FzfResultItem<FileEntry>[] {
-    if (!this.fzfInstance) return [];
-    let results = this.fzfInstance.find(query);
-    if (excludeGitIgnored) {
-      results = results.filter(r => !this.gitIgnore.isIgnored(r.item.relativePath));
-    }
-    return results.slice(0, limit);
+    const fzf = excludeGitIgnored ? this.fzfInstance : this.getUnfilteredFzf();
+    if (!fzf) return [];
+    return fzf.find(query).slice(0, limit);
   }
 
   private rebuildFzf(): void {
-    this.fzfInstance = new Fzf(this.entries, {
+    this.fzfInstance = new Fzf(this.filteredEntries, {
       selector: (item) => item.relativePath,
+      limit: 1000,
       tiebreakers: [
         // Prefer shorter paths (less nested)
         (a, b) => a.item.relativePath.length - b.item.relativePath.length,
       ],
     });
+    this.unfilteredFzfInstance = null;
+  }
+
+  private getUnfilteredFzf(): Fzf<FileEntry> | null {
+    if (this.entries.length === 0) return null;
+    if (!this.unfilteredFzfInstance) {
+      this.unfilteredFzfInstance = new Fzf(this.entries, {
+        selector: (item) => item.relativePath,
+        tiebreakers: [
+          (a, b) => a.item.relativePath.length - b.item.relativePath.length,
+        ],
+      });
+    }
+    return this.unfilteredFzfInstance;
   }
 
   private setupWatcher(): void {
@@ -132,10 +172,17 @@ export class FileIndex implements vscode.Disposable {
       this.entries = this.entries.filter(
         (e) => !this.pendingRemoves.has(e.relativePath),
       );
+      this.filteredEntries = this.filteredEntries.filter(
+        (e) => !this.pendingRemoves.has(e.relativePath),
+      );
     }
 
     if (this.pendingAdds.length > 0) {
       this.entries.push(...this.pendingAdds);
+      const nonIgnored = this.pendingAdds.filter(
+        (e) => !this.gitIgnore.isIgnored(e.relativePath),
+      );
+      this.filteredEntries.push(...nonIgnored);
     }
 
     this.pendingAdds = [];
@@ -156,6 +203,11 @@ export class FileIndex implements vscode.Disposable {
   }
 
   dispose(): void {
+    if (this.buildCts) {
+      this.buildCts.cancel();
+      this.buildCts.dispose();
+      this.buildCts = null;
+    }
     this.disposeWatcher();
     for (const d of this.disposables) d.dispose();
     if (this.batchTimer) clearTimeout(this.batchTimer);

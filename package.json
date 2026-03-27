@@ -1,9 +1,9 @@
 {
   "name": "search-plus-plus",
   "displayName": "search++",
-  "description": "Unified modal search: files and text in one place with proper indexing",
+  "description": "Search through everything: text, files, folders and symbols. Powered by ripgrep and fzf.",
   "version": "0.1.0",
-  "publisher": "jamesauthor",
+  "publisher": "expiracy",
   "engines": {
     "vscode": "^1.96.0"
   },

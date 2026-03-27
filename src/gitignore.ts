@@ -3,12 +3,14 @@ import ignore, { Ignore } from 'ignore';
 
 export class GitIgnoreManager implements vscode.Disposable {
   private ig: Ignore = ignore();
+  private directoryExcludes: string[] = [];
   private watchers: vscode.Disposable[] = [];
   private _onDidChange = new vscode.EventEmitter<void>();
   readonly onDidChange = this._onDidChange.event;
 
   async load(): Promise<void> {
     this.ig = ignore();
+    this.directoryExcludes = ['**/node_modules/**', '**/.git/**'];
 
     const folders = vscode.workspace.workspaceFolders;
     if (!folders) return;
@@ -17,7 +19,7 @@ export class GitIgnoreManager implements vscode.Disposable {
     const gitignoreUris = await vscode.workspace.findFiles(
       '**/.gitignore',
       '**/node_modules/**',
-      50,
+      1000,
     );
 
     for (const uri of gitignoreUris) {
@@ -48,6 +50,21 @@ export class GitIgnoreManager implements vscode.Disposable {
             if (line.startsWith('!')) return `!${dir}/${line.slice(1)}`;
             return `${dir}/${line}`;
           }));
+        }
+
+        // Extract simple directory patterns for the exclude glob
+        for (const line of lines) {
+          if (line.startsWith('!') || line.includes('[')) continue;
+          if (line.endsWith('/')) {
+            const dirName = line.slice(0, -1);
+            if (/^[a-zA-Z0-9._-]+(\/[a-zA-Z0-9._-]+)*$/.test(dirName)) {
+              if (isRoot) {
+                this.directoryExcludes.push(`**/${dirName}/**`);
+              } else {
+                this.directoryExcludes.push(`**/${dir}/${dirName}/**`);
+              }
+            }
+          }
         }
       } catch {
         // File may have been deleted between findFiles and readFile
@@ -109,8 +126,9 @@ export class GitIgnoreManager implements vscode.Disposable {
   getExcludeGlob(): string | undefined {
     // We can't perfectly convert all gitignore patterns to a single glob,
     // so we use post-filtering via isIgnored() as the primary mechanism.
-    // This returns common excludes for initial filtering.
-    return '{**/node_modules/**,**/.git/**}';
+    // This returns directory-level excludes for initial filtering.
+    const unique = [...new Set(this.directoryExcludes)];
+    return `{${unique.join(',')}}`;
   }
 
   private disposeWatchers(): void {

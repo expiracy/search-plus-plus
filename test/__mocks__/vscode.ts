@@ -93,6 +93,16 @@ export const SymbolKind = {
   Operator: 24, TypeParameter: 25,
 };
 
+// --- CancellationTokenSource ---
+export class CancellationTokenSource {
+  token = {
+    isCancellationRequested: false,
+    onCancellationRequested: () => ({ dispose() {} }),
+  };
+  cancel() { this.token.isCancellationRequested = true; }
+  dispose() {}
+}
+
 // --- workspace ---
 export const workspace = {
   workspaceFolders: undefined as any,

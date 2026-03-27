@@ -69,8 +69,9 @@ describe('FileIndex', () => {
     expect(index.isReady).toBe(true);
   });
 
-  test('fileCount matches fixture files', () => {
-    expect(index.fileCount).toBe(ALL_FILES.length);
+  test('fileCount matches non-ignored fixture files', () => {
+    // 8 total - 2 ignored (build/output.js, data.log) = 6
+    expect(index.fileCount).toBe(ALL_FILES.length - 2);
   });
 
   test('find("index") matches src/index.ts', () => {
