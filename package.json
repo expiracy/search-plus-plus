@@ -1,0 +1,127 @@
+{
+  "name": "search-plus-plus",
+  "displayName": "search++",
+  "description": "Unified modal search: files and text in one place with proper indexing",
+  "version": "0.1.0",
+  "publisher": "jamesauthor",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "searchPlusPlus.open",
+        "title": "search++: Open Search"
+      },
+      {
+        "command": "searchPlusPlus.openFiles",
+        "title": "search++: Search Files"
+      },
+      {
+        "command": "searchPlusPlus.openText",
+        "title": "search++: Search Text"
+      },
+      {
+        "command": "searchPlusPlus.reindex",
+        "title": "search++: Reindex Workspace"
+      },
+      {
+        "command": "searchPlusPlus.toggleCaseSensitive",
+        "title": "search++: Toggle Case Sensitive"
+      },
+      {
+        "command": "searchPlusPlus.toggleRegex",
+        "title": "search++: Toggle Regex"
+      },
+      {
+        "command": "searchPlusPlus.toggleGitIgnore",
+        "title": "search++: Toggle Exclude Git-Ignored"
+      },
+      {
+        "command": "searchPlusPlus.nextTab",
+        "title": "search++: Next Tab"
+      },
+      {
+        "command": "searchPlusPlus.prevTab",
+        "title": "search++: Previous Tab"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "searchPlusPlus.open",
+        "key": "ctrl+shift+space",
+        "mac": "cmd+shift+space"
+      },
+      {
+        "command": "searchPlusPlus.toggleCaseSensitive",
+        "key": "alt+c",
+        "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.toggleRegex",
+        "key": "alt+r",
+        "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.toggleGitIgnore",
+        "key": "alt+g",
+        "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.nextTab",
+        "key": "tab",
+        "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.prevTab",
+        "key": "shift+tab",
+        "when": "searchPlusPlusModalOpen"
+      }
+    ],
+    "configuration": {
+      "title": "search++",
+      "properties": {
+        "searchPlusPlus.excludeGitIgnored": {
+          "type": "boolean",
+          "default": true,
+          "description": "Exclude git-ignored files and folders from search results by default"
+        },
+        "searchPlusPlus.debounceMs": {
+          "type": "number",
+          "default": 200,
+          "description": "Debounce delay in milliseconds before triggering search"
+        },
+        "searchPlusPlus.maxResults": {
+          "type": "number",
+          "default": 200,
+          "description": "Maximum number of results to display per search mode"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "bun run build",
+    "build": "bun esbuild.config.mjs --production",
+    "watch": "bun esbuild.config.mjs --watch",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.96.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.21.0",
+    "typescript": "^5.4.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0"
+  },
+  "dependencies": {
+    "fzf": "^0.5.2",
+    "ignore": "^5.3.0",
+    "@vscode/ripgrep": "^1.15.9"
+  }
+}
