@@ -271,8 +271,10 @@ export class SearchModal implements vscode.Disposable {
         const { query, gotoLine, gotoColumn } = parseLineCol(rawValue);
         this.gotoLine = gotoLine;
         this.gotoColumn = gotoColumn;
-        if (!query.trim()) { clearSearch(); return; }
-        executeSearch(query);
+        // Strip trailing colon / partial line:col so fzf only sees the filename
+        const fileQuery = query.replace(/:[\d]*$/, '');
+        if (!fileQuery.trim()) { clearSearch(); return; }
+        executeSearch(fileQuery);
       } else if (this.activeTab === SearchMode.Text || this.activeTab === SearchMode.Symbol) {
         this.gotoLine = undefined;
         this.gotoColumn = undefined;
@@ -418,6 +420,7 @@ export class SearchModal implements vscode.Disposable {
       }
 
       vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', false);
+      vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', false);
       this.currentSearch?.dispose();
       this.activeQuickPick = undefined;
       this.triggerSearch = undefined;
@@ -434,6 +437,7 @@ export class SearchModal implements vscode.Disposable {
     });
 
     vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', true);
+    vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', this.activeTab === SearchMode.File);
     qp.show();
   }
 
@@ -442,6 +446,7 @@ export class SearchModal implements vscode.Disposable {
   private switchTab(mode: SearchMode): void {
     if (this.activeTab === mode) return;
     this.activeTab = mode;
+    vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', mode === SearchMode.File);
     const qp = this.activeQuickPick;
     if (!qp) return;
     qp.placeholder = PLACEHOLDERS[mode];
@@ -524,6 +529,16 @@ export class SearchModal implements vscode.Disposable {
   toggleGitIgnore(): void {
     this.excludeGitIgnored = !this.excludeGitIgnored;
     this.applyOptionToggle();
+  }
+
+  /** Autofill input with the selected file's path + ":" so user can type line:col */
+  autofillSelectedPath(): void {
+    const qp = this.activeQuickPick;
+    if (!qp || this.activeTab !== SearchMode.File) return;
+    const selected = qp.activeItems[0];
+    if (!selected?.uri || selected.isFolder) return;
+    const relativePath = selected.description ?? vscode.workspace.asRelativePath(selected.uri);
+    qp.value = relativePath + ':';
   }
 
   private applyOptionToggle(): void {

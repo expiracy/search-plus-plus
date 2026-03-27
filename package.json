@@ -53,13 +53,17 @@
       {
         "command": "searchPlusPlus.prevTab",
         "title": "search++: Previous Tab"
+      },
+      {
+        "command": "searchPlusPlus.autofillPath",
+        "title": "search++: Autofill File Path"
       }
     ],
     "keybindings": [
       {
         "command": "searchPlusPlus.open",
-        "key": "ctrl+shift+space",
-        "mac": "cmd+shift+space"
+        "key": "shift shift",
+        "mac": "shift shift"
       },
       {
         "command": "searchPlusPlus.toggleCaseSensitive",
@@ -85,6 +89,11 @@
         "command": "searchPlusPlus.prevTab",
         "key": "shift+tab",
         "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.autofillPath",
+        "key": "right",
+        "when": "searchPlusPlusModalOpen && searchPlusPlusFileTab"
       }
     ],
     "configuration": {
