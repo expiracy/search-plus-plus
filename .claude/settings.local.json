@@ -9,7 +9,12 @@
       "Bash(/tmp/trace_deps.txt:*)",
       "Read(//tmp/**)",
       "Bash(bun install:*)",
-      "Bash(grep -E \"\\\\.\\(ts|js|json\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|js|json\\)$\")",
+      "WebFetch(domain:vshaxe.github.io)",
+      "WebFetch(domain:adamcoster.com)",
+      "Bash(npx tsc:*)",
+      "Bash(bun:*)",
+      "Bash(bunx tsc:*)"
     ]
   }
 }
