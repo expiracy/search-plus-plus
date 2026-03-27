@@ -26,14 +26,20 @@ export class GitIgnoreManager implements vscode.Disposable {
           await vscode.workspace.fs.readFile(uri),
         );
         // Prefix patterns with the relative directory of the .gitignore file
-        const dir = vscode.workspace.asRelativePath(
-          vscode.Uri.joinPath(uri, '..'),
-        );
+        const parentUri = vscode.Uri.joinPath(uri, '..');
+        const dir = vscode.workspace.asRelativePath(parentUri).replace(/\\/g, '/');
         const lines = content.split(/\r?\n/).filter(
           (line) => line.trim() && !line.startsWith('#'),
         );
 
-        if (dir === '.') {
+        // Root .gitignore: asRelativePath returns the folder name (not '.')
+        // when the path is the workspace root, so compare URIs directly
+        const isRoot = folders.some(f =>
+          f.uri.path.replace(/\\/g, '/').toLowerCase() ===
+          parentUri.path.replace(/\\/g, '/').toLowerCase(),
+        );
+
+        if (isRoot) {
           this.ig.add(lines);
         } else {
           // Prefix patterns with the directory they apply to
@@ -90,7 +96,7 @@ export class GitIgnoreManager implements vscode.Disposable {
 
   isIgnored(relativePath: string): boolean {
     try {
-      return this.ig.ignores(relativePath);
+      return this.ig.ignores(relativePath.replace(/\\/g, '/'));
     } catch {
       return false;
     }

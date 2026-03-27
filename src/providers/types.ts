@@ -5,6 +5,7 @@ export enum SearchMode {
   File = 'file',
   Folder = 'folder',
   Text = 'text',
+  Symbol = 'symbol',
 }
 
 export enum ResultSection {

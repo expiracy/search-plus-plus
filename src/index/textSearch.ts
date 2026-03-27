@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import { spawn, type ChildProcess } from 'child_process';
 
 // @vscode/ripgrep provides the path to the ripgrep binary
-let rgPath: string;
+let defaultRgPath: string;
 try {
-  rgPath = require('@vscode/ripgrep').rgPath;
+  defaultRgPath = require('@vscode/ripgrep').rgPath;
 } catch {
   // Fallback: VSCode bundles ripgrep, try to find it
-  rgPath = 'rg';
+  defaultRgPath = 'rg';
 }
 
 interface RgMatch {
@@ -43,6 +43,11 @@ export interface TextMatch {
 
 export class TextSearch implements vscode.Disposable {
   private activeProcess: ChildProcess | null = null;
+  private rgPath: string;
+
+  constructor(rgPath?: string) {
+    this.rgPath = rgPath ?? defaultRgPath;
+  }
 
   search(
     query: string,
@@ -92,7 +97,7 @@ export class TextSearch implements vscode.Disposable {
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
     let resultCount = 0;
 
-    const rg = spawn(rgPath, args, {
+    const rg = spawn(this.rgPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     this.activeProcess = rg;

@@ -3,6 +3,7 @@ import { ResultSection, SearchMode, type SearchOptions, type SearchProvider, typ
 import { FileProvider } from '../providers/fileProvider';
 import { TextProvider } from '../providers/textProvider';
 import { FolderProvider } from '../providers/folderProvider';
+import { SymbolProvider } from '../providers/symbolProvider';
 import { EverywhereProvider } from '../providers/everywhereProvider';
 import type { IndexManager } from '../index/indexManager';
 import type { SearchHistory } from '../history';
@@ -13,6 +14,7 @@ const TAB_ORDER: SearchMode[] = [
   SearchMode.File,
   SearchMode.Folder,
   SearchMode.Text,
+  SearchMode.Symbol,
 ];
 
 const PLACEHOLDERS: Record<SearchMode, string> = {
@@ -20,7 +22,15 @@ const PLACEHOLDERS: Record<SearchMode, string> = {
   [SearchMode.File]: 'Search files... (append :line:col to jump)',
   [SearchMode.Folder]: 'Search folders...',
   [SearchMode.Text]: 'Search text content...',
+  [SearchMode.Symbol]: 'Search symbols... (functions, classes, variables)',
 };
+
+interface SavedEditorState {
+  uri: vscode.Uri;
+  selection: vscode.Selection;
+  visibleRanges: readonly vscode.Range[];
+  viewColumn: vscode.ViewColumn | undefined;
+}
 
 const openToSideButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('split-horizontal'),
@@ -28,7 +38,7 @@ const openToSideButton: vscode.QuickInputButton = {
 };
 
 /** Parse :line:col suffix from query (only used on Files tab) */
-function parseLineCol(value: string): { query: string; gotoLine?: number; gotoColumn?: number } {
+export function parseLineCol(value: string): { query: string; gotoLine?: number; gotoColumn?: number } {
   const parts = value.split(':');
   if (parts.length >= 3) {
     const col = parseInt(parts[parts.length - 1], 10);
@@ -76,12 +86,14 @@ export class SearchModal implements vscode.Disposable {
     const fileProvider = new FileProvider(indexManager.fileIndex);
     const textProvider = new TextProvider(indexManager.textSearch);
     const folderProvider = new FolderProvider(indexManager.fileIndex);
+    const symbolProvider = new SymbolProvider(indexManager.gitIgnore);
     const everywhereProvider = new EverywhereProvider(fileProvider, textProvider);
 
     this.providers = new Map<SearchMode, SearchProvider>([
       [SearchMode.File, fileProvider],
       [SearchMode.Text, textProvider],
       [SearchMode.Folder, folderProvider],
+      [SearchMode.Symbol, symbolProvider],
       [SearchMode.Everywhere, everywhereProvider],
     ]);
   }
@@ -148,13 +160,26 @@ export class SearchModal implements vscode.Disposable {
       const fileCount = counts[ResultSection.Folders] + counts[ResultSection.Files];
       if (fileCount > 0) parts.push(`${fileCount} files`);
       if (counts[ResultSection.Text] > 0) parts.push(`${counts[ResultSection.Text]} text`);
-      qp.title = `search++ | ${parts.join(', ')}`;
+      qp.title = parts.join(', ');
     } else {
-      qp.title = `search++ | ${total} results`;
+      qp.title = `${total} results`;
     }
   }
 
   show(initialMode?: SearchMode): void {
+    // Capture original editor state for restoration on cancel
+    const savedState: SavedEditorState | undefined = (() => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) return undefined;
+      return {
+        uri: editor.document.uri,
+        selection: editor.selection,
+        visibleRanges: editor.visibleRanges,
+        viewColumn: editor.viewColumn,
+      };
+    })();
+    let accepted = false;
+
     const qp = vscode.window.createQuickPick<SearchResult>();
     this.activeQuickPick = qp;
     this.activeTab = initialMode ?? SearchMode.Everywhere;
@@ -200,7 +225,7 @@ export class SearchModal implements vscode.Disposable {
         mode: SearchMode.Everywhere,
         alwaysShow: true,
       }];
-      qp.title = 'search++';
+      qp.title = '0 results';
     };
 
     const handleResults = (results: SearchResult[]) => {
@@ -248,7 +273,7 @@ export class SearchModal implements vscode.Disposable {
         this.gotoColumn = gotoColumn;
         if (!query.trim()) { clearSearch(); return; }
         executeSearch(query);
-      } else if (this.activeTab === SearchMode.Text) {
+      } else if (this.activeTab === SearchMode.Text || this.activeTab === SearchMode.Symbol) {
         this.gotoLine = undefined;
         this.gotoColumn = undefined;
         debouncedSearch(rawValue);
@@ -270,8 +295,17 @@ export class SearchModal implements vscode.Disposable {
     // Handle selection
     const acceptDisposable = qp.onDidAccept(() => {
       const selected = qp.selectedItems[0];
-      if (!selected?.uri) return;
+      if (!selected) return;
 
+      // "More results" truncation indicator → switch to that tab
+      if (!selected.uri && selected.mode !== this.activeTab) {
+        this.switchTab(selected.mode);
+        return;
+      }
+
+      if (!selected.uri) return;
+
+      accepted = true;
       qp.hide();
 
       if (selected.isFolder) {
@@ -317,9 +351,9 @@ export class SearchModal implements vscode.Disposable {
     // Stale index notification while modal is open
     const staleDisposable = this.indexManager.onDidChangeState((state) => {
       if (state === 'stale') {
-        qp.title = '$(warning) search++ | Index may be stale';
+        qp.title = '$(warning) Index may be stale';
       } else if (state === 'building') {
-        qp.title = '$(sync~spin) search++ | Reindexing...';
+        qp.title = '$(sync~spin) Reindexing...';
       } else if (state === 'ready') {
         const counts: Record<ResultSection, number> = {
           [ResultSection.Folders]: 0,
@@ -338,6 +372,7 @@ export class SearchModal implements vscode.Disposable {
       const item = e.item;
       if (!item.uri) return;
 
+      accepted = true;
       qp.hide();
 
       const opts: vscode.TextDocumentShowOptions = {
@@ -364,6 +399,24 @@ export class SearchModal implements vscode.Disposable {
     const hideDisposable = qp.onDidHide(() => {
       if (previewTimer) clearTimeout(previewTimer);
       debouncedSearch.cancel();
+
+      // Restore original editor position on cancel
+      if (!accepted && savedState) {
+        vscode.window.showTextDocument(savedState.uri, {
+          preview: false,
+          preserveFocus: false,
+          selection: savedState.selection,
+          viewColumn: savedState.viewColumn,
+        }).then((editor) => {
+          if (savedState.visibleRanges.length > 0) {
+            editor.revealRange(
+              savedState.visibleRanges[0],
+              vscode.TextEditorRevealType.AtTop,
+            );
+          }
+        });
+      }
+
       vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', false);
       this.currentSearch?.dispose();
       this.activeQuickPick = undefined;
@@ -419,8 +472,9 @@ export class SearchModal implements vscode.Disposable {
       this.tabButton('file', 'Files', SearchMode.File),
       this.tabButton('folder', 'Folders', SearchMode.Folder),
       this.tabButton('book', 'Text', SearchMode.Text),
+      this.tabButton('symbol-method', 'Symbols', SearchMode.Symbol),
       // Search options (inline)
-      this.toggle('eye-closed', 'Exclude Git-Ignored (Alt+G)', this.excludeGitIgnored,
+      this.toggle('source-control', 'Only Git Trackable (Alt+G)', this.excludeGitIgnored,
         vscode.QuickInputButtonLocation.Inline),
       this.toggle('case-sensitive', 'Case Sensitive (Alt+C)', this.caseSensitive,
         vscode.QuickInputButtonLocation.Inline),
@@ -433,9 +487,10 @@ export class SearchModal implements vscode.Disposable {
       1: () => { this.switchTab(SearchMode.File); },
       2: () => { this.switchTab(SearchMode.Folder); },
       3: () => { this.switchTab(SearchMode.Text); },
-      4: () => { this.excludeGitIgnored = !this.excludeGitIgnored; },
-      5: () => { this.caseSensitive = !this.caseSensitive; },
-      6: () => { this.useRegex = !this.useRegex; },
+      4: () => { this.switchTab(SearchMode.Symbol); },
+      5: () => { this.excludeGitIgnored = !this.excludeGitIgnored; },
+      6: () => { this.caseSensitive = !this.caseSensitive; },
+      7: () => { this.useRegex = !this.useRegex; },
     };
 
     qp.buttons = buttons;
