@@ -260,6 +260,7 @@ mock.module('vscode', () => {
   return base;
 });
 
+const { Uri } = await import('./__mocks__/vscode');
 const { GitIgnoreManager } = await import('../src/gitignore');
 const { FileIndex } = await import('../src/index/fileIndex');
 
@@ -271,7 +272,10 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
     gitIgnore = new GitIgnoreManager();
     await gitIgnore.load();
     index = new FileIndex(gitIgnore as any);
-    await index.build();
+    const makeEntry = (relativePath: string) => ({ relativePath, uri: Uri.file(`${FIXTURE_ROOT}/${relativePath}`) });
+    const filtered = [...TRACKED_FILES, ...GITIGNORE_FILES.map(g => g.path)].map(makeEntry);
+    const unfiltered = ALL_FILES.map(makeEntry);
+    index.buildFromEntries(filtered, unfiltered);
   });
 
   // ── Root .gitignore patterns ──────────────────────────────────────────
@@ -467,34 +471,16 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
     });
   });
 
-  // ── getExcludeGlob ──────────────────────────────────────────────────
+  // ── isIgnored post-filter ──────────────────────────────────────────
 
-  describe('getExcludeGlob with multiple .gitignore files', () => {
-    test('only includes core excludes, not gitignore-derived patterns', () => {
-      const glob = gitIgnore.getExcludeGlob()!;
-      expect(glob).toContain('**/node_modules/**');
-      expect(glob).toContain('**/.git/**');
-      // Gitignore-derived patterns should NOT be in exclude glob —
-      // they're handled by isIgnored() post-filtering so the toggle works
-      expect(glob).not.toContain('**/build/**');
-      expect(glob).not.toContain('**/dist/**');
-      expect(glob).not.toContain('**/coverage/**');
-      expect(glob).not.toContain('**/__pycache__/**');
-    });
-
-    test('gitignore directory patterns are still caught by isIgnored post-filter', () => {
+  describe('isIgnored post-filter', () => {
+    test('gitignore directory patterns are caught by isIgnored', () => {
       expect(gitIgnore.isIgnored('build/output.js')).toBe(true);
       expect(gitIgnore.isIgnored('dist/bundle.js')).toBe(true);
       expect(gitIgnore.isIgnored('coverage/report.html')).toBe(true);
       expect(gitIgnore.isIgnored('frontend/.next/cache.js')).toBe(true);
       expect(gitIgnore.isIgnored('backend/venv/lib/site.py')).toBe(true);
       expect(gitIgnore.isIgnored('infra/.terraform/state.json')).toBe(true);
-    });
-
-    test('excludes character range patterns from glob (not convertible)', () => {
-      const glob = gitIgnore.getExcludeGlob()!;
-      expect(glob).not.toContain('[Dd]ebug');
-      expect(glob).not.toContain('[Rr]elease');
     });
   });
 

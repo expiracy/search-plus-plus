@@ -73,16 +73,7 @@ export class IndexManager implements vscode.Disposable {
   }
 
   private async rebuildFileIndex(): Promise<void> {
-    this.updateStatusBar('building');
-    try {
-      await this.gitIgnore.load();
-      this.textSearch.setExcludePatterns(this.gitIgnore.getCustomExcludePatterns());
-      await this.fileIndex.build();
-      this.updateStatusBar('ready');
-    } catch (err) {
-      console.error('[search++] File index rebuild failed:', err);
-      this.updateStatusBar('error');
-    }
+    await this.buildAll();
   }
 
   private updateStatusBar(state: IndexState): void {

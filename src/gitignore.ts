@@ -134,14 +134,7 @@ export class GitIgnoreManager implements vscode.Disposable {
       .get<string[]>('excludePaths', []);
   }
 
-  /**
-   * Build a glob exclude pattern string from gitignore patterns
-   * for use with vscode.workspace.findFiles.
-   */
   getExcludeGlob(): string | undefined {
-    // We can't perfectly convert all gitignore patterns to a single glob,
-    // so we use post-filtering via isIgnored() as the primary mechanism.
-    // This returns directory-level excludes for initial filtering.
     const unique = [...new Set(this.directoryExcludes)];
     return `{${unique.join(',')}}`;
   }

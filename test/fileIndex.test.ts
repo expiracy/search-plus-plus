@@ -22,6 +22,19 @@ const ALL_FILES = [
   'src/.gitignore',
 ];
 
+// Files that would be excluded by gitignore
+function isIgnored(relativePath: string): boolean {
+  const p = relativePath.replace(/\\/g, '/');
+  return (
+    p.startsWith('node_modules/') ||
+    p.startsWith('build/') ||
+    p.endsWith('.log') ||
+    p.startsWith('src/generated/')
+  );
+}
+
+const FILTERED_FILES = ALL_FILES.filter((f) => !isIgnored(f));
+
 // Configure vscode mock
 mock.module('vscode', () => {
   const base = require('./__mocks__/vscode');
@@ -39,27 +52,18 @@ mock.module('vscode', () => {
     return normalized;
   };
 
-  // Return fixture file URIs for findFiles
-  base.workspace.findFiles = async () => {
-    return ALL_FILES.map((f: string) => base.Uri.file(`${FIXTURE_ROOT}/${f}`));
-  };
-
   return base;
 });
 
+const { Uri } = await import('./__mocks__/vscode');
 const { FileIndex } = await import('../src/index/fileIndex');
 
-// Stub GitIgnoreManager that knows which fixture files are gitignored
+function makeEntry(relativePath: string) {
+  return { relativePath, uri: Uri.file(`${FIXTURE_ROOT}/${relativePath}`) };
+}
+
 const mockGitIgnore = {
-  isIgnored(relativePath: string): boolean {
-    const p = relativePath.replace(/\\/g, '/');
-    return (
-      p.startsWith('node_modules/') ||
-      p.startsWith('build/') ||
-      p.endsWith('.log') ||
-      p.startsWith('src/generated/')
-    );
-  },
+  isIgnored,
   isCustomExcluded: () => false,
   getExcludeGlob: () => '{**/node_modules/**,**/.git/**}',
   getCustomExcludePatterns: () => [],
@@ -70,9 +74,11 @@ const mockGitIgnore = {
 describe('FileIndex', () => {
   let index: InstanceType<typeof FileIndex>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     index = new FileIndex(mockGitIgnore);
-    await index.build();
+    const filtered = FILTERED_FILES.map(makeEntry);
+    const unfiltered = ALL_FILES.map(makeEntry);
+    index.buildFromEntries(filtered, unfiltered);
   });
 
   test('isReady after build', () => {
@@ -80,8 +86,7 @@ describe('FileIndex', () => {
   });
 
   test('fileCount matches non-ignored fixture files', () => {
-    // 15 total - 4 ignored (build/output.js, data.log, src/generated/output.gen.ts, src/generated/manual.ts) = 11
-    expect(index.fileCount).toBe(ALL_FILES.length - 4);
+    expect(index.fileCount).toBe(FILTERED_FILES.length);
   });
 
   test('find("index") matches src/index.ts', () => {
@@ -154,7 +159,6 @@ describe('FileIndex', () => {
   // --- gitignore filtering affects derived folders ---
 
   test('excludeGitIgnored=true: no results from gitignored directories', () => {
-    // Searching for "build" with gitignore on should not return build/output.js
     const results = index.find('build', 200, true);
     const paths = results.map((r) => r.item.relativePath);
     expect(paths.every((p) => !p.startsWith('build/'))).toBe(true);
@@ -260,7 +264,6 @@ describe('FileIndex', () => {
   test('filter matchWholeWord=true: "src" matches paths with "src" as a segment', () => {
     const results = index.filter('src', 200, true, false, true);
     expect(results.length).toBeGreaterThan(0);
-    // All results should have "src" as a whole path segment
     for (const r of results) {
       const segments = r.relativePath.toLowerCase().split(/[/\\\-_.]/);
       expect(segments).toContain('src');
@@ -268,7 +271,6 @@ describe('FileIndex', () => {
   });
 
   test('filter matchWholeWord=true: "inde" does NOT match src/index.ts', () => {
-    // "inde" is a substring of "index" but not a whole word
     const results = index.filter('inde', 200, true, false, true);
     const match = results.find((r) => r.relativePath === 'src/index.ts');
     expect(match).toBeUndefined();

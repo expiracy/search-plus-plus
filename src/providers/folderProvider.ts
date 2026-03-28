@@ -48,9 +48,6 @@ export class FolderProvider implements SearchProvider {
     isCancelled: () => boolean,
   ): Promise<void> {
     try {
-      // Get a broad sample of files and let extractFolders handle folder-path matching.
-      // Using a file-name pattern like `**/*${query}*` misses folders where the query
-      // appears only in the directory path, not the file name.
       const uris = await vscode.workspace.findFiles('**/*', undefined, 5000);
 
       if (isCancelled()) return;

@@ -118,6 +118,7 @@ export class TextSearch implements vscode.Disposable {
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
     let resultCount = 0;
     let cancelled = false;
+    let completed = false;
 
     const rg = spawn(this.rgPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -176,11 +177,12 @@ export class TextSearch implements vscode.Disposable {
 
     rg.on('close', () => {
       if (flushTimer) clearTimeout(flushTimer);
-      if (cancelled) return;
+      if (cancelled || completed) return;
+      completed = true;
 
       // Search notebooks after ripgrep finishes, then deliver all results
       this.searchNotebooks(query, options, results).then(() => {
-        flush();
+        onResults([...results]);
         if (this.activeProcess === rg) {
           this.activeProcess = null;
         }
@@ -190,6 +192,10 @@ export class TextSearch implements vscode.Disposable {
     rg.on('error', () => {
       if (this.activeProcess === rg) {
         this.activeProcess = null;
+      }
+      if (!completed && !cancelled) {
+        completed = true;
+        onResults([]);
       }
     });
 
@@ -216,7 +222,7 @@ export class TextSearch implements vscode.Disposable {
     try {
       const notebookUris = await vscode.workspace.findFiles(
         '**/*.ipynb',
-        options.excludeGitIgnored ? undefined : undefined,
+        undefined,
         100,
       );
 

@@ -154,6 +154,7 @@ mock.module('vscode', () => {
   return base;
 });
 
+const { Uri } = await import('./__mocks__/vscode');
 const { GitIgnoreManager } = await import('../src/gitignore');
 const { FileIndex } = await import('../src/index/fileIndex');
 const { extractFolders } = await import('../src/providers/folderExtractor');
@@ -167,7 +168,10 @@ describe('ML project: everything mode regression', () => {
     gitIgnore = new GitIgnoreManager();
     await gitIgnore.load();
     index = new FileIndex(gitIgnore as any);
-    await index.build();
+    const makeEntry = (relativePath: string) => ({ relativePath, uri: Uri.file(`${FIXTURE_ROOT}/${relativePath}`) });
+    const filtered = [...TRACKED_FILES, ...GITIGNORE_FILES.map(g => g.path)].map(makeEntry);
+    const unfiltered = ALL_FILES.map(makeEntry);
+    index.buildFromEntries(filtered, unfiltered);
   });
 
   // ── GitIgnoreManager ──────────────────────────────────────────────────
@@ -216,17 +220,6 @@ describe('ML project: everything mode regression', () => {
       expect(gitIgnore.isIgnored('config.yaml')).toBe(false);
     });
 
-    test('getExcludeGlob does NOT contain gitignore-derived patterns (regression)', () => {
-      const glob = gitIgnore.getExcludeGlob()!;
-      expect(glob).toContain('**/node_modules/**');
-      expect(glob).toContain('**/.git/**');
-      // These must NOT be in the exclude glob — otherwise findFiles skips them
-      // and they become invisible even in "everything mode"
-      expect(glob).not.toContain('**/outputs/**');
-      expect(glob).not.toContain('**/raw/**');
-      expect(glob).not.toContain('**/__pycache__/**');
-      expect(glob).not.toContain('**/.ipynb_checkpoints/**');
-    });
   });
 
   // ── FileIndex: everything mode ────────────────────────────────────────

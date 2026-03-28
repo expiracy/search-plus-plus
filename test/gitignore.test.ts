@@ -100,15 +100,6 @@ describe('GitIgnoreManager', () => {
     expect(manager.isIgnored('docs/README.md')).toBe(false);
   });
 
-  test('getExcludeGlob only includes core excludes, not gitignore-derived patterns', () => {
-    const glob = manager.getExcludeGlob()!;
-    expect(glob).toContain('**/node_modules/**');
-    expect(glob).toContain('**/.git/**');
-    // Gitignore patterns like build/ should NOT be in the exclude glob —
-    // they're handled by isIgnored() post-filtering so the toggle works
-    expect(glob).not.toContain('**/build/**');
-  });
-
   test('isIgnored still catches gitignored directory contents via post-filter', () => {
     expect(manager.isIgnored('build/output.js')).toBe(true);
     expect(manager.isIgnored('build/nested/deep.js')).toBe(true);

@@ -12,8 +12,8 @@ export class FileIndex implements vscode.Disposable {
   private filteredEntries: FileEntry[] = [];
   private fzfInstance: Fzf<FileEntry> | null = null;
   private unfilteredFzfInstance: Fzf<FileEntry> | null = null;
+  private fzfDirty = false;
   private watcher: vscode.FileSystemWatcher | null = null;
-  private disposables: vscode.Disposable[] = [];
 
   // Debounced batch updates for bulk operations
   private pendingAdds: FileEntry[] = [];
@@ -60,6 +60,7 @@ export class FileIndex implements vscode.Disposable {
     this.filteredEntries = [];
     this.fzfInstance = null;
     this.unfilteredFzfInstance = null;
+    this.fzfDirty = false;
 
     // Clear any pending batch state to prevent stale updates
     this.pendingAdds = [];
@@ -92,6 +93,10 @@ export class FileIndex implements vscode.Disposable {
   }
 
   find(query: string, limit = 200, excludeGitIgnored = true): FzfResultItem<FileEntry>[] {
+    if (this.fzfDirty) {
+      this.rebuildFzf();
+      this.fzfDirty = false;
+    }
     const fzf = excludeGitIgnored ? this.fzfInstance : this.getUnfilteredFzf();
     if (!fzf) return [];
     return fzf.find(query).slice(0, limit);
@@ -124,6 +129,15 @@ export class FileIndex implements vscode.Disposable {
     }
 
     return matches;
+  }
+
+  /** Populate the index directly (for testing without findFiles) */
+  buildFromEntries(filtered: FileEntry[], unfiltered?: FileEntry[]): void {
+    this._isStale = false;
+    this.filteredEntries = filtered;
+    this.entries = unfiltered ?? filtered;
+    this.fzfDirty = false;
+    this.rebuildFzf();
   }
 
   private rebuildFzf(): void {
@@ -171,8 +185,6 @@ export class FileIndex implements vscode.Disposable {
     });
 
     // onDidChange is irrelevant for file index (path didn't change)
-
-    this.disposables.push(this.watcher);
   }
 
   private trackEvent(): void {
@@ -219,7 +231,7 @@ export class FileIndex implements vscode.Disposable {
 
     this.pendingAdds = [];
     this.pendingRemoves.clear();
-    this.rebuildFzf();
+    this.fzfDirty = true;
   }
 
   private scheduleFullRescan(): void {
@@ -241,7 +253,6 @@ export class FileIndex implements vscode.Disposable {
       this.buildCts = null;
     }
     this.disposeWatcher();
-    for (const d of this.disposables) d.dispose();
     if (this.batchTimer) clearTimeout(this.batchTimer);
     if (this.rescanTimer) clearTimeout(this.rescanTimer);
     this._onDidBecomeStale.dispose();

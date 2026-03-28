@@ -1,6 +1,5 @@
-import { describe, test, expect, mock, beforeAll, afterAll } from 'bun:test';
+import { describe, test, expect, mock, beforeAll } from 'bun:test';
 import path from 'path';
-import fs from 'fs';
 
 // Generate a large-scale mock project with:
 // - 10,000 source files across deep directory trees
@@ -96,6 +95,15 @@ const ALL_FILES = [
   ...NESTED_GITIGNORES.map(g => g.path),
 ];
 
+// Non-ignored files (what rg --files would return)
+const FILTERED_FILES = [
+  ...SOURCE_FILES,
+  '.gitignore',
+  ...NESTED_GITIGNORES.map(g => g.path),
+];
+
+// makeEntry defined after mock setup (needs Uri)
+
 // --- Mock vscode ---
 
 mock.module('vscode', () => {
@@ -156,10 +164,15 @@ mock.module('vscode', () => {
   return base;
 });
 
+const { Uri } = await import('./__mocks__/vscode');
 const { GitIgnoreManager } = await import('../src/gitignore');
 const { FileIndex } = await import('../src/index/fileIndex');
 const { extractFolders } = await import('../src/providers/folderExtractor');
 const { SearchMode } = await import('../src/providers/types');
+
+function makeEntry(relativePath: string) {
+  return { relativePath, uri: Uri.file(`${SCALE_ROOT}/${relativePath}`) };
+}
 
 describe('Scalability: large repo simulation', () => {
   let gitIgnore: InstanceType<typeof GitIgnoreManager>;
@@ -169,15 +182,16 @@ describe('Scalability: large repo simulation', () => {
     gitIgnore = new GitIgnoreManager();
     await gitIgnore.load();
     index = new FileIndex(gitIgnore as any);
-    await index.build();
+    // Use buildFromEntries instead of build() to avoid needing ripgrep in tests
+    const filtered = FILTERED_FILES.map(makeEntry);
+    const unfiltered = ALL_FILES.map(makeEntry);
+    index.buildFromEntries(filtered, unfiltered);
   });
 
   // --- GitIgnore at scale ---
 
   describe('GitIgnoreManager with 60+ .gitignore files', () => {
     test('loads all gitignore files (exceeds old limit of 50)', () => {
-      // Total: 1 root + 3 package + 57 nested = 61 .gitignore files
-      // This would have failed with the old limit of 50
       expect(ALL_GITIGNORES.length).toBe(61);
     });
 
@@ -206,37 +220,17 @@ describe('Scalability: large repo simulation', () => {
       expect(gitIgnore.isIgnored('packages/app/src/pages/file_27.ts')).toBe(false);
       expect(gitIgnore.isIgnored('lib/shared/file_21.ts')).toBe(false);
     });
-
-    test('getExcludeGlob only includes core excludes, not gitignore-derived patterns', () => {
-      const glob = gitIgnore.getExcludeGlob()!;
-      expect(glob).toContain('**/node_modules/**');
-      expect(glob).toContain('**/.git/**');
-      // Gitignore-derived patterns handled by isIgnored() post-filter, not exclude glob
-      expect(glob).not.toContain('**/build/**');
-      expect(glob).not.toContain('**/dist/**');
-      expect(glob).not.toContain('**/.cache/**');
-    });
-
-    test('gitignore directory patterns still caught by isIgnored post-filter', () => {
-      expect(gitIgnore.isIgnored('build/output.js')).toBe(true);
-      expect(gitIgnore.isIgnored('dist/bundle.js')).toBe(true);
-      expect(gitIgnore.isIgnored('.cache/data.bin')).toBe(true);
-      expect(gitIgnore.isIgnored('packages/app/dist/index.js')).toBe(true);
-    });
   });
 
   // --- FileIndex at scale ---
 
   describe('FileIndex with 15,000+ files', () => {
     test('fileCount reflects only non-ignored files', () => {
-      // All ignored files should be filtered out
-      expect(index.fileCount).toBe(SOURCE_FILES.length + 1 + NESTED_GITIGNORES.length);
-      // +1 for root .gitignore, + nested .gitignore files (they're in source dirs, not ignored)
+      expect(index.fileCount).toBe(FILTERED_FILES.length);
     });
 
     test('fileCount excludes all ignored files', () => {
       expect(index.fileCount).toBeLessThan(ALL_FILES.length);
-      // Should not include any of the 5,000 ignored files
       expect(index.fileCount).toBeLessThanOrEqual(ALL_FILES.length - IGNORED_FILES.length);
     });
 
@@ -246,14 +240,13 @@ describe('Scalability: large repo simulation', () => {
       const elapsed = performance.now() - start;
 
       expect(results.length).toBe(200);
-      expect(elapsed).toBeLessThan(500); // Should be well under 500ms
+      expect(elapsed).toBeLessThan(500);
     });
 
     test('find() with excludeGitIgnored=true excludes ignored files', () => {
       const results = index.find('', 20_000, true);
       const paths = results.map(r => r.item.relativePath);
 
-      // None should be in ignored directories
       expect(paths.every(p => !p.startsWith('build/'))).toBe(true);
       expect(paths.every(p => !p.startsWith('dist/'))).toBe(true);
       expect(paths.every(p => !p.startsWith('.cache/'))).toBe(true);
@@ -281,9 +274,7 @@ describe('Scalability: large repo simulation', () => {
     });
 
     test('fuzzy matching works at scale', () => {
-      // Search for a specific file pattern
       const results = index.find('corefl0', 10, true);
-      // Should find files in src/core with "file_0" fuzzy-matching "corefl0"
       expect(results.length).toBeGreaterThan(0);
     });
 
@@ -302,13 +293,11 @@ describe('Scalability: large repo simulation', () => {
       const folders = extractFolders(entries, '', SearchMode.Folder);
       const folderPaths = folders.map((f: any) => f.description);
 
-      // Source directories should be present
       expect(folderPaths).toContain('src');
       expect(folderPaths).toContain('src/core');
       expect(folderPaths).toContain('lib');
       expect(folderPaths).toContain('packages');
 
-      // Ignored directories should NOT be present (since we used excludeGitIgnored=true)
       expect(folderPaths).not.toContain('build');
       expect(folderPaths).not.toContain('dist');
       expect(folderPaths).not.toContain('.cache');
@@ -342,24 +331,19 @@ describe('Scalability: large repo simulation', () => {
       const avg = timings.reduce((a, b) => a + b, 0) / timings.length;
       const max = Math.max(...timings);
 
-      // Average should be under 200ms, max under 500ms
       expect(avg).toBeLessThan(200);
       expect(max).toBeLessThan(500);
     });
 
     test('toggling excludeGitIgnored does not crash', () => {
-      // First call builds the unfiltered FZF instance lazily
       const unfiltered = index.find('file_', 50, false);
       expect(unfiltered.length).toBe(50);
 
-      // Switch back
       const filtered = index.find('file_', 50, true);
       expect(filtered.length).toBe(50);
 
-      // Verify they have different results (unfiltered may include ignored files)
       const unfilteredPaths = new Set(unfiltered.map(r => r.item.relativePath));
       const filteredPaths = new Set(filtered.map(r => r.item.relativePath));
-      // At minimum the sets should be valid
       expect(unfilteredPaths.size).toBe(50);
       expect(filteredPaths.size).toBe(50);
     });

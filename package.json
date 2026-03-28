@@ -2,7 +2,7 @@
   "name": "search-plus-plus",
   "displayName": "search++",
   "description": "Fast unified search for files, folders, text, and symbols. Fuzzy matching, regex, exclude gitignored files, double-shift to open, and tabbed navigation inspired by JetBrains IDEs",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "publisher": "expiracy",
   "repository": {
     "type": "git",
@@ -193,12 +193,12 @@
     "@types/vscode": "^1.96.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "@vscode/ripgrep": "^1.15.9",
     "esbuild": "^0.21.0",
     "eslint": "^8.57.0",
     "typescript": "^5.4.0"
   },
   "dependencies": {
+    "@vscode/ripgrep": "^1.15.9",
     "fzf": "^0.5.2",
     "ignore": "^5.3.0"
   }

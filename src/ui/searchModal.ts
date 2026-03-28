@@ -95,7 +95,7 @@ export class SearchModal implements vscode.Disposable {
     const textProvider = new TextProvider(indexManager.textSearch);
     const folderProvider = new FolderProvider(indexManager.fileIndex);
     const symbolProvider = new SymbolProvider(indexManager.gitIgnore);
-    const everywhereProvider = new EverywhereProvider(fileProvider, textProvider);
+    const everywhereProvider = new EverywhereProvider(fileProvider, folderProvider, textProvider);
 
     this.providers = new Map<SearchMode, SearchProvider>([
       [SearchMode.File, fileProvider],
@@ -232,12 +232,12 @@ export class SearchModal implements vscode.Disposable {
 
     const showNoResults = () => {
       qp.items = [{
-        label: '$(info) No results found',
-        kind: vscode.QuickPickItemKind.Separator,
-        mode: SearchMode.Everywhere,
+        label: '$(search-stop) No results found',
+        description: 'Try a different search term',
+        mode: this.activeTab,
         alwaysShow: true,
       }];
-      qp.title = TAB_NAMES[this.activeTab];
+      qp.title = `${TAB_NAMES[this.activeTab]}: 0 results`;
     };
 
     const handleResults = (results: SearchResult[]) => {
@@ -264,6 +264,7 @@ export class SearchModal implements vscode.Disposable {
     const executeSearch = (query: string) => {
       this.currentSearch?.dispose();
       qp.busy = true;
+      qp.title = `${TAB_NAMES[this.activeTab]}: Searching...`;
       const provider = this.providers.get(this.activeTab);
       if (!provider) return;
 
@@ -278,8 +279,8 @@ export class SearchModal implements vscode.Disposable {
       const rawValue = qp.value.trim();
       if (!rawValue) { clearSearch(); return; }
 
-      // Parse line:col on Files tab
-      if (this.activeTab === SearchMode.File) {
+      // Parse line:col on Files and Everywhere tabs
+      if (this.activeTab === SearchMode.File || this.activeTab === SearchMode.Everywhere) {
         const { query, gotoLine, gotoColumn } = parseLineCol(rawValue);
         this.gotoLine = gotoLine;
         this.gotoColumn = gotoColumn;
@@ -292,7 +293,7 @@ export class SearchModal implements vscode.Disposable {
         this.gotoColumn = undefined;
         debouncedSearch(rawValue);
       } else {
-        // Everywhere (has internal debounce for text) and Folder (instant fzf)
+        // Folder (instant fzf)
         this.gotoLine = undefined;
         this.gotoColumn = undefined;
         executeSearch(rawValue);
@@ -322,7 +323,9 @@ export class SearchModal implements vscode.Disposable {
       qp.hide();
 
       if (selected.isFolder) {
-        vscode.commands.executeCommand('revealInExplorer', selected.uri);
+        vscode.commands.executeCommand('workbench.view.explorer').then(() => {
+          vscode.commands.executeCommand('revealInExplorer', selected.uri);
+        });
         return;
       }
 
@@ -334,14 +337,14 @@ export class SearchModal implements vscode.Disposable {
       // Record in history
       this.history.addOpened(selected.uri, line, col);
 
-      if (line !== undefined) {
-        const pos = new vscode.Position(line, col);
-        vscode.window.showTextDocument(selected.uri, {
-          selection: new vscode.Selection(pos, pos),
-        });
-      } else {
-        vscode.commands.executeCommand('vscode.open', selected.uri);
-      }
+      vscode.commands.executeCommand('vscode.open', selected.uri).then(() => {
+        if (line !== undefined && !selected.uri.fsPath.endsWith('.ipynb')) {
+          const pos = new vscode.Position(line, col);
+          vscode.window.showTextDocument(selected.uri, {
+            selection: new vscode.Selection(pos, pos),
+          });
+        }
+      });
     });
 
     // Stale index notification while modal is open
@@ -378,15 +381,15 @@ export class SearchModal implements vscode.Disposable {
       // Open to the side
       qp.hide();
 
-      if (item.lineNumber !== undefined) {
-        const pos = new vscode.Position(item.lineNumber, item.column ?? 0);
-        vscode.window.showTextDocument(item.uri, {
-          viewColumn: vscode.ViewColumn.Beside,
-          selection: new vscode.Selection(pos, pos),
-        });
-      } else {
-        vscode.commands.executeCommand('vscode.open', item.uri, vscode.ViewColumn.Beside);
-      }
+      vscode.commands.executeCommand('vscode.open', item.uri, vscode.ViewColumn.Beside).then(() => {
+        if (item.lineNumber !== undefined && !item.uri.fsPath.endsWith('.ipynb')) {
+          const pos = new vscode.Position(item.lineNumber, item.column ?? 0);
+          vscode.window.showTextDocument(item.uri, {
+            viewColumn: vscode.ViewColumn.Beside,
+            selection: new vscode.Selection(pos, pos),
+          });
+        }
+      });
     });
 
     // Handle button clicks (tabs + search options)
@@ -395,8 +398,11 @@ export class SearchModal implements vscode.Disposable {
       const action = this.buttonActions[index];
       if (!action) return;
       action();
-      this.rebuildButtons(qp);
-      executeSearchForCurrentTab();
+      // Tab buttons (0-4) already handle rebuild+search via switchTab
+      if (index >= 5) {
+        this.rebuildButtons(qp);
+        executeSearchForCurrentTab();
+      }
     });
 
     // Cleanup on hide
@@ -420,7 +426,7 @@ export class SearchModal implements vscode.Disposable {
     });
 
     vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', true);
-    vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', this.activeTab === SearchMode.File);
+    vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', this.activeTab === SearchMode.File || this.activeTab === SearchMode.Everywhere);
     qp.show();
   }
 
@@ -429,7 +435,7 @@ export class SearchModal implements vscode.Disposable {
   private switchTab(mode: SearchMode): void {
     if (this.activeTab === mode) return;
     this.activeTab = mode;
-    vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', mode === SearchMode.File);
+    vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', mode === SearchMode.File || mode === SearchMode.Everywhere);
     const qp = this.activeQuickPick;
     if (!qp) return;
     qp.placeholder = PLACEHOLDERS[mode];
@@ -533,7 +539,7 @@ export class SearchModal implements vscode.Disposable {
   /** Autofill input with the selected file's path + ":" so user can type line:col */
   autofillSelectedPath(): void {
     const qp = this.activeQuickPick;
-    if (!qp || this.activeTab !== SearchMode.File) return;
+    if (!qp || (this.activeTab !== SearchMode.File && this.activeTab !== SearchMode.Everywhere)) return;
     const selected = qp.activeItems[0];
     if (!selected?.uri || selected.isFolder) return;
     const relativePath = selected.description ?? vscode.workspace.asRelativePath(selected.uri);
