@@ -32,6 +32,7 @@ export class EverywhereProvider implements SearchProvider {
     let fileResults: SearchResult[] = [];
     let textResults: SearchResult[] = [];
     let commandResults: SearchResult[] = [];
+    let textDelivered = false;
     const disposables: vscode.Disposable[] = [];
     let textSearchDisposable: vscode.Disposable | undefined;
     let commandSearchDisposable: vscode.Disposable | undefined;
@@ -95,7 +96,11 @@ export class EverywhereProvider implements SearchProvider {
         });
       }
 
-      onResults(merged);
+      // Only emit results when we have something to show, or text search
+      // has delivered at least once (so empty results are genuine).
+      if (merged.length > 0 || textDelivered) {
+        onResults(merged);
+      }
     };
 
     // Folder + file search runs instantly
@@ -112,14 +117,12 @@ export class EverywhereProvider implements SearchProvider {
       }),
     );
 
-    // Text search is debounced
-    const executeTextSearch = () => {
-      textSearchDisposable?.dispose();
-      textSearchDisposable = this.textProvider.search(query, options, (results) => {
-        textResults = results;
-        buildMergedResults();
-      });
-    };
+    // Text search runs immediately (cancellation is handled by dispose)
+    textSearchDisposable = this.textProvider.search(query, options, (results) => {
+      textResults = results;
+      textDelivered = true;
+      buildMergedResults();
+    });
 
     // Command search is debounced (async index build on first call)
     const executeCommandSearch = () => {
@@ -130,15 +133,11 @@ export class EverywhereProvider implements SearchProvider {
       });
     };
 
-    const debouncedText = debounce(executeTextSearch, debounceMs);
-    debouncedText();
-
     const debouncedCommand = debounce(executeCommandSearch, debounceMs);
     debouncedCommand();
 
     return {
       dispose: () => {
-        debouncedText.cancel();
         debouncedCommand.cancel();
         textSearchDisposable?.dispose();
         commandSearchDisposable?.dispose();
