@@ -6,12 +6,14 @@ export enum SearchMode {
   Folder = 'folder',
   Text = 'text',
   Symbol = 'symbol',
+  Command = 'command',
 }
 
 export enum ResultSection {
   Folders = 'folders',
   Files = 'files',
   Text = 'text',
+  Commands = 'commands',
 }
 
 export interface SearchResult extends vscode.QuickPickItem {
@@ -23,6 +25,8 @@ export interface SearchResult extends vscode.QuickPickItem {
   belongsToSection?: ResultSection;
   /** Whether this result represents a folder (changes selection behavior) */
   isFolder?: boolean;
+  /** Command ID for executable command results */
+  commandId?: string;
 }
 
 export interface SearchOptions {

@@ -20,6 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('searchPlusPlus.openFiles', () => modal.show(SearchMode.File)),
     vscode.commands.registerCommand('searchPlusPlus.openText', () => modal.show(SearchMode.Text)),
     vscode.commands.registerCommand('searchPlusPlus.openSymbols', () => modal.show(SearchMode.Symbol)),
+    vscode.commands.registerCommand('searchPlusPlus.openCommands', () => modal.show(SearchMode.Command)),
     vscode.commands.registerCommand('searchPlusPlus.reindex', () => indexManager.reindex()),
     vscode.commands.registerCommand('searchPlusPlus.toggleCaseSensitive', () => modal.toggleCaseSensitive()),
     vscode.commands.registerCommand('searchPlusPlus.toggleRegex', () => modal.toggleRegex()),

@@ -80,7 +80,6 @@ export class TextSearch implements vscode.Disposable {
 
     const args: string[] = [
       '--json',
-      '--max-count', '5',
     ];
 
     if (!options.caseSensitive) {

@@ -3,11 +3,13 @@ import { ResultSection, SearchMode, type SearchOptions, type SearchProvider, typ
 import { FileProvider } from './fileProvider';
 import { FolderProvider } from './folderProvider';
 import { TextProvider } from './textProvider';
+import { CommandProvider } from './commandProvider';
 import { debounce } from '../utils';
 
 const FOLDER_LIMIT = 10;
 const FILE_LIMIT = 20;
 const TEXT_LIMIT = 50;
+const COMMAND_LIMIT = 5;
 
 export class EverywhereProvider implements SearchProvider {
   readonly mode = SearchMode.Everywhere;
@@ -16,6 +18,7 @@ export class EverywhereProvider implements SearchProvider {
     private fileProvider: FileProvider,
     private folderProvider: FolderProvider,
     private textProvider: TextProvider,
+    private commandProvider: CommandProvider,
   ) {}
 
   search(
@@ -28,29 +31,27 @@ export class EverywhereProvider implements SearchProvider {
     let folderResults: SearchResult[] = [];
     let fileResults: SearchResult[] = [];
     let textResults: SearchResult[] = [];
+    let commandResults: SearchResult[] = [];
     const disposables: vscode.Disposable[] = [];
     let textSearchDisposable: vscode.Disposable | undefined;
+    let commandSearchDisposable: vscode.Disposable | undefined;
 
     const buildMergedResults = () => {
-      const folderSlice = folderResults.slice(0, FOLDER_LIMIT);
       const fileSlice = fileResults.slice(0, FILE_LIMIT);
+      const folderSlice = folderResults.slice(0, FOLDER_LIMIT);
       const textSlice = textResults.slice(0, TEXT_LIMIT).map((r) => ({
         ...r,
         belongsToSection: ResultSection.Text,
       }));
+      const commandSlice = commandResults.slice(0, COMMAND_LIMIT).map((r) => ({
+        ...r,
+        belongsToSection: ResultSection.Commands,
+      }));
 
-      const merged: SearchResult[] = [...fileSlice, ...folderSlice, ...textSlice];
+      // Build merged results with truncation indicators inline after each section
+      const merged: SearchResult[] = [];
 
-      // Truncation indicators
-      if (folderResults.length > FOLDER_LIMIT) {
-        merged.push({
-          label: `$(info) ${folderResults.length - FOLDER_LIMIT} more folder results`,
-          description: 'Switch to Folders tab to see all',
-          mode: SearchMode.Folder,
-          belongsToSection: ResultSection.Folders,
-          alwaysShow: true,
-        });
-      }
+      merged.push(...fileSlice);
       if (fileResults.length > FILE_LIMIT) {
         merged.push({
           label: `$(info) ${fileResults.length - FILE_LIMIT} more file results`,
@@ -60,12 +61,36 @@ export class EverywhereProvider implements SearchProvider {
           alwaysShow: true,
         });
       }
+
+      merged.push(...folderSlice);
+      if (folderResults.length > FOLDER_LIMIT) {
+        merged.push({
+          label: `$(info) ${folderResults.length - FOLDER_LIMIT} more folder results`,
+          description: 'Switch to Folders tab to see all',
+          mode: SearchMode.Folder,
+          belongsToSection: ResultSection.Folders,
+          alwaysShow: true,
+        });
+      }
+
+      merged.push(...textSlice);
       if (textResults.length > TEXT_LIMIT) {
         merged.push({
           label: `$(info) ${textResults.length - TEXT_LIMIT} more text results`,
           description: 'Switch to Text tab to see all',
           mode: SearchMode.Text,
           belongsToSection: ResultSection.Text,
+          alwaysShow: true,
+        });
+      }
+
+      merged.push(...commandSlice);
+      if (commandResults.length > COMMAND_LIMIT) {
+        merged.push({
+          label: `$(info) ${commandResults.length - COMMAND_LIMIT} more command results`,
+          description: 'Switch to Commands tab to see all',
+          mode: SearchMode.Command,
+          belongsToSection: ResultSection.Commands,
           alwaysShow: true,
         });
       }
@@ -96,13 +121,27 @@ export class EverywhereProvider implements SearchProvider {
       });
     };
 
+    // Command search is debounced (async index build on first call)
+    const executeCommandSearch = () => {
+      commandSearchDisposable?.dispose();
+      commandSearchDisposable = this.commandProvider.search(query, options, (results) => {
+        commandResults = results;
+        buildMergedResults();
+      });
+    };
+
     const debouncedText = debounce(executeTextSearch, debounceMs);
     debouncedText();
+
+    const debouncedCommand = debounce(executeCommandSearch, debounceMs);
+    debouncedCommand();
 
     return {
       dispose: () => {
         debouncedText.cancel();
+        debouncedCommand.cancel();
         textSearchDisposable?.dispose();
+        commandSearchDisposable?.dispose();
         for (const d of disposables) d.dispose();
       },
     };
