@@ -1,11 +1,11 @@
-import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 
-const FIXTURE_ROOT = path.resolve(import.meta.dir, 'fixtures/mock-project').replace(/\\/g, '/');
+const FIXTURE_ROOT = path.resolve(__dirname, 'fixtures/mock-project').replace(/\\/g, '/');
 
 // Configure vscode mock
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(FIXTURE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'mock-project', index: 0 }];

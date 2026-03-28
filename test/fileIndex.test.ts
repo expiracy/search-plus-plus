@@ -1,7 +1,7 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
 
-const FIXTURE_ROOT = path.resolve(import.meta.dir, 'fixtures/mock-project').replace(/\\/g, '/');
+const FIXTURE_ROOT = path.resolve(__dirname, 'fixtures/mock-project').replace(/\\/g, '/');
 
 // All files in the fixture project (including gitignored ones)
 const ALL_FILES = [
@@ -36,8 +36,8 @@ function isIgnored(relativePath: string): boolean {
 const FILTERED_FILES = ALL_FILES.filter((f) => !isIgnored(f));
 
 // Configure vscode mock
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(FIXTURE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'mock-project', index: 0 }];

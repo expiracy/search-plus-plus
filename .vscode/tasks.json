@@ -4,7 +4,7 @@
     {
       "label": "watch",
       "type": "shell",
-      "command": "bun",
+      "command": "npm",
       "args": ["run", "watch"],
       "isBackground": true,
       "problemMatcher": {

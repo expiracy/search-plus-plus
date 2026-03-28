@@ -1,14 +1,34 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import { existsSync } from 'fs';
 import { spawn, type ChildProcess } from 'child_process';
 
-// @vscode/ripgrep provides the path to the ripgrep binary
-let defaultRgPath: string;
-try {
-  defaultRgPath = require('@vscode/ripgrep').rgPath;
-} catch {
-  // Fallback: VSCode bundles ripgrep, try to find it
-  defaultRgPath = 'rg';
+function resolveRgPath(): string {
+  const rgBin = process.platform === 'win32' ? 'rg.exe' : 'rg';
+
+  // Strategy 1: @vscode/ripgrep npm package (works in development)
+  try {
+    const rgPath: string = require('@vscode/ripgrep').rgPath;
+    if (existsSync(rgPath)) {
+      return rgPath;
+    }
+  } catch {
+    // Not available (expected in packaged VSIX since node_modules is excluded)
+  }
+
+  // Strategy 2: VS Code's bundled ripgrep
+  for (const modules of ['node_modules.asar.unpacked', 'node_modules']) {
+    const candidate = path.join(vscode.env.appRoot, modules, '@vscode', 'ripgrep', 'bin', rgBin);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  // Strategy 3: system PATH
+  return 'rg';
 }
+
+const defaultRgPath = resolveRgPath();
 
 interface RgMatch {
   type: 'match';

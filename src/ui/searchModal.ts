@@ -8,7 +8,7 @@ import { CommandProvider } from '../providers/commandProvider';
 import { EverywhereProvider } from '../providers/everywhereProvider';
 import type { IndexManager } from '../index/indexManager';
 import type { SearchHistory } from '../history';
-import { debounce, type Debounced } from '../utils';
+import { debounce, isAbsolutePath, type Debounced } from '../utils';
 
 const TAB_ORDER: SearchMode[] = [
   SearchMode.Everywhere,
@@ -289,6 +289,15 @@ export class SearchModal implements vscode.Disposable {
       const rawValue = qp.value.trim();
       if (!rawValue) { clearSearch(); return; }
 
+      // Absolute path → stat and show single result
+      if (isAbsolutePath(rawValue)) {
+        const { query, gotoLine, gotoColumn } = parseLineCol(rawValue);
+        this.gotoLine = gotoLine;
+        this.gotoColumn = gotoColumn;
+        this.handleAbsolutePath(query, handleResults);
+        return;
+      }
+
       // Parse line:col on Files and Everywhere tabs
       if (this.activeTab === SearchMode.File || this.activeTab === SearchMode.Everywhere) {
         const { query, gotoLine, gotoColumn } = parseLineCol(rawValue);
@@ -446,6 +455,43 @@ export class SearchModal implements vscode.Disposable {
     vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', true);
     vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', this.activeTab === SearchMode.File || this.activeTab === SearchMode.Everywhere);
     qp.show();
+  }
+
+  // --- Absolute path handling ---
+
+  private async handleAbsolutePath(
+    path: string,
+    onResults: (results: SearchResult[]) => void,
+  ): Promise<void> {
+    const qp = this.activeQuickPick;
+    if (!qp) return;
+    qp.busy = true;
+
+    const uri = vscode.Uri.file(path);
+    try {
+      const stat = await vscode.workspace.fs.stat(uri);
+      const isDir = (stat.type & vscode.FileType.Directory) !== 0;
+      const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
+
+      onResults([{
+        label: name,
+        description: path,
+        mode: isDir ? SearchMode.Folder : SearchMode.File,
+        uri,
+        iconPath: isDir ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File,
+        alwaysShow: true,
+        isFolder: isDir,
+        belongsToSection: isDir ? ResultSection.Folders : ResultSection.Files,
+      }]);
+    } catch {
+      onResults([{
+        label: '$(warning) Path not found',
+        description: path,
+        mode: this.activeTab,
+        alwaysShow: true,
+      }]);
+    }
+    qp.busy = false;
   }
 
   // --- Tab switching ---

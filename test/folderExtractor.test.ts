@@ -1,6 +1,6 @@
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, test, expect, vi } from 'vitest';
 
-mock.module('vscode', () => import('./__mocks__/vscode'));
+vi.mock('vscode', () => import('./__mocks__/vscode'));
 
 const { extractFolders } = await import('../src/providers/folderExtractor');
 const { SearchMode, ResultSection } = await import('../src/providers/types');

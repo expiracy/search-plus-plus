@@ -1,8 +1,8 @@
 {
   "name": "search-plus-plus",
   "displayName": "search++",
-  "description": "Fast unified search for files, folders, text, and symbols. Fuzzy matching, regex, exclude gitignored files, double-shift to open, and tabbed navigation inspired by JetBrains IDEs",
-  "version": "1.0.2",
+  "description": "Blazingly fast unified search for files, folders, text, symbols and commands. Supports fuzzy matching, regex, match case, match word, exclude gitignored files. Double-shift to open, tab and shift-tab to cycle between pages, arrow keys to navigate search results. Inspired by JetBrains IDEs",
+  "version": "1.0.3",
   "publisher": "expiracy",
   "repository": {
     "type": "git",
@@ -187,22 +187,22 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "bun run build",
-    "build": "bun esbuild.config.mjs --production",
-    "watch": "bun esbuild.config.mjs --watch",
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.config.mjs --production",
+    "watch": "node esbuild.config.mjs --watch",
     "lint": "eslint src/",
-    "test": "bun test",
+    "test": "vitest run",
     "package": "npx @vscode/vsce package"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.11",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.96.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "esbuild": "^0.21.0",
     "eslint": "^8.57.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^3.1.1"
   },
   "dependencies": {
     "@vscode/ripgrep": "^1.15.9",

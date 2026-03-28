@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeAll } from 'bun:test';
+import { describe, test, expect, vi, beforeAll } from 'vitest';
 import path from 'path';
 
 // Generate a large-scale mock project with:
@@ -7,7 +7,7 @@ import path from 'path';
 // - 60 nested .gitignore files
 // - Multiple file types and nesting depths
 
-const SCALE_ROOT = path.resolve(import.meta.dir, 'fixtures/scale-project').replace(/\\/g, '/');
+const SCALE_ROOT = path.resolve(__dirname, 'fixtures/scale-project').replace(/\\/g, '/');
 
 // --- Generate file lists ---
 
@@ -106,8 +106,8 @@ const FILTERED_FILES = [
 
 // --- Mock vscode ---
 
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(SCALE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'scale-project', index: 0 }];

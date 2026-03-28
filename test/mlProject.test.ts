@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeAll } from 'bun:test';
+import { describe, test, expect, vi, beforeAll } from 'vitest';
 import path from 'path';
 
 // Simulates an ML project (like ppg-sleep-stage-classifier) with:
@@ -6,7 +6,7 @@ import path from 'path';
 // - Large output/checkpoint files in gitignored directories
 // - Regression test: gitignored dirs like outputs/ must be discoverable in "everything mode"
 
-const FIXTURE_ROOT = path.resolve(import.meta.dir, 'fixtures/ml-project').replace(/\\/g, '/');
+const FIXTURE_ROOT = path.resolve(__dirname, 'fixtures/ml-project').replace(/\\/g, '/');
 
 // --- .gitignore file definitions ---
 
@@ -99,8 +99,8 @@ const ALL_FILES = [
 
 // --- Mock vscode ---
 
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(FIXTURE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'ml-project', index: 0 }];
