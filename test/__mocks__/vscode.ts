@@ -116,6 +116,98 @@ export const workspace = {
     return p.replace(/\\/g, '/');
   },
   findFiles: async () => [] as Uri[],
+  findTextInFiles: async (
+    query: { pattern: string; isRegExp?: boolean; isCaseSensitive?: boolean; isWordMatch?: boolean },
+    optionsOrCallback: any,
+    callbackOrToken?: any,
+    maybeToken?: any,
+  ): Promise<{ limitHit: boolean }> => {
+    // Handle overloaded signature
+    let options: any;
+    let callback: (result: any) => void;
+    let token: any;
+    if (typeof optionsOrCallback === 'function') {
+      options = {};
+      callback = optionsOrCallback;
+      token = callbackOrToken;
+    } else {
+      options = optionsOrCallback || {};
+      callback = callbackOrToken;
+      token = maybeToken;
+    }
+
+    // Use ripgrep for realistic test search
+    const { spawn } = require('child_process');
+    const rgPath = require('@vscode/ripgrep').rgPath;
+
+    const args: string[] = ['--json', '--max-filesize', '1M'];
+
+    if (query.isCaseSensitive) {
+      args.push('--case-sensitive');
+    } else {
+      args.push('--ignore-case');
+    }
+
+    if (query.isWordMatch) args.push('--word-regexp');
+    if (!query.isRegExp && !query.isWordMatch) args.push('--fixed-strings');
+    if (options.useIgnoreFiles === false) args.push('--no-ignore');
+
+    args.push('--', query.pattern);
+    for (const folder of (workspace.workspaceFolders || [])) {
+      args.push(folder.uri.fsPath);
+    }
+
+    const maxResults = options.maxResults || 200;
+
+    return new Promise((resolve) => {
+      const rg = spawn(rgPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      let buffer = '';
+      let resultCount = 0;
+
+      rg.stdout.on('data', (data: Buffer) => {
+        buffer += data.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          if (token?.isCancellationRequested) { rg.kill(); return; }
+          if (resultCount >= maxResults) { rg.kill(); return; }
+
+          try {
+            const parsed = JSON.parse(line);
+            if (parsed.type === 'match') {
+              const filePath = parsed.data.path.text;
+              const lineNumber = parsed.data.line_number - 1;
+              const lineText = parsed.data.lines.text.trimEnd();
+              const submatches = parsed.data.submatches || [];
+
+              const ranges = submatches.map((sm: any) =>
+                new Range(new Position(lineNumber, sm.start), new Position(lineNumber, sm.end)),
+              );
+              const previewRanges = submatches.map((sm: any) =>
+                new Range(new Position(0, sm.start), new Position(0, sm.end)),
+              );
+
+              callback({
+                uri: Uri.file(filePath),
+                ranges: ranges.length === 1 ? ranges[0] : ranges,
+                preview: {
+                  text: lineText,
+                  matches: previewRanges.length === 1 ? previewRanges[0] : previewRanges,
+                },
+              });
+
+              resultCount += submatches.length;
+            }
+          } catch { /* skip malformed lines */ }
+        }
+      });
+
+      rg.on('close', () => resolve({ limitHit: resultCount >= maxResults }));
+      rg.on('error', () => resolve({ limitHit: false }));
+    });
+  },
   fs: {
     readFile: async () => new Uint8Array(),
     stat: async () => ({}),

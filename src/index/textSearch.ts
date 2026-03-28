@@ -25,10 +25,20 @@ interface RgMatch {
   };
 }
 
+interface NotebookCell {
+  cell_type: string;
+  source: string | string[];
+}
+
+interface NotebookJson {
+  cells?: NotebookCell[];
+}
+
 export interface TextSearchOptions {
   caseSensitive: boolean;
   useRegex: boolean;
   excludeGitIgnored: boolean;
+  matchWholeWord: boolean;
   maxResults: number;
 }
 
@@ -44,9 +54,14 @@ export interface TextMatch {
 export class TextSearch implements vscode.Disposable {
   private activeProcess: ChildProcess | null = null;
   private rgPath: string;
+  private excludePatterns: string[] = [];
 
   constructor(rgPath?: string) {
     this.rgPath = rgPath ?? defaultRgPath;
+  }
+
+  setExcludePatterns(patterns: string[]): void {
+    this.excludePatterns = patterns;
   }
 
   search(
@@ -66,7 +81,6 @@ export class TextSearch implements vscode.Disposable {
     const args: string[] = [
       '--json',
       '--max-count', '5',
-      '--max-filesize', '1M',
     ];
 
     if (!options.caseSensitive) {
@@ -75,7 +89,9 @@ export class TextSearch implements vscode.Disposable {
       args.push('--case-sensitive');
     }
 
-    if (!options.useRegex) {
+    if (options.matchWholeWord) {
+      args.push('--word-regexp');
+    } else if (!options.useRegex) {
       args.push('--fixed-strings');
     }
 
@@ -83,6 +99,11 @@ export class TextSearch implements vscode.Disposable {
       // ripgrep respects .gitignore by default
     } else {
       args.push('--no-ignore');
+    }
+
+    // Custom exclude patterns from extension settings
+    for (const pattern of this.excludePatterns) {
+      args.push('--glob', `!${pattern}`);
     }
 
     args.push('--', query);
@@ -96,6 +117,7 @@ export class TextSearch implements vscode.Disposable {
     let buffer = '';
     let flushTimer: ReturnType<typeof setTimeout> | undefined;
     let resultCount = 0;
+    let cancelled = false;
 
     const rg = spawn(this.rgPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -154,10 +176,15 @@ export class TextSearch implements vscode.Disposable {
 
     rg.on('close', () => {
       if (flushTimer) clearTimeout(flushTimer);
-      flush();
-      if (this.activeProcess === rg) {
-        this.activeProcess = null;
-      }
+      if (cancelled) return;
+
+      // Search notebooks after ripgrep finishes, then deliver all results
+      this.searchNotebooks(query, options, results).then(() => {
+        flush();
+        if (this.activeProcess === rg) {
+          this.activeProcess = null;
+        }
+      });
     });
 
     rg.on('error', () => {
@@ -168,6 +195,7 @@ export class TextSearch implements vscode.Disposable {
 
     return {
       dispose: () => {
+        cancelled = true;
         if (flushTimer) clearTimeout(flushTimer);
         rg.kill();
         if (this.activeProcess === rg) {
@@ -175,6 +203,82 @@ export class TextSearch implements vscode.Disposable {
         }
       },
     };
+  }
+
+  private async searchNotebooks(
+    query: string,
+    options: TextSearchOptions,
+    results: TextMatch[],
+  ): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders) return;
+
+    try {
+      const notebookUris = await vscode.workspace.findFiles(
+        '**/*.ipynb',
+        options.excludeGitIgnored ? undefined : undefined,
+        100,
+      );
+
+      const isCaseSensitive = options.caseSensitive || query !== query.toLowerCase();
+      let pattern: RegExp;
+      try {
+        const flags = isCaseSensitive ? 'g' : 'gi';
+        if (options.useRegex) {
+          pattern = new RegExp(options.matchWholeWord ? `\\b${query}\\b` : query, flags);
+        } else {
+          const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          pattern = new RegExp(options.matchWholeWord ? `\\b${escaped}\\b` : escaped, flags);
+        }
+      } catch {
+        return; // Invalid regex
+      }
+
+      for (const uri of notebookUris) {
+        if (results.length >= options.maxResults) break;
+
+        try {
+          const raw = await vscode.workspace.fs.readFile(uri);
+          const notebook: NotebookJson = JSON.parse(new TextDecoder().decode(raw));
+          if (!notebook.cells) continue;
+
+          const filePath = uri.fsPath;
+          const relativePath = vscode.workspace.asRelativePath(uri);
+          let lineOffset = 0;
+
+          for (const cell of notebook.cells) {
+            if (results.length >= options.maxResults) break;
+
+            const source = Array.isArray(cell.source) ? cell.source.join('') : cell.source;
+            const cellLines = source.split('\n');
+
+            for (let i = 0; i < cellLines.length; i++) {
+              if (results.length >= options.maxResults) break;
+
+              const line = cellLines[i];
+              pattern.lastIndex = 0;
+              const match = pattern.exec(line);
+              if (match) {
+                results.push({
+                  filePath,
+                  relativePath,
+                  lineNumber: lineOffset + i,
+                  column: match.index,
+                  lineText: line.trim(),
+                  matchText: match[0],
+                });
+              }
+            }
+
+            lineOffset += cellLines.length;
+          }
+        } catch {
+          // Skip unreadable/malformed notebooks
+        }
+      }
+    } catch {
+      // findFiles failed, skip notebook search
+    }
   }
 
   private killActive(): void {

@@ -72,6 +72,13 @@ export class SymbolProvider implements SearchProvider {
         };
       });
 
+      // Always apply custom exclude patterns
+      results = results.filter((r) => {
+        if (!r.uri) return true;
+        const rel = vscode.workspace.asRelativePath(r.uri);
+        return !this.gitIgnore.isCustomExcluded(rel);
+      });
+
       if (options.excludeGitIgnored) {
         results = results.filter((r) => {
           if (!r.uri) return true;

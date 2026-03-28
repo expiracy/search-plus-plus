@@ -59,6 +59,7 @@ export class IndexManager implements vscode.Disposable {
 
     try {
       await this.gitIgnore.load();
+      this.textSearch.setExcludePatterns(this.gitIgnore.getCustomExcludePatterns());
       await this.fileIndex.build();
       this.updateStatusBar('ready');
     } catch (err) {
@@ -75,6 +76,7 @@ export class IndexManager implements vscode.Disposable {
     this.updateStatusBar('building');
     try {
       await this.gitIgnore.load();
+      this.textSearch.setExcludePatterns(this.gitIgnore.getCustomExcludePatterns());
       await this.fileIndex.build();
       this.updateStatusBar('ready');
     } catch (err) {

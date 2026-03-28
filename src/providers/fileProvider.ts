@@ -19,10 +19,12 @@ export class FileProvider implements SearchProvider {
     } else {
       const config = vscode.workspace.getConfiguration('searchPlusPlus');
       const maxResults = config.get<number>('maxResults', 200);
-      const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored);
 
-      if (!cancelled) {
-        const fileResults: SearchResult[] = matches.slice(0, maxResults).map((match) => ({
+      let fileResults: SearchResult[];
+
+      if (options.fuzzySearch) {
+        const matches = this.fileIndex.find(query, maxResults, options.excludeGitIgnored);
+        fileResults = matches.map((match) => ({
           label: match.item.relativePath.split('/').pop() || match.item.relativePath,
           description: match.item.relativePath,
           mode: SearchMode.File,
@@ -31,7 +33,23 @@ export class FileProvider implements SearchProvider {
           alwaysShow: true,
           belongsToSection: ResultSection.Files,
         }));
+      } else {
+        const entries = this.fileIndex.filter(
+          query, maxResults, options.excludeGitIgnored,
+          options.caseSensitive, options.matchWholeWord,
+        );
+        fileResults = entries.map((entry) => ({
+          label: entry.relativePath.split('/').pop() || entry.relativePath,
+          description: entry.relativePath,
+          mode: SearchMode.File,
+          uri: entry.uri,
+          iconPath: vscode.ThemeIcon.File,
+          alwaysShow: true,
+          belongsToSection: ResultSection.Files,
+        }));
+      }
 
+      if (!cancelled) {
         onResults(fileResults);
       }
     }

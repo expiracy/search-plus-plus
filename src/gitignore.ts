@@ -3,6 +3,7 @@ import ignore, { Ignore } from 'ignore';
 
 export class GitIgnoreManager implements vscode.Disposable {
   private ig: Ignore = ignore();
+  private customIg: Ignore = ignore();
   private directoryExcludes: string[] = [];
   private watchers: vscode.Disposable[] = [];
   private _onDidChange = new vscode.EventEmitter<void>();
@@ -10,6 +11,7 @@ export class GitIgnoreManager implements vscode.Disposable {
 
   async load(): Promise<void> {
     this.ig = ignore();
+    this.customIg = ignore();
     this.directoryExcludes = ['**/node_modules/**', '**/.git/**'];
 
     const folders = vscode.workspace.workspaceFolders;
@@ -52,20 +54,6 @@ export class GitIgnoreManager implements vscode.Disposable {
           }));
         }
 
-        // Extract simple directory patterns for the exclude glob
-        for (const line of lines) {
-          if (line.startsWith('!') || line.includes('[')) continue;
-          if (line.endsWith('/')) {
-            const dirName = line.slice(0, -1);
-            if (/^[a-zA-Z0-9._-]+(\/[a-zA-Z0-9._-]+)*$/.test(dirName)) {
-              if (isRoot) {
-                this.directoryExcludes.push(`**/${dirName}/**`);
-              } else {
-                this.directoryExcludes.push(`**/${dir}/${dirName}/**`);
-              }
-            }
-          }
-        }
       } catch {
         // File may have been deleted between findFiles and readFile
       }
@@ -77,6 +65,18 @@ export class GitIgnoreManager implements vscode.Disposable {
     for (const [pattern, enabled] of Object.entries({ ...filesExclude, ...searchExclude })) {
       if (enabled) {
         this.ig.add(pattern);
+      }
+    }
+
+    // Custom exclude patterns from searchPlusPlus.excludePaths
+    const customExcludes = vscode.workspace
+      .getConfiguration('searchPlusPlus')
+      .get<string[]>('excludePaths', []);
+    for (const pattern of customExcludes) {
+      this.ig.add(pattern);
+      this.customIg.add(pattern);
+      if (pattern.includes('/**') || pattern.endsWith('/')) {
+        this.directoryExcludes.push(pattern);
       }
     }
 
@@ -98,7 +98,8 @@ export class GitIgnoreManager implements vscode.Disposable {
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (
           e.affectsConfiguration('files.exclude') ||
-          e.affectsConfiguration('search.exclude')
+          e.affectsConfiguration('search.exclude') ||
+          e.affectsConfiguration('searchPlusPlus.excludePaths')
         ) {
           this.reload();
         }
@@ -117,6 +118,20 @@ export class GitIgnoreManager implements vscode.Disposable {
     } catch {
       return false;
     }
+  }
+
+  isCustomExcluded(relativePath: string): boolean {
+    try {
+      return this.customIg.ignores(relativePath.replace(/\\/g, '/'));
+    } catch {
+      return false;
+    }
+  }
+
+  getCustomExcludePatterns(): string[] {
+    return vscode.workspace
+      .getConfiguration('searchPlusPlus')
+      .get<string[]>('excludePaths', []);
   }
 
   /**

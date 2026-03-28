@@ -32,7 +32,10 @@ mock.module('vscode', () => {
 
   base.workspace.findFiles = async (pattern: string) => {
     if (pattern === '**/.gitignore') {
-      return [base.Uri.file(`${FIXTURE_ROOT}/.gitignore`)];
+      return [
+        base.Uri.file(`${FIXTURE_ROOT}/.gitignore`),
+        base.Uri.file(`${FIXTURE_ROOT}/src/.gitignore`),
+      ];
     }
     return [];
   };
@@ -97,11 +100,18 @@ describe('GitIgnoreManager', () => {
     expect(manager.isIgnored('docs/README.md')).toBe(false);
   });
 
-  test('getExcludeGlob includes gitignore directory patterns', () => {
+  test('getExcludeGlob only includes core excludes, not gitignore-derived patterns', () => {
     const glob = manager.getExcludeGlob()!;
     expect(glob).toContain('**/node_modules/**');
     expect(glob).toContain('**/.git/**');
-    expect(glob).toContain('**/build/**');
+    // Gitignore patterns like build/ should NOT be in the exclude glob —
+    // they're handled by isIgnored() post-filtering so the toggle works
+    expect(glob).not.toContain('**/build/**');
+  });
+
+  test('isIgnored still catches gitignored directory contents via post-filter', () => {
+    expect(manager.isIgnored('build/output.js')).toBe(true);
+    expect(manager.isIgnored('build/nested/deep.js')).toBe(true);
   });
 
   test('isIgnored handles backslashes (Windows paths)', () => {
@@ -112,5 +122,31 @@ describe('GitIgnoreManager', () => {
   test('isIgnored returns false for non-matching paths', () => {
     expect(manager.isIgnored('package.json')).toBe(false);
     expect(manager.isIgnored('.gitignore')).toBe(false);
+  });
+
+  // --- nested gitignore ---
+
+  test('nested .gitignore: ignores generated/ directory under src/', () => {
+    expect(manager.isIgnored('src/generated/output.gen.ts')).toBe(true);
+    expect(manager.isIgnored('src/generated/manual.ts')).toBe(true);
+  });
+
+  test('nested .gitignore: does not ignore other files under src/', () => {
+    expect(manager.isIgnored('src/index.ts')).toBe(false);
+    expect(manager.isIgnored('src/deep/nested/file.ts')).toBe(false);
+  });
+
+  test('nested .gitignore: pattern does not apply outside its directory', () => {
+    // generated/ is in src/.gitignore, so it should not apply at root level
+    expect(manager.isIgnored('generated/something.ts')).toBe(false);
+  });
+
+  // --- binary / non-text files are not gitignored ---
+
+  test('does not ignore binary files (images, fonts, pdfs)', () => {
+    expect(manager.isIgnored('assets/logo.png')).toBe(false);
+    expect(manager.isIgnored('assets/icon.ico')).toBe(false);
+    expect(manager.isIgnored('assets/font.woff2')).toBe(false);
+    expect(manager.isIgnored('docs/guide.pdf')).toBe(false);
   });
 });

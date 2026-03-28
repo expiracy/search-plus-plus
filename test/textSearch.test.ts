@@ -22,7 +22,6 @@ mock.module('vscode', () => {
   return base;
 });
 
-const rgPath = require('@vscode/ripgrep').rgPath;
 const { TextSearch } = await import('../src/index/textSearch');
 
 /** Helper: run a search and collect all results into a promise */
@@ -37,7 +36,7 @@ function searchAsync(
       lastResults = results;
     });
 
-    // Ripgrep finishes quickly on small fixtures. Wait for close.
+    // findTextInFiles resolves quickly on small fixtures. Wait for completion.
     setTimeout(() => {
       disposable.dispose();
       resolve(lastResults);
@@ -49,6 +48,7 @@ const defaultOpts = {
   caseSensitive: false,
   useRegex: false,
   excludeGitIgnored: true,
+  matchWholeWord: false,
   maxResults: 200,
 };
 
@@ -56,7 +56,7 @@ describe('TextSearch', () => {
   let ts: InstanceType<typeof TextSearch>;
 
   beforeEach(() => {
-    ts = new TextSearch(rgPath);
+    ts = new TextSearch();
   });
 
   afterEach(() => {
@@ -146,5 +146,31 @@ describe('TextSearch', () => {
   test('maxResults limits result count', async () => {
     const results = await searchAsync(ts, 'export', { ...defaultOpts, maxResults: 2 });
     expect(results.length).toBeLessThanOrEqual(2);
+  });
+
+  // --- matchWholeWord ---
+
+  test('matchWholeWord=true: "hello" matches (it is a whole word in the source)', async () => {
+    const results = await searchAsync(ts, 'hello', { ...defaultOpts, matchWholeWord: true });
+    const match = results.find((r: any) => r.relativePath.includes('src/index.ts'));
+    expect(match).toBeDefined();
+  });
+
+  test('matchWholeWord=true: "hell" does NOT match (not a whole word)', async () => {
+    const results = await searchAsync(ts, 'hell', { ...defaultOpts, matchWholeWord: true });
+    const match = results.find((r: any) => r.relativePath.includes('src/index.ts'));
+    expect(match).toBeUndefined();
+  });
+
+  test('matchWholeWord=false: "hell" DOES match as substring', async () => {
+    const results = await searchAsync(ts, 'hell', { ...defaultOpts, matchWholeWord: false });
+    const match = results.find((r: any) => r.relativePath.includes('src/index.ts'));
+    expect(match).toBeDefined();
+  });
+
+  test('matchWholeWord=true: "add" matches function name in utils.ts', async () => {
+    const results = await searchAsync(ts, 'add', { ...defaultOpts, matchWholeWord: true });
+    const match = results.find((r: any) => r.relativePath.includes('src/utils.ts'));
+    expect(match).toBeDefined();
   });
 });

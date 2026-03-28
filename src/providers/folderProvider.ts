@@ -20,9 +20,18 @@ export class FolderProvider implements SearchProvider {
     } else {
       const config = vscode.workspace.getConfiguration('searchPlusPlus');
       const maxResults = config.get<number>('maxResults', 200);
-      const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored);
 
-      const entries = matches.map((m) => m.item);
+      let entries;
+      if (options.fuzzySearch) {
+        const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored);
+        entries = matches.map((m) => m.item);
+      } else {
+        entries = this.fileIndex.filter(
+          query, 1000, options.excludeGitIgnored,
+          options.caseSensitive, options.matchWholeWord,
+        );
+      }
+
       const folderResults = extractFolders(entries, query, SearchMode.Folder);
 
       if (!cancelled) {
@@ -39,8 +48,10 @@ export class FolderProvider implements SearchProvider {
     isCancelled: () => boolean,
   ): Promise<void> {
     try {
-      const pattern = `**/*${query}*`;
-      const uris = await vscode.workspace.findFiles(pattern, undefined, 50);
+      // Get a broad sample of files and let extractFolders handle folder-path matching.
+      // Using a file-name pattern like `**/*${query}*` misses folders where the query
+      // appears only in the directory path, not the file name.
+      const uris = await vscode.workspace.findFiles('**/*', undefined, 5000);
 
       if (isCancelled()) return;
 

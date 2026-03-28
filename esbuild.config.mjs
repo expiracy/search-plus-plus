@@ -8,7 +8,7 @@ const buildOptions = {
   entryPoints: ['src/extension.ts'],
   bundle: true,
   outfile: 'dist/extension.js',
-  external: ['vscode', '@vscode/ripgrep'],
+  external: ['vscode'],
   format: 'cjs',
   platform: 'node',
   target: 'node18',

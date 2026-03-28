@@ -207,22 +207,21 @@ describe('Scalability: large repo simulation', () => {
       expect(gitIgnore.isIgnored('lib/shared/file_21.ts')).toBe(false);
     });
 
-    test('getExcludeGlob includes directory patterns from all gitignore files', () => {
+    test('getExcludeGlob only includes core excludes, not gitignore-derived patterns', () => {
       const glob = gitIgnore.getExcludeGlob()!;
-      // Root patterns
       expect(glob).toContain('**/node_modules/**');
       expect(glob).toContain('**/.git/**');
-      expect(glob).toContain('**/build/**');
-      expect(glob).toContain('**/dist/**');
-      expect(glob).toContain('**/.cache/**');
-      expect(glob).toContain('**/coverage/**');
-      expect(glob).toContain('**/.next/**');
-      expect(glob).toContain('**/tmp/**');
-      expect(glob).toContain('**/logs/**');
-      // Nested patterns
-      expect(glob).toContain('**/packages/app/dist/**');
-      expect(glob).toContain('**/packages/cli/dist/**');
-      expect(glob).toContain('**/packages/shared/dist/**');
+      // Gitignore-derived patterns handled by isIgnored() post-filter, not exclude glob
+      expect(glob).not.toContain('**/build/**');
+      expect(glob).not.toContain('**/dist/**');
+      expect(glob).not.toContain('**/.cache/**');
+    });
+
+    test('gitignore directory patterns still caught by isIgnored post-filter', () => {
+      expect(gitIgnore.isIgnored('build/output.js')).toBe(true);
+      expect(gitIgnore.isIgnored('dist/bundle.js')).toBe(true);
+      expect(gitIgnore.isIgnored('.cache/data.bin')).toBe(true);
+      expect(gitIgnore.isIgnored('packages/app/dist/index.js')).toBe(true);
     });
   });
 

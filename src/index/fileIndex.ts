@@ -81,7 +81,7 @@ export class FileIndex implements vscode.Disposable {
     this.entries = uris.map((uri) => ({
       relativePath: vscode.workspace.asRelativePath(uri),
       uri,
-    }));
+    })).filter((e) => !this.gitIgnore.isCustomExcluded(e.relativePath));
 
     this.filteredEntries = this.entries.filter(
       (e) => !this.gitIgnore.isIgnored(e.relativePath),
@@ -95,6 +95,35 @@ export class FileIndex implements vscode.Disposable {
     const fzf = excludeGitIgnored ? this.fzfInstance : this.getUnfilteredFzf();
     if (!fzf) return [];
     return fzf.find(query).slice(0, limit);
+  }
+
+  filter(
+    query: string,
+    limit = 200,
+    excludeGitIgnored = true,
+    caseSensitive = false,
+    matchWholeWord = false,
+  ): FileEntry[] {
+    const entries = excludeGitIgnored ? this.filteredEntries : this.entries;
+    const q = caseSensitive ? query : query.toLowerCase();
+
+    const matches: FileEntry[] = [];
+    for (const entry of entries) {
+      const path = caseSensitive ? entry.relativePath : entry.relativePath.toLowerCase();
+
+      if (matchWholeWord) {
+        // Split path on common separators and check for exact segment match
+        const segments = path.split(/[/\\\-_.]/);
+        if (!segments.some((seg) => seg === q)) continue;
+      } else {
+        if (!path.includes(q)) continue;
+      }
+
+      matches.push(entry);
+      if (matches.length >= limit) break;
+    }
+
+    return matches;
   }
 
   private rebuildFzf(): void {
@@ -178,8 +207,11 @@ export class FileIndex implements vscode.Disposable {
     }
 
     if (this.pendingAdds.length > 0) {
-      this.entries.push(...this.pendingAdds);
-      const nonIgnored = this.pendingAdds.filter(
+      const customFiltered = this.pendingAdds.filter(
+        (e) => !this.gitIgnore.isCustomExcluded(e.relativePath),
+      );
+      this.entries.push(...customFiltered);
+      const nonIgnored = customFiltered.filter(
         (e) => !this.gitIgnore.isIgnored(e.relativePath),
       );
       this.filteredEntries.push(...nonIgnored);

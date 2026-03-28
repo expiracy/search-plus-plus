@@ -29,6 +29,8 @@ export interface SearchOptions {
   excludeGitIgnored: boolean;
   caseSensitive: boolean;
   useRegex: boolean;
+  fuzzySearch: boolean;
+  matchWholeWord: boolean;
 }
 
 export interface SearchProvider {

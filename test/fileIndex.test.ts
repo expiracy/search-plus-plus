@@ -8,11 +8,18 @@ const ALL_FILES = [
   'src/index.ts',
   'src/utils.ts',
   'src/deep/nested/file.ts',
+  'src/generated/manual.ts',
+  'src/generated/output.gen.ts',
   'lib/helper.js',
   'build/output.js',
   'docs/README.md',
+  'docs/guide.pdf',
+  'assets/logo.png',
+  'assets/icon.ico',
+  'assets/font.woff2',
   'data.log',
   '.gitignore',
+  'src/.gitignore',
 ];
 
 // Configure vscode mock
@@ -49,10 +56,13 @@ const mockGitIgnore = {
     return (
       p.startsWith('node_modules/') ||
       p.startsWith('build/') ||
-      p.endsWith('.log')
+      p.endsWith('.log') ||
+      p.startsWith('src/generated/')
     );
   },
+  isCustomExcluded: () => false,
   getExcludeGlob: () => '{**/node_modules/**,**/.git/**}',
+  getCustomExcludePatterns: () => [],
   onDidChange: () => ({ dispose() {} }),
   dispose() {},
 } as any;
@@ -70,8 +80,8 @@ describe('FileIndex', () => {
   });
 
   test('fileCount matches non-ignored fixture files', () => {
-    // 8 total - 2 ignored (build/output.js, data.log) = 6
-    expect(index.fileCount).toBe(ALL_FILES.length - 2);
+    // 15 total - 4 ignored (build/output.js, data.log, src/generated/output.gen.ts, src/generated/manual.ts) = 11
+    expect(index.fileCount).toBe(ALL_FILES.length - 4);
   });
 
   test('find("index") matches src/index.ts', () => {
@@ -189,5 +199,148 @@ describe('FileIndex', () => {
     const results = index.find('', 1000, true);
     const paths = results.map((r) => r.item.relativePath);
     expect(paths.every((p) => !p.endsWith('.log'))).toBe(true);
+  });
+
+  // --- filter() substring search ---
+
+  test('filter("index") matches src/index.ts', () => {
+    const results = index.filter('index');
+    const match = results.find((r) => r.relativePath === 'src/index.ts');
+    expect(match).toBeDefined();
+  });
+
+  test('filter("utils") matches src/utils.ts', () => {
+    const results = index.filter('utils');
+    const match = results.find((r) => r.relativePath === 'src/utils.ts');
+    expect(match).toBeDefined();
+  });
+
+  test('filter does NOT fuzzy match: "idx" should not match src/index.ts', () => {
+    const results = index.filter('idx');
+    const match = results.find((r) => r.relativePath === 'src/index.ts');
+    expect(match).toBeUndefined();
+  });
+
+  test('filter is case-insensitive by default', () => {
+    const results = index.filter('INDEX');
+    const match = results.find((r) => r.relativePath === 'src/index.ts');
+    expect(match).toBeDefined();
+  });
+
+  test('filter with caseSensitive=true is case-sensitive', () => {
+    const results = index.filter('INDEX', 200, true, true);
+    const match = results.find((r) => r.relativePath === 'src/index.ts');
+    expect(match).toBeUndefined();
+  });
+
+  test('filter excludeGitIgnored=true filters out gitignored files', () => {
+    const results = index.filter('output', 200, true);
+    const match = results.find((r) => r.relativePath === 'build/output.js');
+    expect(match).toBeUndefined();
+  });
+
+  test('filter excludeGitIgnored=false includes gitignored files', () => {
+    const results = index.filter('output', 200, false);
+    const match = results.find((r) => r.relativePath === 'build/output.js');
+    expect(match).toBeDefined();
+  });
+
+  test('filter limit caps results', () => {
+    const results = index.filter('', 2);
+    expect(results.length).toBeLessThanOrEqual(2);
+  });
+
+  test('filter with no matches returns empty', () => {
+    const results = index.filter('xyzzy_nonexistent_12345');
+    expect(results).toHaveLength(0);
+  });
+
+  // --- filter() matchWholeWord ---
+
+  test('filter matchWholeWord=true: "src" matches paths with "src" as a segment', () => {
+    const results = index.filter('src', 200, true, false, true);
+    expect(results.length).toBeGreaterThan(0);
+    // All results should have "src" as a whole path segment
+    for (const r of results) {
+      const segments = r.relativePath.toLowerCase().split(/[/\\\-_.]/);
+      expect(segments).toContain('src');
+    }
+  });
+
+  test('filter matchWholeWord=true: "inde" does NOT match src/index.ts', () => {
+    // "inde" is a substring of "index" but not a whole word
+    const results = index.filter('inde', 200, true, false, true);
+    const match = results.find((r) => r.relativePath === 'src/index.ts');
+    expect(match).toBeUndefined();
+  });
+
+  test('filter matchWholeWord=true: "index" matches src/index.ts', () => {
+    const results = index.filter('index', 200, true, false, true);
+    const match = results.find((r) => r.relativePath === 'src/index.ts');
+    expect(match).toBeDefined();
+  });
+
+  test('filter matchWholeWord=false: "inde" DOES match src/index.ts', () => {
+    const results = index.filter('inde', 200, true, false, false);
+    const match = results.find((r) => r.relativePath === 'src/index.ts');
+    expect(match).toBeDefined();
+  });
+
+  // --- binary / non-text files in index ---
+
+  test('find("logo") matches assets/logo.png', () => {
+    const results = index.find('logo');
+    const match = results.find((r) => r.item.relativePath === 'assets/logo.png');
+    expect(match).toBeDefined();
+  });
+
+  test('find("icon") matches assets/icon.ico', () => {
+    const results = index.find('icon');
+    const match = results.find((r) => r.item.relativePath === 'assets/icon.ico');
+    expect(match).toBeDefined();
+  });
+
+  test('find("font") matches assets/font.woff2', () => {
+    const results = index.find('font');
+    const match = results.find((r) => r.item.relativePath === 'assets/font.woff2');
+    expect(match).toBeDefined();
+  });
+
+  test('find("guide") matches docs/guide.pdf', () => {
+    const results = index.find('guide');
+    const match = results.find((r) => r.item.relativePath === 'docs/guide.pdf');
+    expect(match).toBeDefined();
+  });
+
+  test('filter("png") matches assets/logo.png', () => {
+    const results = index.filter('png');
+    const match = results.find((r) => r.relativePath === 'assets/logo.png');
+    expect(match).toBeDefined();
+  });
+
+  test('filter("pdf") matches docs/guide.pdf', () => {
+    const results = index.filter('pdf');
+    const match = results.find((r) => r.relativePath === 'docs/guide.pdf');
+    expect(match).toBeDefined();
+  });
+
+  // --- nested gitignore ---
+
+  test('excludeGitIgnored=true filters out files in nested-gitignored directory', () => {
+    const results = index.find('output.gen', 200, true);
+    const match = results.find((r) => r.item.relativePath === 'src/generated/output.gen.ts');
+    expect(match).toBeUndefined();
+  });
+
+  test('excludeGitIgnored=true filters all files in nested-gitignored directory', () => {
+    const results = index.find('manual', 200, true);
+    const match = results.find((r) => r.item.relativePath === 'src/generated/manual.ts');
+    expect(match).toBeUndefined();
+  });
+
+  test('excludeGitIgnored=false includes files from nested-gitignored directory', () => {
+    const results = index.find('output.gen', 200, false);
+    const match = results.find((r) => r.item.relativePath === 'src/generated/output.gen.ts');
+    expect(match).toBeDefined();
   });
 });

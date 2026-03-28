@@ -28,6 +28,14 @@ export class SearchHistory {
     this.pruneStaleEntries(filtered);
   }
 
+  removeEntry(fsPath: string, lineNumber?: number): void {
+    const recent = this.getRecentEntries();
+    const filtered = recent.filter(
+      (e) => !(e.fsPath === fsPath && e.lineNumber === lineNumber),
+    );
+    this.state.update(RECENT_FILES_KEY, filtered);
+  }
+
   private async pruneStaleEntries(entries: RecentFileEntry[]): Promise<void> {
     const valid: RecentFileEntry[] = [];
     for (const entry of entries) {
