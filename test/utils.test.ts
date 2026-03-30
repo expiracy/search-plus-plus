@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import { debounce } from '../src/utils';
+import { debounce, getEnabledSections } from '../src/utils';
+import { ResultSection } from '../src/providers/types';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -54,5 +55,40 @@ describe('debounce', () => {
     fn('a', 42, true);
     await sleep(40);
     expect(receivedArgs).toEqual(['a', 42, true]);
+  });
+});
+
+describe('getEnabledSections', () => {
+  test('returns defaults for non-array input', () => {
+    expect(getEnabledSections(undefined)).toEqual([
+      ResultSection.Files, ResultSection.Folders, ResultSection.Text, ResultSection.Symbols, ResultSection.Commands,
+    ]);
+    expect(getEnabledSections(null)).toEqual([
+      ResultSection.Files, ResultSection.Folders, ResultSection.Text, ResultSection.Symbols, ResultSection.Commands,
+    ]);
+  });
+
+  test('preserves custom order', () => {
+    expect(getEnabledSections(['text', 'files'])).toEqual([
+      ResultSection.Text, ResultSection.Files,
+    ]);
+  });
+
+  test('filters invalid section names', () => {
+    expect(getEnabledSections(['files', 'invalid', 'text'])).toEqual([
+      ResultSection.Files, ResultSection.Text,
+    ]);
+  });
+
+  test('deduplicates keeping first occurrence', () => {
+    expect(getEnabledSections(['files', 'files'])).toEqual([ResultSection.Files]);
+  });
+
+  test('returns empty array for empty input', () => {
+    expect(getEnabledSections([])).toEqual([]);
+  });
+
+  test('skips non-string entries', () => {
+    expect(getEnabledSections([null, 123, 'commands'])).toEqual([ResultSection.Commands]);
   });
 });

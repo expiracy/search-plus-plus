@@ -13,6 +13,7 @@ export enum ResultSection {
   Folders = 'folders',
   Files = 'files',
   Text = 'text',
+  Symbols = 'symbols',
   Commands = 'commands',
 }
 
@@ -27,15 +28,28 @@ export interface SearchResult extends vscode.QuickPickItem {
   isFolder?: boolean;
   /** Command ID for executable command results */
   commandId?: string;
+  /** Number of additional results hidden behind a "see more" indicator */
+  moreCount?: number;
 }
 
 export interface SearchOptions {
   excludeGitIgnored: boolean;
+  excludeVscodeExcluded: boolean;
   caseSensitive: boolean;
   useRegex: boolean;
   fuzzySearch: boolean;
   matchWholeWord: boolean;
 }
+
+export const DEFAULT_EVERYWHERE_LIMIT = 20;
+
+export const DEFAULT_SECTIONS: ResultSection[] = [
+  ResultSection.Files,
+  ResultSection.Folders,
+  ResultSection.Text,
+  ResultSection.Symbols,
+  ResultSection.Commands,
+];
 
 export interface SearchProvider {
   readonly mode: SearchMode;

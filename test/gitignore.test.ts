@@ -73,71 +73,71 @@ describe('GitIgnoreManager', () => {
   });
 
   test('ignores node_modules paths', () => {
-    expect(manager.isIgnored('node_modules/foo/bar.js')).toBe(true);
-    expect(manager.isIgnored('node_modules/fake-dep/index.js')).toBe(true);
+    expect(manager.isGitIgnored('node_modules/foo/bar.js')).toBe(true);
+    expect(manager.isGitIgnored('node_modules/fake-dep/index.js')).toBe(true);
   });
 
   test('does not ignore source files', () => {
-    expect(manager.isIgnored('src/index.ts')).toBe(false);
-    expect(manager.isIgnored('src/utils.ts')).toBe(false);
-    expect(manager.isIgnored('src/deep/nested/file.ts')).toBe(false);
+    expect(manager.isGitIgnored('src/index.ts')).toBe(false);
+    expect(manager.isGitIgnored('src/utils.ts')).toBe(false);
+    expect(manager.isGitIgnored('src/deep/nested/file.ts')).toBe(false);
   });
 
   test('ignores .log files via glob pattern', () => {
-    expect(manager.isIgnored('data.log')).toBe(true);
-    expect(manager.isIgnored('error.log')).toBe(true);
+    expect(manager.isGitIgnored('data.log')).toBe(true);
+    expect(manager.isGitIgnored('error.log')).toBe(true);
   });
 
   test('ignores build directory', () => {
-    expect(manager.isIgnored('build/output.js')).toBe(true);
+    expect(manager.isGitIgnored('build/output.js')).toBe(true);
   });
 
   test('does not ignore lib directory', () => {
-    expect(manager.isIgnored('lib/helper.js')).toBe(false);
+    expect(manager.isGitIgnored('lib/helper.js')).toBe(false);
   });
 
   test('does not ignore docs', () => {
-    expect(manager.isIgnored('docs/README.md')).toBe(false);
+    expect(manager.isGitIgnored('docs/README.md')).toBe(false);
   });
 
-  test('isIgnored still catches gitignored directory contents via post-filter', () => {
-    expect(manager.isIgnored('build/output.js')).toBe(true);
-    expect(manager.isIgnored('build/nested/deep.js')).toBe(true);
+  test('isGitIgnored still catches gitignored directory contents via post-filter', () => {
+    expect(manager.isGitIgnored('build/output.js')).toBe(true);
+    expect(manager.isGitIgnored('build/nested/deep.js')).toBe(true);
   });
 
-  test('isIgnored handles backslashes (Windows paths)', () => {
-    expect(manager.isIgnored('node_modules\\foo\\bar.js')).toBe(true);
-    expect(manager.isIgnored('src\\index.ts')).toBe(false);
+  test('isGitIgnored handles backslashes (Windows paths)', () => {
+    expect(manager.isGitIgnored('node_modules\\foo\\bar.js')).toBe(true);
+    expect(manager.isGitIgnored('src\\index.ts')).toBe(false);
   });
 
-  test('isIgnored returns false for non-matching paths', () => {
-    expect(manager.isIgnored('package.json')).toBe(false);
-    expect(manager.isIgnored('.gitignore')).toBe(false);
+  test('isGitIgnored returns false for non-matching paths', () => {
+    expect(manager.isGitIgnored('package.json')).toBe(false);
+    expect(manager.isGitIgnored('.gitignore')).toBe(false);
   });
 
   // --- nested gitignore ---
 
   test('nested .gitignore: ignores generated/ directory under src/', () => {
-    expect(manager.isIgnored('src/generated/output.gen.ts')).toBe(true);
-    expect(manager.isIgnored('src/generated/manual.ts')).toBe(true);
+    expect(manager.isGitIgnored('src/generated/output.gen.ts')).toBe(true);
+    expect(manager.isGitIgnored('src/generated/manual.ts')).toBe(true);
   });
 
   test('nested .gitignore: does not ignore other files under src/', () => {
-    expect(manager.isIgnored('src/index.ts')).toBe(false);
-    expect(manager.isIgnored('src/deep/nested/file.ts')).toBe(false);
+    expect(manager.isGitIgnored('src/index.ts')).toBe(false);
+    expect(manager.isGitIgnored('src/deep/nested/file.ts')).toBe(false);
   });
 
   test('nested .gitignore: pattern does not apply outside its directory', () => {
     // generated/ is in src/.gitignore, so it should not apply at root level
-    expect(manager.isIgnored('generated/something.ts')).toBe(false);
+    expect(manager.isGitIgnored('generated/something.ts')).toBe(false);
   });
 
   // --- binary / non-text files are not gitignored ---
 
   test('does not ignore binary files (images, fonts, pdfs)', () => {
-    expect(manager.isIgnored('assets/logo.png')).toBe(false);
-    expect(manager.isIgnored('assets/icon.ico')).toBe(false);
-    expect(manager.isIgnored('assets/font.woff2')).toBe(false);
-    expect(manager.isIgnored('docs/guide.pdf')).toBe(false);
+    expect(manager.isGitIgnored('assets/logo.png')).toBe(false);
+    expect(manager.isGitIgnored('assets/icon.ico')).toBe(false);
+    expect(manager.isGitIgnored('assets/font.woff2')).toBe(false);
+    expect(manager.isGitIgnored('docs/guide.pdf')).toBe(false);
   });
 });

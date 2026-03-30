@@ -1,15 +1,11 @@
 import * as vscode from 'vscode';
-import { ResultSection, SearchMode, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { ResultSection, SearchMode, DEFAULT_EVERYWHERE_LIMIT, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { FileProvider } from './fileProvider';
 import { FolderProvider } from './folderProvider';
 import { TextProvider } from './textProvider';
 import { CommandProvider } from './commandProvider';
-import { debounce } from '../utils';
-
-const FOLDER_LIMIT = 10;
-const FILE_LIMIT = 20;
-const TEXT_LIMIT = 50;
-const COMMAND_LIMIT = 5;
+import { SymbolProvider } from './symbolProvider';
+import { debounce, getEnabledSections } from '../utils';
 
 export class EverywhereProvider implements SearchProvider {
   readonly mode = SearchMode.Everywhere;
@@ -18,6 +14,7 @@ export class EverywhereProvider implements SearchProvider {
     private fileProvider: FileProvider,
     private folderProvider: FolderProvider,
     private textProvider: TextProvider,
+    private symbolProvider: SymbolProvider,
     private commandProvider: CommandProvider,
   ) {}
 
@@ -28,118 +25,127 @@ export class EverywhereProvider implements SearchProvider {
   ): vscode.Disposable {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     const debounceMs = config.get<number>('debounceMs', 200);
-    let folderResults: SearchResult[] = [];
-    let fileResults: SearchResult[] = [];
-    let textResults: SearchResult[] = [];
-    let commandResults: SearchResult[] = [];
-    let textDelivered = false;
+    const sections = getEnabledSections(config.get('everywhere.sections'));
+    const limit = Math.max(1, Math.floor(config.get<number>('everywhere.resultLimit', DEFAULT_EVERYWHERE_LIMIT)));
+    const enabledSections = new Set(sections);
+
+    const resultStore: Record<ResultSection, SearchResult[]> = {
+      [ResultSection.Files]: [],
+      [ResultSection.Folders]: [],
+      [ResultSection.Text]: [],
+      [ResultSection.Symbols]: [],
+      [ResultSection.Commands]: [],
+    };
+
+    let textDelivered = !enabledSections.has(ResultSection.Text);
     const disposables: vscode.Disposable[] = [];
     let textSearchDisposable: vscode.Disposable | undefined;
+    let symbolSearchDisposable: vscode.Disposable | undefined;
     let commandSearchDisposable: vscode.Disposable | undefined;
 
-    const buildMergedResults = () => {
-      const fileSlice = fileResults.slice(0, FILE_LIMIT);
-      const folderSlice = folderResults.slice(0, FOLDER_LIMIT);
-      const textSlice = textResults.slice(0, TEXT_LIMIT).map((r) => ({
-        ...r,
-        belongsToSection: ResultSection.Text,
-      }));
-      const commandSlice = commandResults.slice(0, COMMAND_LIMIT).map((r) => ({
-        ...r,
-        belongsToSection: ResultSection.Commands,
-      }));
+    const sectionMeta: Record<ResultSection, { searchMode: SearchMode; tabLabel: string }> = {
+      [ResultSection.Files]: { searchMode: SearchMode.File, tabLabel: 'Files' },
+      [ResultSection.Folders]: { searchMode: SearchMode.Folder, tabLabel: 'Folders' },
+      [ResultSection.Text]: { searchMode: SearchMode.Text, tabLabel: 'Text' },
+      [ResultSection.Symbols]: { searchMode: SearchMode.Symbol, tabLabel: 'Symbols' },
+      [ResultSection.Commands]: { searchMode: SearchMode.Command, tabLabel: 'Commands' },
+    };
 
-      // Build merged results with truncation indicators inline after each section
+    const buildMergedResults = () => {
       const merged: SearchResult[] = [];
 
-      merged.push(...fileSlice);
-      if (fileResults.length > FILE_LIMIT) {
-        merged.push({
-          label: `$(info) ${fileResults.length - FILE_LIMIT} more file results`,
-          description: 'Switch to Files tab to see all',
-          mode: SearchMode.File,
-          belongsToSection: ResultSection.Files,
-          alwaysShow: true,
-        });
+      for (const section of sections) {
+        const results = resultStore[section];
+        const { searchMode, tabLabel } = sectionMeta[section];
+        const slice = results.slice(0, limit).map(r => ({
+          ...r,
+          belongsToSection: section,
+        }));
+
+        merged.push(...slice);
+
+        if (results.length > limit) {
+          merged.push({
+            label: `$(ellipsis) see ${results.length - limit} more ${tabLabel.toLowerCase()} results...`,
+            description: `Switch to ${tabLabel} tab to see all`,
+            mode: searchMode,
+            belongsToSection: section,
+            moreCount: results.length - limit,
+            alwaysShow: true,
+          });
+        }
       }
 
-      merged.push(...folderSlice);
-      if (folderResults.length > FOLDER_LIMIT) {
-        merged.push({
-          label: `$(info) ${folderResults.length - FOLDER_LIMIT} more folder results`,
-          description: 'Switch to Folders tab to see all',
-          mode: SearchMode.Folder,
-          belongsToSection: ResultSection.Folders,
-          alwaysShow: true,
-        });
-      }
-
-      merged.push(...textSlice);
-      if (textResults.length > TEXT_LIMIT) {
-        merged.push({
-          label: `$(info) ${textResults.length - TEXT_LIMIT} more text results`,
-          description: 'Switch to Text tab to see all',
-          mode: SearchMode.Text,
-          belongsToSection: ResultSection.Text,
-          alwaysShow: true,
-        });
-      }
-
-      merged.push(...commandSlice);
-      if (commandResults.length > COMMAND_LIMIT) {
-        merged.push({
-          label: `$(info) ${commandResults.length - COMMAND_LIMIT} more command results`,
-          description: 'Switch to Commands tab to see all',
-          mode: SearchMode.Command,
-          belongsToSection: ResultSection.Commands,
-          alwaysShow: true,
-        });
-      }
-
-      // Only emit results when we have something to show, or text search
-      // has delivered at least once (so empty results are genuine).
       if (merged.length > 0 || textDelivered) {
         onResults(merged);
       }
     };
 
-    // Folder + file search runs instantly
-    disposables.push(
-      this.folderProvider.search(query, options, (results) => {
-        folderResults = results;
-        buildMergedResults();
-      }),
-    );
-    disposables.push(
-      this.fileProvider.search(query, options, (results) => {
-        fileResults = results;
-        buildMergedResults();
-      }),
-    );
+    // File search (instant, index-based)
+    if (enabledSections.has(ResultSection.Files)) {
+      disposables.push(
+        this.fileProvider.search(query, options, (results) => {
+          resultStore[ResultSection.Files] = results;
+          buildMergedResults();
+        }),
+      );
+    }
 
-    // Text search runs immediately (cancellation is handled by dispose)
-    textSearchDisposable = this.textProvider.search(query, options, (results) => {
-      textResults = results;
-      textDelivered = true;
-      buildMergedResults();
-    });
+    // Folder search (instant, index-based)
+    if (enabledSections.has(ResultSection.Folders)) {
+      disposables.push(
+        this.folderProvider.search(query, options, (results) => {
+          resultStore[ResultSection.Folders] = results;
+          buildMergedResults();
+        }),
+      );
+    }
 
-    // Command search is debounced (async index build on first call)
-    const executeCommandSearch = () => {
-      commandSearchDisposable?.dispose();
-      commandSearchDisposable = this.commandProvider.search(query, options, (results) => {
-        commandResults = results;
+    // Text search (async ripgrep)
+    if (enabledSections.has(ResultSection.Text)) {
+      textSearchDisposable = this.textProvider.search(query, options, (results) => {
+        resultStore[ResultSection.Text] = results;
+        textDelivered = true;
         buildMergedResults();
       });
-    };
+    }
 
-    const debouncedCommand = debounce(executeCommandSearch, debounceMs);
-    debouncedCommand();
+    // Symbol search (debounced, async workspace symbol provider)
+    if (enabledSections.has(ResultSection.Symbols)) {
+      const executeSymbolSearch = () => {
+        symbolSearchDisposable?.dispose();
+        symbolSearchDisposable = this.symbolProvider.search(query, options, (results) => {
+          resultStore[ResultSection.Symbols] = results;
+          buildMergedResults();
+        });
+      };
+
+      const debouncedSymbol = debounce(executeSymbolSearch, debounceMs);
+      debouncedSymbol();
+
+      disposables.push({ dispose: () => debouncedSymbol.cancel() });
+    }
+
+    // Command search (debounced, async index build)
+    if (enabledSections.has(ResultSection.Commands)) {
+      const executeCommandSearch = () => {
+        commandSearchDisposable?.dispose();
+        commandSearchDisposable = this.commandProvider.search(query, options, (results) => {
+          resultStore[ResultSection.Commands] = results;
+          buildMergedResults();
+        });
+      };
+
+      const debouncedCommand = debounce(executeCommandSearch, debounceMs);
+      debouncedCommand();
+
+      disposables.push({ dispose: () => debouncedCommand.cancel() });
+    }
 
     return {
       dispose: () => {
-        debouncedCommand.cancel();
         textSearchDisposable?.dispose();
+        symbolSearchDisposable?.dispose();
         commandSearchDisposable?.dispose();
         for (const d of disposables) d.dispose();
       },

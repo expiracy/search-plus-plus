@@ -12,6 +12,25 @@ export function isAbsolutePath(input: string): boolean {
   return false;
 }
 
+import { ResultSection, DEFAULT_SECTIONS } from './providers/types';
+
+const VALID_SECTIONS = new Set<string>(Object.values(ResultSection));
+
+export function getEnabledSections(raw: unknown): ResultSection[] {
+  if (!Array.isArray(raw)) return DEFAULT_SECTIONS;
+
+  const seen = new Set<string>();
+  const sections: ResultSection[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'string') continue;
+    if (!VALID_SECTIONS.has(item)) continue;
+    if (seen.has(item)) continue;
+    seen.add(item);
+    sections.push(item as ResultSection);
+  }
+  return sections;
+}
+
 export function debounce<T extends (...args: any[]) => any>(
   fn: T,
   delayMs: number,

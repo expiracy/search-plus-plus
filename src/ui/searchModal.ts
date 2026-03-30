@@ -10,6 +10,18 @@ import type { IndexManager } from '../index/indexManager';
 import type { SearchHistory } from '../history';
 import { debounce, isAbsolutePath, type Debounced } from '../utils';
 
+/** Stable identity key for a SearchResult, used to preserve active item across qp.items replacements. */
+function getItemKey(item: SearchResult): string | undefined {
+  if (item.kind === vscode.QuickPickItemKind.Separator) return undefined;
+  if (item.commandId) return `cmd:${item.commandId}`;
+  if (item.uri) {
+    const base = item.uri.toString();
+    if (item.lineNumber !== undefined) return `${base}:${item.lineNumber}:${item.column ?? 0}`;
+    return base;
+  }
+  return undefined;
+}
+
 const TAB_ORDER: SearchMode[] = [
   SearchMode.Everywhere,
   SearchMode.File,
@@ -72,6 +84,7 @@ export class SearchModal implements vscode.Disposable {
 
   // Search option toggles
   private excludeGitIgnored: boolean;
+  private excludeVscodeExcluded: boolean;
   private caseSensitive = false;
   private useRegex = false;
   private fuzzySearch = false;
@@ -83,6 +96,8 @@ export class SearchModal implements vscode.Disposable {
   // Full unfiltered results from the last search
   private fullResults: SearchResult[] = [];
   private activeQuickPick: vscode.QuickPick<SearchResult> | undefined;
+  // Indices into qp.items marking the first selectable item of each section (Everything tab)
+  private sectionStarts: number[] = [];
 
   // Stored so keyboard shortcut commands can trigger re-search
   private triggerSearch: (() => void) | undefined;
@@ -94,13 +109,14 @@ export class SearchModal implements vscode.Disposable {
   constructor(private indexManager: IndexManager, private history: SearchHistory) {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     this.excludeGitIgnored = config.get<boolean>('excludeGitIgnored', true);
+    this.excludeVscodeExcluded = config.get<boolean>('excludeVscodeExcluded', true);
 
-    const fileProvider = new FileProvider(indexManager.fileIndex);
+    const fileProvider = new FileProvider(indexManager.fileIndex, indexManager.gitIgnore);
     const textProvider = new TextProvider(indexManager.textSearch);
-    const folderProvider = new FolderProvider(indexManager.fileIndex);
+    const folderProvider = new FolderProvider(indexManager.fileIndex, indexManager.gitIgnore);
     const symbolProvider = new SymbolProvider(indexManager.gitIgnore);
     const commandProvider = new CommandProvider();
-    const everywhereProvider = new EverywhereProvider(fileProvider, folderProvider, textProvider, commandProvider);
+    const everywhereProvider = new EverywhereProvider(fileProvider, folderProvider, textProvider, symbolProvider, commandProvider);
 
     this.providers = new Map<SearchMode, SearchProvider>([
       [SearchMode.File, fileProvider],
@@ -116,20 +132,29 @@ export class SearchModal implements vscode.Disposable {
     const qp = this.activeQuickPick;
     if (!qp) return;
 
-    // Count items per section
+    // Count items per section (moreCount items contribute their hidden count)
     const counts: Record<ResultSection, number> = {
       [ResultSection.Folders]: 0,
       [ResultSection.Files]: 0,
       [ResultSection.Text]: 0,
+      [ResultSection.Symbols]: 0,
       [ResultSection.Commands]: 0,
     };
     for (const item of this.fullResults) {
-      if (item.belongsToSection) counts[item.belongsToSection]++;
+      if (item.belongsToSection) {
+        if (item.moreCount) {
+          counts[item.belongsToSection] += item.moreCount;
+        } else {
+          counts[item.belongsToSection]++;
+        }
+      }
     }
 
     const filtered: SearchResult[] = [];
     let currentSection: ResultSection | undefined;
     const showSeparators = this.activeTab === SearchMode.Everywhere;
+    this.sectionStarts = [];
+    let nextIsSectionStart = false;
 
     for (const item of this.fullResults) {
       const section = item.belongsToSection;
@@ -140,6 +165,7 @@ export class SearchModal implements vscode.Disposable {
         const sectionLabel =
           section === ResultSection.Folders ? `Folders (${counts[ResultSection.Folders]})` :
           section === ResultSection.Files ? `Files (${counts[ResultSection.Files]})` :
+          section === ResultSection.Symbols ? `Symbols (${counts[ResultSection.Symbols]})` :
           section === ResultSection.Commands ? `Commands (${counts[ResultSection.Commands]})` :
           `Text Matches (${counts[ResultSection.Text]})`;
         filtered.push({
@@ -148,6 +174,7 @@ export class SearchModal implements vscode.Disposable {
           mode: SearchMode.Everywhere,
           alwaysShow: true,
         });
+        nextIsSectionStart = true;
       }
 
       if (!item.isFolder && !item.commandId) {
@@ -155,9 +182,25 @@ export class SearchModal implements vscode.Disposable {
       } else {
         filtered.push(item);
       }
+
+      if (nextIsSectionStart) {
+        this.sectionStarts.push(filtered.length - 1);
+        nextIsSectionStart = false;
+      }
     }
 
+    const prevActive = qp.activeItems?.[0];
+    const prevKey = prevActive ? getItemKey(prevActive) : undefined;
+
     qp.items = filtered;
+
+    if (prevKey) {
+      const restored = filtered.find(item => getItemKey(item) === prevKey);
+      if (restored) {
+        qp.activeItems = [restored];
+      }
+    }
+
     this.updateTitle(qp, counts);
   }
 
@@ -168,7 +211,7 @@ export class SearchModal implements vscode.Disposable {
     const tabName = TAB_NAMES[this.activeTab];
 
     if (this.activeTab === SearchMode.Everywhere) {
-      const total = counts[ResultSection.Folders] + counts[ResultSection.Files] + counts[ResultSection.Text] + counts[ResultSection.Commands];
+      const total = counts[ResultSection.Folders] + counts[ResultSection.Files] + counts[ResultSection.Text] + counts[ResultSection.Symbols] + counts[ResultSection.Commands];
       if (total === 0) {
         qp.title = tabName;
         return;
@@ -177,6 +220,7 @@ export class SearchModal implements vscode.Disposable {
       if (counts[ResultSection.Files] > 0) parts.push(`${counts[ResultSection.Files]} files`);
       if (counts[ResultSection.Folders] > 0) parts.push(`${counts[ResultSection.Folders]} folders`);
       if (counts[ResultSection.Text] > 0) parts.push(`${counts[ResultSection.Text]} text`);
+      if (counts[ResultSection.Symbols] > 0) parts.push(`${counts[ResultSection.Symbols]} symbols`);
       if (counts[ResultSection.Commands] > 0) parts.push(`${counts[ResultSection.Commands]} commands`);
       qp.title = `${tabName}: ${parts.join(', ')}`;
     } else {
@@ -214,6 +258,7 @@ export class SearchModal implements vscode.Disposable {
 
     const getOptions = (): SearchOptions => ({
       excludeGitIgnored: this.excludeGitIgnored,
+      excludeVscodeExcluded: this.excludeVscodeExcluded,
       caseSensitive: this.caseSensitive,
       useRegex: this.useRegex,
       fuzzySearch: this.fuzzySearch,
@@ -438,6 +483,7 @@ export class SearchModal implements vscode.Disposable {
 
       vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', false);
       vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', false);
+      vscode.commands.executeCommand('setContext', 'searchPlusPlusEverythingTab', false);
       this.currentSearch?.dispose();
       this.activeQuickPick = undefined;
       this.triggerSearch = undefined;
@@ -454,6 +500,7 @@ export class SearchModal implements vscode.Disposable {
 
     vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', true);
     vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', this.activeTab === SearchMode.File || this.activeTab === SearchMode.Everywhere);
+    vscode.commands.executeCommand('setContext', 'searchPlusPlusEverythingTab', this.activeTab === SearchMode.Everywhere);
     qp.show();
   }
 
@@ -500,6 +547,7 @@ export class SearchModal implements vscode.Disposable {
     if (this.activeTab === mode) return;
     this.activeTab = mode;
     vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', mode === SearchMode.File || mode === SearchMode.Everywhere);
+    vscode.commands.executeCommand('setContext', 'searchPlusPlusEverythingTab', mode === SearchMode.Everywhere);
     const qp = this.activeQuickPick;
     if (!qp) return;
     qp.placeholder = PLACEHOLDERS[mode];
@@ -519,6 +567,46 @@ export class SearchModal implements vscode.Disposable {
     this.switchTab(TAB_ORDER[(idx - 1 + TAB_ORDER.length) % TAB_ORDER.length]);
   }
 
+  nextSection(): void {
+    const qp = this.activeQuickPick;
+    if (!qp || this.activeTab !== SearchMode.Everywhere) return;
+    if (this.sectionStarts.length === 0) return;
+
+    const active = qp.activeItems[0];
+    const currentIdx = active ? qp.items.indexOf(active) : -1;
+
+    // Find next section start after current position, wrap to first
+    const nextStart = this.sectionStarts.find(s => s > currentIdx);
+    const targetIdx = nextStart ?? this.sectionStarts[0];
+
+    qp.activeItems = [qp.items[targetIdx]];
+  }
+
+  prevSection(): void {
+    const qp = this.activeQuickPick;
+    if (!qp || this.activeTab !== SearchMode.Everywhere) return;
+    if (this.sectionStarts.length === 0) return;
+
+    const active = qp.activeItems[0];
+    const currentIdx = active ? qp.items.indexOf(active) : qp.items.length;
+
+    // Find which section contains the current item
+    let currentSectionIdx = this.sectionStarts.length - 1;
+    for (let i = this.sectionStarts.length - 1; i >= 0; i--) {
+      if (this.sectionStarts[i] <= currentIdx) {
+        currentSectionIdx = i;
+        break;
+      }
+    }
+
+    // Go to previous section, wrapping to last
+    const prevIdx = currentSectionIdx > 0
+      ? currentSectionIdx - 1
+      : this.sectionStarts.length - 1;
+
+    qp.activeItems = [qp.items[this.sectionStarts[prevIdx]]];
+  }
+
   // --- Buttons ---
 
   private buttonActions: Record<number, (() => void) | undefined> = {};
@@ -534,6 +622,8 @@ export class SearchModal implements vscode.Disposable {
       this.tabButton('terminal', TAB_NAMES[SearchMode.Command], SearchMode.Command),
       // Search options (inline)
       this.toggle('source-control', 'Exclude Git Ignored (Alt+G)', this.excludeGitIgnored,
+        vscode.QuickInputButtonLocation.Inline),
+      this.toggle('vscode', 'Exclude VS Code Excluded (Alt+V)', this.excludeVscodeExcluded,
         vscode.QuickInputButtonLocation.Inline),
       this.toggle('case-sensitive', 'Case Sensitive (Alt+C)', this.caseSensitive,
         vscode.QuickInputButtonLocation.Inline),
@@ -553,10 +643,11 @@ export class SearchModal implements vscode.Disposable {
       4: () => { this.switchTab(SearchMode.Symbol); },
       5: () => { this.switchTab(SearchMode.Command); },
       6: () => { this.excludeGitIgnored = !this.excludeGitIgnored; },
-      7: () => { this.caseSensitive = !this.caseSensitive; },
-      8: () => { this.useRegex = !this.useRegex; },
-      9: () => { this.matchWholeWord = !this.matchWholeWord; },
-      10: () => { this.fuzzySearch = !this.fuzzySearch; },
+      7: () => { this.excludeVscodeExcluded = !this.excludeVscodeExcluded; },
+      8: () => { this.caseSensitive = !this.caseSensitive; },
+      9: () => { this.useRegex = !this.useRegex; },
+      10: () => { this.matchWholeWord = !this.matchWholeWord; },
+      11: () => { this.fuzzySearch = !this.fuzzySearch; },
     };
 
     qp.buttons = buttons;
@@ -589,6 +680,11 @@ export class SearchModal implements vscode.Disposable {
 
   toggleGitIgnore(): void {
     this.excludeGitIgnored = !this.excludeGitIgnored;
+    this.applyOptionToggle();
+  }
+
+  toggleVscodeExclude(): void {
+    this.excludeVscodeExcluded = !this.excludeVscodeExcluded;
     this.applyOptionToggle();
   }
 

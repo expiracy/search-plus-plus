@@ -48,6 +48,7 @@ const defaultOpts = {
   caseSensitive: false,
   useRegex: false,
   excludeGitIgnored: true,
+  excludeVscodeExcluded: true,
   matchWholeWord: false,
   maxResults: 200,
 };

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { existsSync } from 'fs';
 import { spawn, type ChildProcess } from 'child_process';
+import type { GitIgnoreManager } from '../gitignore';
 
 function resolveRgPath(): string {
   const rgBin = process.platform === 'win32' ? 'rg.exe' : 'rg';
@@ -58,6 +59,7 @@ export interface TextSearchOptions {
   caseSensitive: boolean;
   useRegex: boolean;
   excludeGitIgnored: boolean;
+  excludeVscodeExcluded: boolean;
   matchWholeWord: boolean;
   maxResults: number;
 }
@@ -75,13 +77,18 @@ export class TextSearch implements vscode.Disposable {
   private activeProcess: ChildProcess | null = null;
   private rgPath: string;
   private excludePatterns: string[] = [];
+  private vscodeExcludePatterns: string[] = [];
 
-  constructor(rgPath?: string) {
+  constructor(rgPath?: string, private gitIgnore?: GitIgnoreManager) {
     this.rgPath = rgPath ?? defaultRgPath;
   }
 
   setExcludePatterns(patterns: string[]): void {
     this.excludePatterns = patterns;
+  }
+
+  setVscodeExcludePatterns(patterns: string[]): void {
+    this.vscodeExcludePatterns = patterns;
   }
 
   search(
@@ -123,6 +130,13 @@ export class TextSearch implements vscode.Disposable {
     // Custom exclude patterns from extension settings
     for (const pattern of this.excludePatterns) {
       args.push('--glob', `!${pattern}`);
+    }
+
+    // VS Code's files.exclude / search.exclude patterns
+    if (options.excludeVscodeExcluded) {
+      for (const pattern of this.vscodeExcludePatterns) {
+        args.push('--glob', `!${pattern}`);
+      }
     }
 
     args.push('--', query);
@@ -239,11 +253,21 @@ export class TextSearch implements vscode.Disposable {
     if (!folders) return;
 
     try {
-      const notebookUris = await vscode.workspace.findFiles(
+      const allNotebookUris = await vscode.workspace.findFiles(
         '**/*.ipynb',
-        undefined,
+        this.gitIgnore?.getExcludeGlob(),
         100,
       );
+
+      const notebookUris = this.gitIgnore
+        ? allNotebookUris.filter((uri) => {
+            const rel = vscode.workspace.asRelativePath(uri);
+            if (this.gitIgnore!.isCustomExcluded(rel)) return false;
+            if (options.excludeGitIgnored && this.gitIgnore!.isGitIgnored(rel)) return false;
+            if (options.excludeVscodeExcluded && this.gitIgnore!.isVscodeExcluded(rel)) return false;
+            return true;
+          })
+        : allNotebookUris;
 
       const isCaseSensitive = options.caseSensitive || query !== query.toLowerCase();
       let pattern: RegExp;

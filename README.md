@@ -28,6 +28,7 @@ Toggle these while the search modal is open:
 | Match Whole Word | **Alt+W** | Only match complete words |
 | Fuzzy Search | **Alt+F** | Fuzzy matching (powered by fzf) |
 | Exclude Git Ignored | **Alt+G** | Hide files excluded by `.gitignore` |
+| Exclude VS Code Excluded | **Alt+V** | Hide files matching VS Code's `files.exclude` and `search.exclude` patterns |
 
 ### Go to Line and Column
 
@@ -67,25 +68,33 @@ Click the split-editor button on any file or text result to open it in a side pa
 | **Alt+W** | Toggle match whole word |
 | **Alt+F** | Toggle fuzzy search |
 | **Alt+G** | Toggle exclude git ignored |
+| **Alt+V** | Toggle exclude VS Code excluded |
+| **Ctrl+Down** / **Cmd+Down** | Next section (Everything tab) |
+| **Ctrl+Up** / **Cmd+Up** | Previous section (Everything tab) |
 | **Right Arrow** | Autofill file path (Files tab) |
 
 You can also open a specific tab directly from the command palette:
 
+- `search++: Open Search`
 - `search++: Search Files`
 - `search++: Search Text`
 - `search++: Search Symbols`
 - `search++: Search Commands`
+- `search++: Reindex Workspace`
 
 ## Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `searchPlusPlus.excludeGitIgnored` | `true` | Exclude git-ignored files by default |
-| `searchPlusPlus.debounceMs` | `200` | Delay in ms before triggering search |
-| `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
+| `searchPlusPlus.excludeVscodeExcluded` | `true` | Exclude files matching VS Code's `files.exclude` and `search.exclude` patterns by default |
 | `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
+| `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
+| `searchPlusPlus.debounceMs` | `100` | Delay in ms before triggering search |
+| `searchPlusPlus.everywhere.sections` | `["files", "folders", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
+| `searchPlusPlus.everywhere.resultLimit` | `10` | Maximum results per section on the Everything tab (1-200) |
 
-Exclusions are layered: VS Code's `files.exclude` and `search.exclude` settings, all `.gitignore` files in your workspace, and your custom `searchPlusPlus.excludePaths` patterns are all applied together.
+Exclusions are layered: VS Code's `files.exclude` and `search.exclude` patterns (toggled with **Alt+V**), `.gitignore` rules (toggled with **Alt+G**), and your custom `searchPlusPlus.excludePaths` patterns are all applied together.
 
 ## How It Works
 

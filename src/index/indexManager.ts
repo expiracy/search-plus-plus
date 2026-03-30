@@ -20,7 +20,7 @@ export class IndexManager implements vscode.Disposable {
   constructor(context: vscode.ExtensionContext) {
     this.gitIgnore = new GitIgnoreManager();
     this.fileIndex = new FileIndex(this.gitIgnore);
-    this.textSearch = new TextSearch();
+    this.textSearch = new TextSearch(undefined, this.gitIgnore);
 
     // Status bar
     this.statusBarItem = vscode.window.createStatusBarItem(
@@ -60,6 +60,7 @@ export class IndexManager implements vscode.Disposable {
     try {
       await this.gitIgnore.load();
       this.textSearch.setExcludePatterns(this.gitIgnore.getCustomExcludePatterns());
+      this.textSearch.setVscodeExcludePatterns(this.gitIgnore.getVscodeExcludePatterns());
       await this.fileIndex.build();
       this.updateStatusBar('ready');
     } catch (err) {
