@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SearchMode, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { TextSearch } from '../index/textSearch';
 
 export class TextProvider implements SearchProvider {
@@ -12,8 +12,7 @@ export class TextProvider implements SearchProvider {
     options: SearchOptions,
     onResults: (results: SearchResult[]) => void,
   ): vscode.Disposable {
-    const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    const maxResults = config.get<number>('maxResults', 200);
+    const maxResults = getMaxResults();
 
     return this.textSearch.search(
       query,
@@ -32,6 +31,7 @@ export class TextProvider implements SearchProvider {
             column: match.column,
             iconPath: vscode.ThemeIcon.File,
             alwaysShow: true,
+            belongsToSection: ResultSection.Text,
           };
         });
         onResults(results);

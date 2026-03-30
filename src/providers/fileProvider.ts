@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ResultSection, SearchMode, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { FileIndex } from '../index/fileIndex';
 import { GitIgnoreManager } from '../gitignore';
 
@@ -18,36 +18,20 @@ export class FileProvider implements SearchProvider {
     if (!this.fileIndex.isReady) {
       this.fallbackSearch(query, options, onResults, () => cancelled);
     } else {
-      const config = vscode.workspace.getConfiguration('searchPlusPlus');
-      const maxResults = config.get<number>('maxResults', 200);
+      const maxResults = getMaxResults();
 
       let fileResults: SearchResult[];
 
       if (options.fuzzySearch) {
-        const matches = this.fileIndex.find(query, maxResults, options.excludeGitIgnored, options.excludeVscodeExcluded);
-        fileResults = matches.map((match) => ({
-          label: match.item.relativePath.split('/').pop() || match.item.relativePath,
-          description: match.item.relativePath,
-          mode: SearchMode.File,
-          uri: match.item.uri,
-          iconPath: vscode.ThemeIcon.File,
-          alwaysShow: true,
-          belongsToSection: ResultSection.Files,
-        }));
+        const matches = this.fileIndex.find(query, maxResults, options.excludeGitIgnored, options.excludeSearchIgnored);
+        fileResults = matches.map((match) => this.toFileResult(match.item.relativePath, match.item.uri));
       } else {
         const entries = this.fileIndex.filter(
           query, maxResults, options.excludeGitIgnored,
-          options.caseSensitive, options.matchWholeWord, options.excludeVscodeExcluded,
+          options.caseSensitive, options.matchWholeWord,
+          options.excludeSearchIgnored,
         );
-        fileResults = entries.map((entry) => ({
-          label: entry.relativePath.split('/').pop() || entry.relativePath,
-          description: entry.relativePath,
-          mode: SearchMode.File,
-          uri: entry.uri,
-          iconPath: vscode.ThemeIcon.File,
-          alwaysShow: true,
-          belongsToSection: ResultSection.Files,
-        }));
+        fileResults = entries.map((entry) => this.toFileResult(entry.relativePath, entry.uri));
       }
 
       if (!cancelled) {
@@ -56,6 +40,18 @@ export class FileProvider implements SearchProvider {
     }
 
     return { dispose: () => { cancelled = true; } };
+  }
+
+  private toFileResult(relativePath: string, uri: vscode.Uri): SearchResult {
+    return {
+      label: relativePath.split('/').pop() || relativePath,
+      description: relativePath,
+      mode: SearchMode.File,
+      uri,
+      iconPath: vscode.ThemeIcon.File,
+      alwaysShow: true,
+      belongsToSection: ResultSection.Files,
+    };
   }
 
   private async fallbackSearch(
@@ -73,19 +69,8 @@ export class FileProvider implements SearchProvider {
       const fileResults: SearchResult[] = [];
       for (const uri of uris) {
         const relativePath = vscode.workspace.asRelativePath(uri);
-        if (this.gitIgnore.isCustomExcluded(relativePath)) continue;
-        if (options.excludeGitIgnored && this.gitIgnore.isGitIgnored(relativePath)) continue;
-        if (options.excludeVscodeExcluded && this.gitIgnore.isVscodeExcluded(relativePath)) continue;
-
-        fileResults.push({
-          label: relativePath.split('/').pop() || relativePath,
-          description: relativePath,
-          mode: SearchMode.File,
-          uri,
-          iconPath: vscode.ThemeIcon.File,
-          alwaysShow: true,
-          belongsToSection: ResultSection.Files,
-        });
+        if (this.gitIgnore.shouldExclude(relativePath, options)) continue;
+        fileResults.push(this.toFileResult(relativePath, uri));
       }
 
       onResults(fileResults);

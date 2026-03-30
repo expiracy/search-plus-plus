@@ -37,6 +37,11 @@ vi.doMock('vscode', async () => {
         base.Uri.file(`${FIXTURE_ROOT}/src/.gitignore`),
       ];
     }
+    if (pattern === '**/.searchignore') {
+      return [
+        base.Uri.file(`${FIXTURE_ROOT}/.searchignore`),
+      ];
+    }
     return [];
   };
 
@@ -139,5 +144,41 @@ describe('GitIgnoreManager', () => {
     expect(manager.isGitIgnored('assets/icon.ico')).toBe(false);
     expect(manager.isGitIgnored('assets/font.woff2')).toBe(false);
     expect(manager.isGitIgnored('docs/guide.pdf')).toBe(false);
+  });
+
+  // --- .searchignore ---
+
+  test('searchignore: ignores docs/ directory', () => {
+    expect(manager.isSearchIgnored('docs/README.md')).toBe(true);
+    expect(manager.isSearchIgnored('docs/guide.pdf')).toBe(true);
+  });
+
+  test('searchignore: ignores *.pdf files anywhere', () => {
+    expect(manager.isSearchIgnored('report.pdf')).toBe(true);
+    expect(manager.isSearchIgnored('nested/deep/file.pdf')).toBe(true);
+  });
+
+  test('searchignore: does not ignore non-matching files', () => {
+    expect(manager.isSearchIgnored('src/index.ts')).toBe(false);
+    expect(manager.isSearchIgnored('lib/helper.js')).toBe(false);
+    expect(manager.isSearchIgnored('assets/logo.png')).toBe(false);
+  });
+
+  test('searchignore: patterns do not affect gitignore', () => {
+    // docs/ is in .searchignore but not .gitignore
+    expect(manager.isGitIgnored('docs/README.md')).toBe(false);
+    // build/ is in .gitignore but not .searchignore
+    expect(manager.isSearchIgnored('build/output.js')).toBe(false);
+  });
+
+  test('searchignore: handles Windows backslashes', () => {
+    expect(manager.isSearchIgnored('docs\\README.md')).toBe(true);
+    expect(manager.isSearchIgnored('src\\index.ts')).toBe(false);
+  });
+
+  test('getSearchIgnorePatterns returns loaded patterns', () => {
+    const patterns = manager.getSearchIgnorePatterns();
+    expect(patterns).toContain('docs/');
+    expect(patterns).toContain('*.pdf');
   });
 });

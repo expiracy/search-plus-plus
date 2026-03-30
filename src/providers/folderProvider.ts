@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SearchMode, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { extractFolders } from './folderExtractor';
 import { FileIndex } from '../index/fileIndex';
 import { GitIgnoreManager } from '../gitignore';
@@ -19,17 +19,17 @@ export class FolderProvider implements SearchProvider {
     if (!this.fileIndex.isReady) {
       this.fallbackSearch(query, options, onResults, () => cancelled);
     } else {
-      const config = vscode.workspace.getConfiguration('searchPlusPlus');
-      const maxResults = config.get<number>('maxResults', 200);
+      const maxResults = getMaxResults();
 
       let entries;
       if (options.fuzzySearch) {
-        const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored, options.excludeVscodeExcluded);
+        const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored, options.excludeSearchIgnored);
         entries = matches.map((m) => m.item);
       } else {
         entries = this.fileIndex.filter(
           query, 1000, options.excludeGitIgnored,
-          options.caseSensitive, options.matchWholeWord, options.excludeVscodeExcluded,
+          options.caseSensitive, options.matchWholeWord,
+          options.excludeSearchIgnored,
         );
       }
 
@@ -57,9 +57,7 @@ export class FolderProvider implements SearchProvider {
       const entries: { relativePath: string; uri: vscode.Uri }[] = [];
       for (const uri of uris) {
         const relativePath = vscode.workspace.asRelativePath(uri);
-        if (this.gitIgnore.isCustomExcluded(relativePath)) continue;
-        if (options.excludeGitIgnored && this.gitIgnore.isGitIgnored(relativePath)) continue;
-        if (options.excludeVscodeExcluded && this.gitIgnore.isVscodeExcluded(relativePath)) continue;
+        if (this.gitIgnore.shouldExclude(relativePath, options)) continue;
         entries.push({ relativePath, uri });
       }
       const folderResults = extractFolders(entries, query, SearchMode.Folder);

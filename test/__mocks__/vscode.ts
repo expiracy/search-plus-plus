@@ -115,6 +115,12 @@ export const workspace = {
       : (pathOrUri.fsPath ?? pathOrUri.path);
     return p.replace(/\\/g, '/');
   },
+  getWorkspaceFolder: (uri: Uri) => {
+    const folders = workspace.workspaceFolders;
+    if (!folders) return undefined;
+    const uriPath = uri.path.replace(/\\/g, '/');
+    return folders.find((f: { uri: Uri }) => uriPath.startsWith(f.uri.path.replace(/\\/g, '/')));
+  },
   findFiles: async () => [] as Uri[],
   findTextInFiles: async (
     query: { pattern: string; isRegExp?: boolean; isCaseSensitive?: boolean; isWordMatch?: boolean },
@@ -137,7 +143,9 @@ export const workspace = {
     }
 
     // Use ripgrep for realistic test search
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { spawn } = require('child_process');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const rgPath = require('@vscode/ripgrep').rgPath;
 
     const args: string[] = ['--json', '--max-filesize', '1M'];

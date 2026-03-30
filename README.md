@@ -1,21 +1,23 @@
 # search++
 
-A fast, unified search for VS Code inspired by JetBrains IDEs. Press **Shift+Shift** to search across files, folders, text, symbols, and commands, all in one place.
+A fast, unified search for VS Code inspired by JetBrains IDEs. Press **Shift+Shift** to search across files, folders, text, symbols, and commands -- all in one place.
 
-## Features
+## Getting Started
 
-### Six Search Tabs
-
-Cycle between tabs with **Tab** / **Shift+Tab**, or click the tab buttons in the title bar.
+1. Install search++ from the VS Code Marketplace.
+2. Press **Shift+Shift** to open the search modal.
+3. Start typing to search. Use **Tab** / **Shift+Tab** to cycle between tabs.
 
 | Tab | What it searches |
 |-----|-----------------|
-| **Everywhere** | All of the below, combined into one view with grouped sections |
+| **Everywhere** | All of the below, combined into grouped sections |
 | **Files** | Filenames across your workspace |
-| **Folders** | Folder paths extracted from your workspace |
-| **Text** | File contents using ripgrep |
-| **Symbols** | Functions, classes, variables, etc. via VS Code's language providers |
+| **Folders** | Folder paths in your workspace |
+| **Text** | File contents (powered by ripgrep) |
+| **Symbols** | Functions, classes, variables via VS Code's language providers |
 | **Commands** | All VS Code commands (built-in and from extensions) |
+
+## Features
 
 ### Search Options
 
@@ -28,8 +30,7 @@ Toggle these while the search modal is open:
 | Match Whole Word | **Alt+W** | Only match complete words |
 | Fuzzy Search | **Alt+F** | Fuzzy matching (powered by fzf) |
 | Exclude Git Ignored | **Alt+G** | Hide files excluded by `.gitignore` |
-| Exclude VS Code Excluded | **Alt+V** | Hide files matching VS Code's `files.exclude` and `search.exclude` patterns |
-
+| Exclude Search Ignored | **Alt+S** | Hide files excluded by `.searchignore` |
 ### Go to Line and Column
 
 On the **Files** tab, append `:line` or `:line:column` to jump to a specific location:
@@ -43,11 +44,11 @@ Press the **Right Arrow** key to autofill the selected file's path, then type `:
 
 ### Absolute Path Support
 
-Type a full file path (e.g. `C:\Users\me\file.ts` or `/home/me/file.ts`) to stat it directly and open it from the result.
+Type a full file path (e.g. `C:\Users\me\file.ts` or `/home/me/file.ts`) to open it directly from the results.
 
 ### Search History
 
-Recently opened files appear when the search input is empty. Stale entries (deleted files) are automatically removed.
+Recently opened files appear when the search input is empty. Stale entries (deleted files) are automatically pruned. Individual history items can be removed via the remove button.
 
 ### Notebook Support
 
@@ -55,52 +56,127 @@ Text search includes Jupyter `.ipynb` notebook cells.
 
 ### Open to Side
 
-Click the split-editor button on any file or text result to open it in a side panel.
+Click the split-editor button on any file or text result to open it in a side editor group.
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| **Shift+Shift** | Open search (Everywhere tab) |
-| **Tab** / **Shift+Tab** | Next / previous tab |
-| **Alt+C** | Toggle case sensitive |
-| **Alt+R** | Toggle regex |
-| **Alt+W** | Toggle match whole word |
-| **Alt+F** | Toggle fuzzy search |
-| **Alt+G** | Toggle exclude git ignored |
-| **Alt+V** | Toggle exclude VS Code excluded |
-| **Ctrl+Down** / **Cmd+Down** | Next section (Everything tab) |
-| **Ctrl+Up** / **Cmd+Up** | Previous section (Everything tab) |
-| **Right Arrow** | Autofill file path (Files tab) |
+| Shortcut | Action | Context |
+|----------|--------|---------|
+| **Shift+Shift** | Open search (Everywhere tab) | Global |
+| **Tab** / **Shift+Tab** | Next / previous tab | Modal open |
+| **Alt+C** | Toggle case sensitive | Modal open |
+| **Alt+R** | Toggle regex | Modal open |
+| **Alt+W** | Toggle match whole word | Modal open |
+| **Alt+F** | Toggle fuzzy search | Modal open |
+| **Alt+G** | Toggle exclude git ignored | Modal open |
+| **Alt+S** | Toggle exclude search ignored | Modal open |
+| **Right Arrow** | Autofill file path | Files tab |
 
-You can also open a specific tab directly from the command palette:
+## Commands
 
-- `search++: Open Search`
-- `search++: Search Files`
-- `search++: Search Text`
-- `search++: Search Symbols`
-- `search++: Search Commands`
-- `search++: Reindex Workspace`
+These commands are available from the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+
+**Search**
+
+| Command | Description |
+|---------|-------------|
+| `search++: Open Search` | Open the search modal (Everywhere tab) |
+| `search++: Search Files` | Open directly to the Files tab |
+| `search++: Search Text` | Open directly to the Text tab |
+| `search++: Search Symbols` | Open directly to the Symbols tab |
+| `search++: Search Commands` | Open directly to the Commands tab |
+| `search++: Reindex Workspace` | Rebuild the file index |
+
+**Toggles and Navigation**
+
+These are also callable from the command palette and can be used in custom keybindings:
+
+| Command | Description |
+|---------|-------------|
+| `search++: Toggle Case Sensitive` | Toggle case-sensitive matching |
+| `search++: Toggle Regex` | Toggle regular expression matching |
+| `search++: Toggle Only Git Trackable` | Toggle git-ignored file exclusion |
+| `search++: Toggle Exclude Search Ignored` | Toggle `.searchignore` file exclusion |
+| `search++: Toggle Fuzzy Search` | Toggle fuzzy matching |
+| `search++: Toggle Match Whole Word` | Toggle whole-word matching |
+| `search++: Next Tab` | Switch to the next tab |
+| `search++: Previous Tab` | Switch to the previous tab |
+| `search++: Autofill File Path` | Autofill the selected file's path |
 
 ## Settings
+
+All settings are under the `searchPlusPlus` namespace.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `searchPlusPlus.excludeGitIgnored` | `true` | Exclude git-ignored files by default |
-| `searchPlusPlus.excludeVscodeExcluded` | `true` | Exclude files matching VS Code's `files.exclude` and `search.exclude` patterns by default |
+| `searchPlusPlus.excludeSearchIgnored` | `true` | Exclude files matching `.searchignore` patterns by default |
 | `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
 | `searchPlusPlus.debounceMs` | `100` | Delay in ms before triggering search |
-| `searchPlusPlus.everywhere.sections` | `["files", "folders", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
-| `searchPlusPlus.everywhere.resultLimit` | `10` | Maximum results per section on the Everything tab (1-200) |
+| `searchPlusPlus.everywhere.sections` | `["files", "folders", "text", "symbols", "commands"]` | Sections shown on the Everywhere tab; array order controls display order |
+| `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everywhere tab (1-200) |
 
-Exclusions are layered: VS Code's `files.exclude` and `search.exclude` patterns (toggled with **Alt+V**), `.gitignore` rules (toggled with **Alt+G**), and your custom `searchPlusPlus.excludePaths` patterns are all applied together.
+### `.searchignore`
+
+Create a `.searchignore` file in your workspace to exclude files and folders from search results without modifying `.gitignore`. The file uses identical syntax to `.gitignore`.
+
+```
+# Hide generated docs from search
+docs/
+*.pdf
+
+# Hide large data files
+data/**
+*.csv
+```
+
+Nested `.searchignore` files are supported -- patterns are scoped to the directory containing the file, just like `.gitignore`. Changes to `.searchignore` files are detected automatically; no reindex is required.
+
+Toggle this filter on or off with **Alt+S** while the search modal is open.
+
+### How Exclusions Layer
+
+Exclusions are applied additively from three sources:
+
+1. **Git ignored** -- `.gitignore` rules (toggled with **Alt+G**)
+2. **Search ignored** -- `.searchignore` rules (toggled with **Alt+S**)
+3. **Custom patterns** -- `searchPlusPlus.excludePaths` (always applied)
+
+## Status Bar
+
+The status bar shows the current state of the file index. Click it at any time to trigger a manual reindex.
+
+| State | Icon | Meaning |
+|-------|------|---------|
+| Building | Spinner | Workspace is being indexed |
+| Ready | Search | Index is ready; tooltip shows the file count |
+| Stale | Warning | Bulk file changes detected; index may be outdated |
+| Error | Error | Index build failed |
+
+## Custom Keybindings
+
+The extension sets context keys you can use in custom `keybindings.json` `when` clauses:
+
+| Context Key | When it is `true` |
+|-------------|-------------------|
+| `searchPlusPlusModalOpen` | The search modal is open |
+| `searchPlusPlusFileTab` | The Files tab or Everywhere tab is active |
+| `searchPlusPlusEverythingTab` | The Everywhere tab is active |
+
+Example:
+
+```json
+{
+  "key": "ctrl+shift+f",
+  "command": "searchPlusPlus.openText",
+  "when": "!searchPlusPlusModalOpen"
+}
+```
 
 ## How It Works
 
-- **File and folder search** uses an in-memory index built on startup, with a file watcher that keeps it up to date. Fuzzy matching is powered by the [fzf](https://github.com/junegunn/fzf) library.
-- **Text search** spawns [ripgrep](https://github.com/BurntSushi/ripgrep) for fast content search with streaming JSON results.
-- **Symbol search** delegates to VS Code's built-in workspace symbol providers, so results depend on your installed language extensions.
-- **Command search** indexes all registered VS Code commands.
-
-The status bar item shows the index state. Click it to trigger a manual reindex if needed.
+- **File and folder search** uses an in-memory index built on activation, kept up to date by a file system watcher. Fuzzy matching is powered by [fzf](https://github.com/junegunn/fzf).
+- **Text search** spawns [ripgrep](https://github.com/BurntSushi/ripgrep) with streaming JSON output for fast content search.
+- **Symbol search** delegates to VS Code's workspace symbol providers, so results depend on your installed language extensions.
+- **Command search** indexes all registered VS Code commands (built-in and from extensions).

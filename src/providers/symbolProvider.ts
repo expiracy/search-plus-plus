@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SearchMode, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { GitIgnoreManager } from '../gitignore';
 
 const SYMBOL_ICONS: Partial<Record<vscode.SymbolKind, string>> = {
@@ -42,8 +42,7 @@ export class SymbolProvider implements SearchProvider {
   ): vscode.Disposable {
     let cancelled = false;
 
-    const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    const maxResults = config.get<number>('maxResults', 200);
+    const maxResults = getMaxResults();
 
     vscode.commands.executeCommand<vscode.SymbolInformation[]>(
       'vscode.executeWorkspaceSymbolProvider',
@@ -69,16 +68,14 @@ export class SymbolProvider implements SearchProvider {
           lineNumber: line,
           column: col,
           alwaysShow: true,
+          belongsToSection: ResultSection.Symbols,
         };
       });
 
       results = results.filter((r) => {
         if (!r.uri) return true;
         const rel = vscode.workspace.asRelativePath(r.uri);
-        if (this.gitIgnore.isCustomExcluded(rel)) return false;
-        if (options.excludeGitIgnored && this.gitIgnore.isGitIgnored(rel)) return false;
-        if (options.excludeVscodeExcluded && this.gitIgnore.isVscodeExcluded(rel)) return false;
-        return true;
+        return !this.gitIgnore.shouldExclude(rel, options);
       });
 
       onResults(results);

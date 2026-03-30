@@ -1,12 +1,12 @@
-export interface Debounced<T extends (...args: any[]) => any> {
-  (...args: Parameters<T>): void;
+export interface Debounced<Args extends unknown[]> {
+  (...args: Args): void;
   cancel(): void;
 }
 
 /** Detect whether input looks like an absolute file system path. */
 export function isAbsolutePath(input: string): boolean {
   // Windows: drive letter + :\ or :/
-  if (/^[a-zA-Z]:[\\\/]/.test(input)) return true;
+  if (/^[a-zA-Z]:[/\\]/.test(input)) return true;
   // Unix/macOS: starts with / followed by a non-whitespace char
   if (/^\/\S/.test(input)) return true;
   return false;
@@ -31,15 +31,15 @@ export function getEnabledSections(raw: unknown): ResultSection[] {
   return sections;
 }
 
-export function debounce<T extends (...args: any[]) => any>(
-  fn: T,
+export function debounce<Args extends unknown[]>(
+  fn: (...args: Args) => void,
   delayMs: number,
-): Debounced<T> {
+): Debounced<Args> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const debounced = ((...args: Parameters<T>) => {
+  const debounced = ((...args: Args) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => fn(...args), delayMs);
-  }) as Debounced<T>;
+  }) as Debounced<Args>;
   debounced.cancel = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;

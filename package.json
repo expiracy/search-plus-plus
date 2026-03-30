@@ -1,8 +1,8 @@
 {
   "name": "search-plus-plus",
   "displayName": "search++",
-  "description": "Blazingly fast unified search for files, folders, text, symbols and commands. Supports fuzzy matching, regex, match case, match word, exclude gitignored files, exclude VS Code excluded files. Double-shift to open, tab and shift-tab to cycle between pages, arrow keys to navigate search results. Inspired by JetBrains IDEs",
-  "version": "1.2.1",
+  "description": "Blazingly fast unified search for files, folders, text, symbols and commands. Supports fuzzy matching, regex, match case, match word, exclude gitignored files. Double-shift to open, tab and shift-tab to cycle between pages, arrow keys to navigate search results. Inspired by JetBrains IDEs",
+  "version": "2.0.0",
   "publisher": "expiracy",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
   },
   "categories": [
     "Other"
-  ],    
+  ],
   "keywords": [
     "search",
     "find",
@@ -67,7 +67,7 @@
       },
       {
         "command": "searchPlusPlus.openSymbols",
-        "title": "search++: Search Symbols" 
+        "title": "search++: Search Symbols"
       },
       {
         "command": "searchPlusPlus.openCommands",
@@ -90,8 +90,8 @@
         "title": "search++: Toggle Only Git Trackable"
       },
       {
-        "command": "searchPlusPlus.toggleVscodeExclude",
-        "title": "search++: Toggle VS Code Excluded"
+        "command": "searchPlusPlus.toggleSearchIgnore",
+        "title": "search++: Toggle Exclude Search Ignored"
       },
       {
         "command": "searchPlusPlus.toggleFuzzySearch",
@@ -112,14 +112,6 @@
       {
         "command": "searchPlusPlus.autofillPath",
         "title": "search++: Autofill File Path"
-      },
-      {
-        "command": "searchPlusPlus.nextSection",
-        "title": "search++: Next Section"
-      },
-      {
-        "command": "searchPlusPlus.prevSection",
-        "title": "search++: Previous Section"
       }
     ],
     "keybindings": [
@@ -144,8 +136,8 @@
         "when": "searchPlusPlusModalOpen"
       },
       {
-        "command": "searchPlusPlus.toggleVscodeExclude",
-        "key": "alt+v",
+        "command": "searchPlusPlus.toggleSearchIgnore",
+        "key": "alt+s",
         "when": "searchPlusPlusModalOpen"
       },
       {
@@ -172,18 +164,6 @@
         "command": "searchPlusPlus.autofillPath",
         "key": "right",
         "when": "searchPlusPlusModalOpen && searchPlusPlusFileTab"
-      },
-      {
-        "command": "searchPlusPlus.nextSection",
-        "key": "ctrl+down",
-        "mac": "cmd+down",
-        "when": "searchPlusPlusModalOpen && searchPlusPlusEverythingTab"
-      },
-      {
-        "command": "searchPlusPlus.prevSection",
-        "key": "ctrl+up",
-        "mac": "cmd+up",
-        "when": "searchPlusPlusModalOpen && searchPlusPlusEverythingTab"
       }
     ],
     "configuration": [
@@ -196,11 +176,11 @@
             "default": true,
             "description": "Exclude git-ignored files and folders from search results by default"
           },
-          "searchPlusPlus.excludeVscodeExcluded": {
+          "searchPlusPlus.excludeSearchIgnored": {
             "order": 2,
             "type": "boolean",
             "default": true,
-            "description": "Exclude files matching VS Code's files.exclude and search.exclude patterns from search results by default"
+            "description": "Exclude files matching .searchignore patterns from search results by default"
           },
           "searchPlusPlus.excludePaths": {
             "order": 3,
@@ -209,7 +189,7 @@
               "type": "string"
             },
             "default": [],
-            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore and VS Code's exclude settings."
+            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
           },
           "searchPlusPlus.maxResults": {
             "order": 4,
@@ -233,10 +213,22 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["files", "folders", "text", "symbols", "commands"]
+              "enum": [
+                "files",
+                "folders",
+                "text",
+                "symbols",
+                "commands"
+              ]
             },
             "uniqueItems": true,
-            "default": ["files", "folders", "text", "symbols", "commands"],
+            "default": [
+              "files",
+              "folders",
+              "text",
+              "symbols",
+              "commands"
+            ],
             "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it."
           },
           "searchPlusPlus.everywhere.resultLimit": {
@@ -257,7 +249,8 @@
     "watch": "node esbuild.config.mjs --watch",
     "lint": "eslint src/",
     "test": "vitest run",
-    "package": "npx @vscode/vsce package"
+    "package": "npx @vscode/vsce package",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -266,8 +259,13 @@
     "@typescript-eslint/parser": "^7.0.0",
     "esbuild": "^0.21.0",
     "eslint": "^8.57.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "typescript": "^5.4.0",
     "vitest": "^3.1.1"
+  },
+  "lint-staged": {
+    "*.ts": "eslint"
   },
   "dependencies": {
     "@vscode/ripgrep": "^1.15.9",
