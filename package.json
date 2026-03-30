@@ -13,7 +13,7 @@
   },
   "categories": [
     "Other"
-  ],    
+  ],
   "keywords": [
     "search",
     "find",
@@ -67,7 +67,7 @@
       },
       {
         "command": "searchPlusPlus.openSymbols",
-        "title": "search++: Search Symbols" 
+        "title": "search++: Search Symbols"
       },
       {
         "command": "searchPlusPlus.openCommands",
@@ -112,14 +112,6 @@
       {
         "command": "searchPlusPlus.autofillPath",
         "title": "search++: Autofill File Path"
-      },
-      {
-        "command": "searchPlusPlus.nextSection",
-        "title": "search++: Next Section"
-      },
-      {
-        "command": "searchPlusPlus.prevSection",
-        "title": "search++: Previous Section"
       }
     ],
     "keybindings": [
@@ -172,18 +164,6 @@
         "command": "searchPlusPlus.autofillPath",
         "key": "right",
         "when": "searchPlusPlusModalOpen && searchPlusPlusFileTab"
-      },
-      {
-        "command": "searchPlusPlus.nextSection",
-        "key": "ctrl+down",
-        "mac": "cmd+down",
-        "when": "searchPlusPlusModalOpen && searchPlusPlusEverythingTab"
-      },
-      {
-        "command": "searchPlusPlus.prevSection",
-        "key": "ctrl+up",
-        "mac": "cmd+up",
-        "when": "searchPlusPlusModalOpen && searchPlusPlusEverythingTab"
       }
     ],
     "configuration": [
@@ -233,10 +213,22 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["files", "folders", "text", "symbols", "commands"]
+              "enum": [
+                "files",
+                "folders",
+                "text",
+                "symbols",
+                "commands"
+              ]
             },
             "uniqueItems": true,
-            "default": ["files", "folders", "text", "symbols", "commands"],
+            "default": [
+              "files",
+              "folders",
+              "text",
+              "symbols",
+              "commands"
+            ],
             "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it."
           },
           "searchPlusPlus.everywhere.resultLimit": {
@@ -257,7 +249,8 @@
     "watch": "node esbuild.config.mjs --watch",
     "lint": "eslint src/",
     "test": "vitest run",
-    "package": "npx @vscode/vsce package"
+    "package": "npx @vscode/vsce package",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -266,8 +259,13 @@
     "@typescript-eslint/parser": "^7.0.0",
     "esbuild": "^0.21.0",
     "eslint": "^8.57.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "typescript": "^5.4.0",
     "vitest": "^3.1.1"
+  },
+  "lint-staged": {
+    "*.ts": "eslint"
   },
   "dependencies": {
     "@vscode/ripgrep": "^1.15.9",
