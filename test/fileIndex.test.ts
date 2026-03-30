@@ -19,6 +19,7 @@ const ALL_FILES = [
   'assets/font.woff2',
   'data.log',
   '.gitignore',
+  '.searchignore',
   'src/.gitignore',
 ];
 
