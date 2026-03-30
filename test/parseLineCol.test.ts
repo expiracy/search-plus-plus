@@ -1,8 +1,9 @@
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, test, expect, vi } from 'vitest';
 
-mock.module('vscode', () => import('./__mocks__/vscode'));
+vi.mock('vscode', () => import('./__mocks__/vscode'));
 
 const { parseLineCol } = await import('../src/ui/searchModal');
+const { isAbsolutePath } = await import('../src/utils');
 
 describe('parseLineCol', () => {
   test('plain query with no colon', () => {
@@ -47,5 +48,63 @@ describe('parseLineCol', () => {
 
   test('large line and column numbers', () => {
     expect(parseLineCol('file:9999:500')).toEqual({ query: 'file', gotoLine: 9999, gotoColumn: 500 });
+  });
+
+  test('Windows absolute path is not mangled', () => {
+    expect(parseLineCol('C:\\Users\\file.ts')).toEqual({ query: 'C:\\Users\\file.ts' });
+  });
+
+  test('Windows absolute path with line:col', () => {
+    expect(parseLineCol('C:\\Users\\file.ts:10:5')).toEqual({ query: 'C:\\Users\\file.ts', gotoLine: 10, gotoColumn: 5 });
+  });
+
+  test('Unix absolute path is not mangled', () => {
+    expect(parseLineCol('/home/user/file.ts')).toEqual({ query: '/home/user/file.ts' });
+  });
+
+  test('Unix absolute path with line number', () => {
+    expect(parseLineCol('/home/user/file.ts:42')).toEqual({ query: '/home/user/file.ts', gotoLine: 42 });
+  });
+});
+
+describe('isAbsolutePath', () => {
+  test('Windows path with backslash', () => {
+    expect(isAbsolutePath('C:\\Users\\file.ts')).toBe(true);
+  });
+
+  test('Windows path with forward slash', () => {
+    expect(isAbsolutePath('C:/Users/file.ts')).toBe(true);
+  });
+
+  test('lowercase drive letter', () => {
+    expect(isAbsolutePath('d:\\projects\\foo')).toBe(true);
+  });
+
+  test('Unix absolute path', () => {
+    expect(isAbsolutePath('/home/user/file.ts')).toBe(true);
+  });
+
+  test('relative path is not absolute', () => {
+    expect(isAbsolutePath('src/file.ts')).toBe(false);
+  });
+
+  test('plain filename is not absolute', () => {
+    expect(isAbsolutePath('file.ts')).toBe(false);
+  });
+
+  test('search query is not absolute', () => {
+    expect(isAbsolutePath('search query')).toBe(false);
+  });
+
+  test('bare slash is not absolute', () => {
+    expect(isAbsolutePath('/')).toBe(false);
+  });
+
+  test('drive letter without slash is not absolute', () => {
+    expect(isAbsolutePath('C:')).toBe(false);
+  });
+
+  test('two-letter prefix is not a drive letter', () => {
+    expect(isAbsolutePath('CC:\\foo')).toBe(false);
   });
 });

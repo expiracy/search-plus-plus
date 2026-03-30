@@ -1,14 +1,35 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import { existsSync } from 'fs';
 import { spawn, type ChildProcess } from 'child_process';
+import type { GitIgnoreManager } from '../gitignore';
 
-// @vscode/ripgrep provides the path to the ripgrep binary
-let defaultRgPath: string;
-try {
-  defaultRgPath = require('@vscode/ripgrep').rgPath;
-} catch {
-  // Fallback: VSCode bundles ripgrep, try to find it
-  defaultRgPath = 'rg';
+function resolveRgPath(): string {
+  const rgBin = process.platform === 'win32' ? 'rg.exe' : 'rg';
+
+  // Strategy 1: @vscode/ripgrep npm package (works in development)
+  try {
+    const rgPath: string = require('@vscode/ripgrep').rgPath;
+    if (existsSync(rgPath)) {
+      return rgPath;
+    }
+  } catch {
+    // Not available (expected in packaged VSIX since node_modules is excluded)
+  }
+
+  // Strategy 2: VS Code's bundled ripgrep
+  for (const modules of ['node_modules.asar.unpacked', 'node_modules']) {
+    const candidate = path.join(vscode.env.appRoot, modules, '@vscode', 'ripgrep', 'bin', rgBin);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  // Strategy 3: system PATH
+  return 'rg';
 }
+
+const defaultRgPath = resolveRgPath();
 
 interface RgMatch {
   type: 'match';
@@ -38,6 +59,7 @@ export interface TextSearchOptions {
   caseSensitive: boolean;
   useRegex: boolean;
   excludeGitIgnored: boolean;
+  excludeVscodeExcluded: boolean;
   matchWholeWord: boolean;
   maxResults: number;
 }
@@ -55,13 +77,18 @@ export class TextSearch implements vscode.Disposable {
   private activeProcess: ChildProcess | null = null;
   private rgPath: string;
   private excludePatterns: string[] = [];
+  private vscodeExcludePatterns: string[] = [];
 
-  constructor(rgPath?: string) {
+  constructor(rgPath?: string, private gitIgnore?: GitIgnoreManager) {
     this.rgPath = rgPath ?? defaultRgPath;
   }
 
   setExcludePatterns(patterns: string[]): void {
     this.excludePatterns = patterns;
+  }
+
+  setVscodeExcludePatterns(patterns: string[]): void {
+    this.vscodeExcludePatterns = patterns;
   }
 
   search(
@@ -80,7 +107,6 @@ export class TextSearch implements vscode.Disposable {
 
     const args: string[] = [
       '--json',
-      '--max-count', '5',
     ];
 
     if (!options.caseSensitive) {
@@ -104,6 +130,13 @@ export class TextSearch implements vscode.Disposable {
     // Custom exclude patterns from extension settings
     for (const pattern of this.excludePatterns) {
       args.push('--glob', `!${pattern}`);
+    }
+
+    // VS Code's files.exclude / search.exclude patterns
+    if (options.excludeVscodeExcluded) {
+      for (const pattern of this.vscodeExcludePatterns) {
+        args.push('--glob', `!${pattern}`);
+      }
     }
 
     args.push('--', query);
@@ -220,11 +253,21 @@ export class TextSearch implements vscode.Disposable {
     if (!folders) return;
 
     try {
-      const notebookUris = await vscode.workspace.findFiles(
+      const allNotebookUris = await vscode.workspace.findFiles(
         '**/*.ipynb',
-        undefined,
+        this.gitIgnore?.getExcludeGlob(),
         100,
       );
+
+      const notebookUris = this.gitIgnore
+        ? allNotebookUris.filter((uri) => {
+            const rel = vscode.workspace.asRelativePath(uri);
+            if (this.gitIgnore!.isCustomExcluded(rel)) return false;
+            if (options.excludeGitIgnored && this.gitIgnore!.isGitIgnored(rel)) return false;
+            if (options.excludeVscodeExcluded && this.gitIgnore!.isVscodeExcluded(rel)) return false;
+            return true;
+          })
+        : allNotebookUris;
 
       const isCaseSensitive = options.caseSensitive || query !== query.toLowerCase();
       let pattern: RegExp;

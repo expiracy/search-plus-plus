@@ -1,7 +1,7 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
 
-const FIXTURE_ROOT = path.resolve(import.meta.dir, 'fixtures/mock-project').replace(/\\/g, '/');
+const FIXTURE_ROOT = path.resolve(__dirname, 'fixtures/mock-project').replace(/\\/g, '/');
 
 // All files in the fixture project (including gitignored ones)
 const ALL_FILES = [
@@ -36,8 +36,8 @@ function isIgnored(relativePath: string): boolean {
 const FILTERED_FILES = ALL_FILES.filter((f) => !isIgnored(f));
 
 // Configure vscode mock
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(FIXTURE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'mock-project', index: 0 }];
@@ -62,11 +62,22 @@ function makeEntry(relativePath: string) {
   return { relativePath, uri: Uri.file(`${FIXTURE_ROOT}/${relativePath}`) };
 }
 
+// Files that would be excluded by VS Code's files.exclude / search.exclude
+function isVscodeExcluded(relativePath: string): boolean {
+  const p = relativePath.replace(/\\/g, '/');
+  return p.startsWith('assets/');
+}
+
+const VSCODE_FILTERED_FILES = ALL_FILES.filter((f) => !isVscodeExcluded(f));
+const BOTH_FILTERED_FILES = ALL_FILES.filter((f) => !isIgnored(f) && !isVscodeExcluded(f));
+
 const mockGitIgnore = {
-  isIgnored,
+  isGitIgnored: isIgnored,
+  isVscodeExcluded,
   isCustomExcluded: () => false,
   getExcludeGlob: () => '{**/node_modules/**,**/.git/**}',
   getCustomExcludePatterns: () => [],
+  getVscodeExcludePatterns: () => [],
   onDidChange: () => ({ dispose() {} }),
   dispose() {},
 } as any;
@@ -76,9 +87,11 @@ describe('FileIndex', () => {
 
   beforeEach(() => {
     index = new FileIndex(mockGitIgnore);
-    const filtered = FILTERED_FILES.map(makeEntry);
+    const filtered = BOTH_FILTERED_FILES.map(makeEntry);
     const unfiltered = ALL_FILES.map(makeEntry);
-    index.buildFromEntries(filtered, unfiltered);
+    const gitFiltered = FILTERED_FILES.map(makeEntry);
+    const vscodeFiltered = VSCODE_FILTERED_FILES.map(makeEntry);
+    index.buildFromEntries(filtered, unfiltered, gitFiltered, vscodeFiltered);
   });
 
   test('isReady after build', () => {
@@ -86,7 +99,7 @@ describe('FileIndex', () => {
   });
 
   test('fileCount matches non-ignored fixture files', () => {
-    expect(index.fileCount).toBe(FILTERED_FILES.length);
+    expect(index.fileCount).toBe(BOTH_FILTERED_FILES.length);
   });
 
   test('find("index") matches src/index.ts', () => {
@@ -290,20 +303,20 @@ describe('FileIndex', () => {
 
   // --- binary / non-text files in index ---
 
-  test('find("logo") matches assets/logo.png', () => {
-    const results = index.find('logo');
+  test('find("logo") matches assets/logo.png (with vscode excludes off)', () => {
+    const results = index.find('logo', 200, true, false);
     const match = results.find((r) => r.item.relativePath === 'assets/logo.png');
     expect(match).toBeDefined();
   });
 
-  test('find("icon") matches assets/icon.ico', () => {
-    const results = index.find('icon');
+  test('find("icon") matches assets/icon.ico (with vscode excludes off)', () => {
+    const results = index.find('icon', 200, true, false);
     const match = results.find((r) => r.item.relativePath === 'assets/icon.ico');
     expect(match).toBeDefined();
   });
 
-  test('find("font") matches assets/font.woff2', () => {
-    const results = index.find('font');
+  test('find("font") matches assets/font.woff2 (with vscode excludes off)', () => {
+    const results = index.find('font', 200, true, false);
     const match = results.find((r) => r.item.relativePath === 'assets/font.woff2');
     expect(match).toBeDefined();
   });
@@ -314,8 +327,8 @@ describe('FileIndex', () => {
     expect(match).toBeDefined();
   });
 
-  test('filter("png") matches assets/logo.png', () => {
-    const results = index.filter('png');
+  test('filter("png") matches assets/logo.png (with vscode excludes off)', () => {
+    const results = index.filter('png', 200, true, false, false, false);
     const match = results.find((r) => r.relativePath === 'assets/logo.png');
     expect(match).toBeDefined();
   });
@@ -343,6 +356,51 @@ describe('FileIndex', () => {
   test('excludeGitIgnored=false includes files from nested-gitignored directory', () => {
     const results = index.find('output.gen', 200, false);
     const match = results.find((r) => r.item.relativePath === 'src/generated/output.gen.ts');
+    expect(match).toBeDefined();
+  });
+
+  // --- vscode exclude filtering ---
+
+  test('excludeVscodeExcluded=true filters out assets/ files', () => {
+    const results = index.find('logo', 200, true, true);
+    const match = results.find((r) => r.item.relativePath === 'assets/logo.png');
+    expect(match).toBeUndefined();
+  });
+
+  test('excludeVscodeExcluded=false includes assets/ files', () => {
+    const results = index.find('logo', 200, true, false);
+    const match = results.find((r) => r.item.relativePath === 'assets/logo.png');
+    expect(match).toBeDefined();
+  });
+
+  test('both excludes off includes all files', () => {
+    const results = index.find('', 1000, false, false);
+    expect(results.length).toBe(ALL_FILES.length);
+  });
+
+  test('git on + vscode off: excludes gitignored but includes vscode-excluded', () => {
+    const results = index.find('', 1000, true, false);
+    const paths = results.map((r) => r.item.relativePath);
+    expect(paths).toContain('assets/logo.png');
+    expect(paths).not.toContain('build/output.js');
+  });
+
+  test('git off + vscode on: includes gitignored but excludes vscode-excluded', () => {
+    const results = index.find('', 1000, false, true);
+    const paths = results.map((r) => r.item.relativePath);
+    expect(paths).not.toContain('assets/logo.png');
+    expect(paths).toContain('build/output.js');
+  });
+
+  test('filter with excludeVscodeExcluded=true filters out assets/', () => {
+    const results = index.filter('logo', 200, true, false, false, true);
+    const match = results.find((r) => r.relativePath === 'assets/logo.png');
+    expect(match).toBeUndefined();
+  });
+
+  test('filter with excludeVscodeExcluded=false includes assets/', () => {
+    const results = index.filter('logo', 200, true, false, false, false);
+    const match = results.find((r) => r.relativePath === 'assets/logo.png');
     expect(match).toBeDefined();
   });
 });

@@ -122,8 +122,12 @@ These use real dependencies (ripgrep binary, fzf library) against fixture files.
 - `FileIndex` — uses real fzf library. Mock `workspace.findFiles` to return fixture file URIs, then call `index.build()` and test `index.find()`. Use a stub GitIgnoreManager:
   ```typescript
   const mockGitIgnore = {
-    isIgnored: (p: string) => p.startsWith('node_modules/') || p.startsWith('build/') || p.endsWith('.log'),
+    isGitIgnored: (p: string) => p.startsWith('node_modules/') || p.startsWith('build/') || p.endsWith('.log'),
+    isVscodeExcluded: () => false,
+    isCustomExcluded: () => false,
     getExcludeGlob: () => '{**/node_modules/**,**/.git/**}',
+    getCustomExcludePatterns: () => [],
+    getVscodeExcludePatterns: () => [],
     onDidChange: () => ({ dispose() {} }),
     dispose() {},
   } as any;

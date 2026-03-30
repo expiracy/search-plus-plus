@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeAll } from 'bun:test';
+import { describe, test, expect, vi, beforeAll } from 'vitest';
 import path from 'path';
 
 // Generate a large-scale mock project with:
@@ -7,7 +7,7 @@ import path from 'path';
 // - 60 nested .gitignore files
 // - Multiple file types and nesting depths
 
-const SCALE_ROOT = path.resolve(import.meta.dir, 'fixtures/scale-project').replace(/\\/g, '/');
+const SCALE_ROOT = path.resolve(__dirname, 'fixtures/scale-project').replace(/\\/g, '/');
 
 // --- Generate file lists ---
 
@@ -106,8 +106,8 @@ const FILTERED_FILES = [
 
 // --- Mock vscode ---
 
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(SCALE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'scale-project', index: 0 }];
@@ -196,29 +196,29 @@ describe('Scalability: large repo simulation', () => {
     });
 
     test('root gitignore patterns are respected', () => {
-      expect(gitIgnore.isIgnored('build/output.js')).toBe(true);
-      expect(gitIgnore.isIgnored('dist/bundle.js')).toBe(true);
-      expect(gitIgnore.isIgnored('.cache/babel/cache.json')).toBe(true);
-      expect(gitIgnore.isIgnored('coverage/lcov-report/index.html')).toBe(true);
-      expect(gitIgnore.isIgnored('.next/static/chunk.js')).toBe(true);
-      expect(gitIgnore.isIgnored('tmp/scratch.txt')).toBe(true);
-      expect(gitIgnore.isIgnored('logs/error.txt')).toBe(true);
-      expect(gitIgnore.isIgnored('debug.log')).toBe(true);
-      expect(gitIgnore.isIgnored('.env')).toBe(true);
+      expect(gitIgnore.isGitIgnored('build/output.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('dist/bundle.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('.cache/babel/cache.json')).toBe(true);
+      expect(gitIgnore.isGitIgnored('coverage/lcov-report/index.html')).toBe(true);
+      expect(gitIgnore.isGitIgnored('.next/static/chunk.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('tmp/scratch.txt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('logs/error.txt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('debug.log')).toBe(true);
+      expect(gitIgnore.isGitIgnored('.env')).toBe(true);
     });
 
     test('nested package gitignore patterns are respected', () => {
-      expect(gitIgnore.isIgnored('packages/app/dist/bundle.js')).toBe(true);
-      expect(gitIgnore.isIgnored('packages/app/.cache/file.json')).toBe(true);
-      expect(gitIgnore.isIgnored('packages/cli/dist/index.js')).toBe(true);
-      expect(gitIgnore.isIgnored('packages/shared/dist/types.d.ts')).toBe(true);
+      expect(gitIgnore.isGitIgnored('packages/app/dist/bundle.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('packages/app/.cache/file.json')).toBe(true);
+      expect(gitIgnore.isGitIgnored('packages/cli/dist/index.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('packages/shared/dist/types.d.ts')).toBe(true);
     });
 
     test('source files are not ignored', () => {
-      expect(gitIgnore.isIgnored('src/core/file_0.ts')).toBe(false);
-      expect(gitIgnore.isIgnored('src/api/v1/file_3.jsx')).toBe(false);
-      expect(gitIgnore.isIgnored('packages/app/src/pages/file_27.ts')).toBe(false);
-      expect(gitIgnore.isIgnored('lib/shared/file_21.ts')).toBe(false);
+      expect(gitIgnore.isGitIgnored('src/core/file_0.ts')).toBe(false);
+      expect(gitIgnore.isGitIgnored('src/api/v1/file_3.jsx')).toBe(false);
+      expect(gitIgnore.isGitIgnored('packages/app/src/pages/file_27.ts')).toBe(false);
+      expect(gitIgnore.isGitIgnored('lib/shared/file_21.ts')).toBe(false);
     });
   });
 

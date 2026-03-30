@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeAll } from 'bun:test';
+import { describe, test, expect, vi, beforeAll } from 'vitest';
 import path from 'path';
 
 // Simulates a polyglot monorepo with 7 nested .gitignore files exercising:
@@ -10,7 +10,7 @@ import path from 'path';
 // - Comments and blank lines
 // - Windows backslash normalization
 
-const FIXTURE_ROOT = path.resolve(import.meta.dir, 'fixtures/conventions-project').replace(/\\/g, '/');
+const FIXTURE_ROOT = path.resolve(__dirname, 'fixtures/conventions-project').replace(/\\/g, '/');
 
 // --- .gitignore file definitions ---
 
@@ -205,8 +205,8 @@ const ALL_FILES = [
 
 // --- Mock vscode ---
 
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(FIXTURE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'conventions-project', index: 0 }];
@@ -282,38 +282,38 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('root .gitignore patterns', () => {
     test('directory patterns: node_modules/, build/, dist/, coverage/, __pycache__/', () => {
-      expect(gitIgnore.isIgnored('node_modules/lodash/index.js')).toBe(true);
-      expect(gitIgnore.isIgnored('node_modules/react/index.js')).toBe(true);
-      expect(gitIgnore.isIgnored('build/output.js')).toBe(true);
-      expect(gitIgnore.isIgnored('build/esm/index.js')).toBe(true);
-      expect(gitIgnore.isIgnored('dist/bundle.js')).toBe(true);
-      expect(gitIgnore.isIgnored('dist/assets/style.css')).toBe(true);
-      expect(gitIgnore.isIgnored('coverage/lcov.info')).toBe(true);
-      expect(gitIgnore.isIgnored('__pycache__/test.cpython-311.pyc')).toBe(true);
+      expect(gitIgnore.isGitIgnored('node_modules/lodash/index.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('node_modules/react/index.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('build/output.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('build/esm/index.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('dist/bundle.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('dist/assets/style.css')).toBe(true);
+      expect(gitIgnore.isGitIgnored('coverage/lcov.info')).toBe(true);
+      expect(gitIgnore.isGitIgnored('__pycache__/test.cpython-311.pyc')).toBe(true);
     });
 
     test('wildcard extension patterns: *.log, *.pyc, *.o, *.so', () => {
-      expect(gitIgnore.isIgnored('debug.log')).toBe(true);
-      expect(gitIgnore.isIgnored('access.log')).toBe(true);
-      expect(gitIgnore.isIgnored('main.pyc')).toBe(true);
-      expect(gitIgnore.isIgnored('utils.o')).toBe(true);
-      expect(gitIgnore.isIgnored('libshared.so')).toBe(true);
+      expect(gitIgnore.isGitIgnored('debug.log')).toBe(true);
+      expect(gitIgnore.isGitIgnored('access.log')).toBe(true);
+      expect(gitIgnore.isGitIgnored('main.pyc')).toBe(true);
+      expect(gitIgnore.isGitIgnored('utils.o')).toBe(true);
+      expect(gitIgnore.isGitIgnored('libshared.so')).toBe(true);
     });
 
     test('exact filename patterns: .env, .DS_Store, Thumbs.db', () => {
-      expect(gitIgnore.isIgnored('.env')).toBe(true);
-      expect(gitIgnore.isIgnored('.DS_Store')).toBe(true);
-      expect(gitIgnore.isIgnored('Thumbs.db')).toBe(true);
+      expect(gitIgnore.isGitIgnored('.env')).toBe(true);
+      expect(gitIgnore.isGitIgnored('.DS_Store')).toBe(true);
+      expect(gitIgnore.isGitIgnored('Thumbs.db')).toBe(true);
     });
 
     test('.env.example is NOT ignored (different filename)', () => {
-      expect(gitIgnore.isIgnored('.env.example')).toBe(false);
+      expect(gitIgnore.isGitIgnored('.env.example')).toBe(false);
     });
 
     test('source files are not affected by root patterns', () => {
-      expect(gitIgnore.isIgnored('package.json')).toBe(false);
-      expect(gitIgnore.isIgnored('README.md')).toBe(false);
-      expect(gitIgnore.isIgnored('scripts/deploy.sh')).toBe(false);
+      expect(gitIgnore.isGitIgnored('package.json')).toBe(false);
+      expect(gitIgnore.isGitIgnored('README.md')).toBe(false);
+      expect(gitIgnore.isGitIgnored('scripts/deploy.sh')).toBe(false);
     });
   });
 
@@ -321,23 +321,23 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('frontend/.gitignore patterns', () => {
     test('*.map ignores source maps', () => {
-      expect(gitIgnore.isIgnored('frontend/src/app.js.map')).toBe(true);
+      expect(gitIgnore.isGitIgnored('frontend/src/app.js.map')).toBe(true);
     });
 
     test('.next/ ignores Next.js build output', () => {
-      expect(gitIgnore.isIgnored('frontend/.next/static/chunk.js')).toBe(true);
-      expect(gitIgnore.isIgnored('frontend/.next/server/page.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('frontend/.next/static/chunk.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('frontend/.next/server/page.js')).toBe(true);
     });
 
     test('storybook-static/ ignores Storybook build', () => {
-      expect(gitIgnore.isIgnored('frontend/storybook-static/main.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('frontend/storybook-static/main.js')).toBe(true);
     });
 
     test('frontend source files are not ignored', () => {
-      expect(gitIgnore.isIgnored('frontend/src/App.tsx')).toBe(false);
-      expect(gitIgnore.isIgnored('frontend/src/index.ts')).toBe(false);
-      expect(gitIgnore.isIgnored('frontend/src/components/Header.tsx')).toBe(false);
-      expect(gitIgnore.isIgnored('frontend/package.json')).toBe(false);
+      expect(gitIgnore.isGitIgnored('frontend/src/App.tsx')).toBe(false);
+      expect(gitIgnore.isGitIgnored('frontend/src/index.ts')).toBe(false);
+      expect(gitIgnore.isGitIgnored('frontend/src/components/Header.tsx')).toBe(false);
+      expect(gitIgnore.isGitIgnored('frontend/package.json')).toBe(false);
     });
   });
 
@@ -345,25 +345,25 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('backend/.gitignore patterns', () => {
     test('venv/ ignores virtual environment', () => {
-      expect(gitIgnore.isIgnored('backend/venv/lib/pkg.txt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('backend/venv/lib/pkg.txt')).toBe(true);
     });
 
     test('.mypy_cache/ ignores type checker cache', () => {
-      expect(gitIgnore.isIgnored('backend/.mypy_cache/cache.json')).toBe(true);
+      expect(gitIgnore.isGitIgnored('backend/.mypy_cache/cache.json')).toBe(true);
     });
 
     test('*.egg-info/ ignores egg info directories', () => {
-      expect(gitIgnore.isIgnored('backend/myapp.egg-info/PKG-INFO')).toBe(true);
+      expect(gitIgnore.isGitIgnored('backend/myapp.egg-info/PKG-INFO')).toBe(true);
     });
 
     test('*.txt ignores text files in backend', () => {
-      expect(gitIgnore.isIgnored('backend/notes.txt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('backend/notes.txt')).toBe(true);
     });
 
     test('backend source files are not ignored', () => {
-      expect(gitIgnore.isIgnored('backend/src/main.py')).toBe(false);
-      expect(gitIgnore.isIgnored('backend/src/models.py')).toBe(false);
-      expect(gitIgnore.isIgnored('backend/src/utils/helpers.py')).toBe(false);
+      expect(gitIgnore.isGitIgnored('backend/src/main.py')).toBe(false);
+      expect(gitIgnore.isGitIgnored('backend/src/models.py')).toBe(false);
+      expect(gitIgnore.isGitIgnored('backend/src/utils/helpers.py')).toBe(false);
     });
   });
 
@@ -371,30 +371,30 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('services/.gitignore: character range patterns', () => {
     test('bin/ and obj/ ignore build artifacts', () => {
-      expect(gitIgnore.isIgnored('services/bin/api.dll')).toBe(true);
-      expect(gitIgnore.isIgnored('services/obj/project.assets.json')).toBe(true);
+      expect(gitIgnore.isGitIgnored('services/bin/api.dll')).toBe(true);
+      expect(gitIgnore.isGitIgnored('services/obj/project.assets.json')).toBe(true);
     });
 
     test('[Dd]ebug/ matches uppercase Debug', () => {
-      expect(gitIgnore.isIgnored('services/Debug/services.dll')).toBe(true);
+      expect(gitIgnore.isGitIgnored('services/Debug/services.dll')).toBe(true);
     });
 
     test('[Dd]ebug/ matches lowercase debug', () => {
-      expect(gitIgnore.isIgnored('services/debug/services.dll')).toBe(true);
+      expect(gitIgnore.isGitIgnored('services/debug/services.dll')).toBe(true);
     });
 
     test('[Rr]elease/ matches uppercase Release', () => {
-      expect(gitIgnore.isIgnored('services/Release/services.dll')).toBe(true);
+      expect(gitIgnore.isGitIgnored('services/Release/services.dll')).toBe(true);
     });
 
     test('[Rr]elease/ matches lowercase release', () => {
-      expect(gitIgnore.isIgnored('services/release/services.dll')).toBe(true);
+      expect(gitIgnore.isGitIgnored('services/release/services.dll')).toBe(true);
     });
 
     test('services source files are not ignored', () => {
-      expect(gitIgnore.isIgnored('services/api/Program.cs')).toBe(false);
-      expect(gitIgnore.isIgnored('services/worker/Worker.cs')).toBe(false);
-      expect(gitIgnore.isIgnored('services/shared/Types.cs')).toBe(false);
+      expect(gitIgnore.isGitIgnored('services/api/Program.cs')).toBe(false);
+      expect(gitIgnore.isGitIgnored('services/worker/Worker.cs')).toBe(false);
+      expect(gitIgnore.isGitIgnored('services/shared/Types.cs')).toBe(false);
     });
   });
 
@@ -402,23 +402,23 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('negation patterns (!pattern)', () => {
     test('backend: !requirements.txt negates *.txt', () => {
-      expect(gitIgnore.isIgnored('backend/requirements.txt')).toBe(false);
-      expect(gitIgnore.isIgnored('backend/notes.txt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('backend/requirements.txt')).toBe(false);
+      expect(gitIgnore.isGitIgnored('backend/notes.txt')).toBe(true);
     });
 
     test('infra: !example.tfvars negates *.tfvars', () => {
-      expect(gitIgnore.isIgnored('infra/example.tfvars')).toBe(false);
-      expect(gitIgnore.isIgnored('infra/secret.tfvars')).toBe(true);
+      expect(gitIgnore.isGitIgnored('infra/example.tfvars')).toBe(false);
+      expect(gitIgnore.isGitIgnored('infra/secret.tfvars')).toBe(true);
     });
 
     test('docs: !guide.pdf negates *.pdf', () => {
-      expect(gitIgnore.isIgnored('docs/guide.pdf')).toBe(false);
-      expect(gitIgnore.isIgnored('docs/report.pdf')).toBe(true);
+      expect(gitIgnore.isGitIgnored('docs/guide.pdf')).toBe(false);
+      expect(gitIgnore.isGitIgnored('docs/report.pdf')).toBe(true);
     });
 
     test('data: !schema.csv negates *.csv', () => {
-      expect(gitIgnore.isIgnored('data/schema.csv')).toBe(false);
-      expect(gitIgnore.isIgnored('data/users.csv')).toBe(true);
+      expect(gitIgnore.isGitIgnored('data/schema.csv')).toBe(false);
+      expect(gitIgnore.isGitIgnored('data/users.csv')).toBe(true);
     });
   });
 
@@ -426,17 +426,17 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('infra/.gitignore: Terraform patterns', () => {
     test('.terraform/ directory is ignored', () => {
-      expect(gitIgnore.isIgnored('infra/.terraform/providers/aws.zip')).toBe(true);
+      expect(gitIgnore.isGitIgnored('infra/.terraform/providers/aws.zip')).toBe(true);
     });
 
     test('*.tfstate and *.tfstate.backup are ignored', () => {
-      expect(gitIgnore.isIgnored('infra/terraform.tfstate')).toBe(true);
-      expect(gitIgnore.isIgnored('infra/terraform.tfstate.backup')).toBe(true);
+      expect(gitIgnore.isGitIgnored('infra/terraform.tfstate')).toBe(true);
+      expect(gitIgnore.isGitIgnored('infra/terraform.tfstate.backup')).toBe(true);
     });
 
     test('Terraform source files are not ignored', () => {
-      expect(gitIgnore.isIgnored('infra/main.tf')).toBe(false);
-      expect(gitIgnore.isIgnored('infra/variables.tf')).toBe(false);
+      expect(gitIgnore.isGitIgnored('infra/main.tf')).toBe(false);
+      expect(gitIgnore.isGitIgnored('infra/variables.tf')).toBe(false);
     });
   });
 
@@ -444,15 +444,15 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('data/.gitignore patterns', () => {
     test('*.parquet files are ignored', () => {
-      expect(gitIgnore.isIgnored('data/orders.parquet')).toBe(true);
+      expect(gitIgnore.isGitIgnored('data/orders.parquet')).toBe(true);
     });
 
     test('raw/ directory is ignored', () => {
-      expect(gitIgnore.isIgnored('data/raw/dump.sql')).toBe(true);
+      expect(gitIgnore.isGitIgnored('data/raw/dump.sql')).toBe(true);
     });
 
     test('migrations are not ignored', () => {
-      expect(gitIgnore.isIgnored('data/migrations/001_init.sql')).toBe(false);
+      expect(gitIgnore.isGitIgnored('data/migrations/001_init.sql')).toBe(false);
     });
   });
 
@@ -461,26 +461,26 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
   describe('comments and blank lines', () => {
     test('comment lines are not applied as patterns', () => {
       // None of the # comment text should act as an ignore rule
-      expect(gitIgnore.isIgnored('frontend/src/App.tsx')).toBe(false);
-      expect(gitIgnore.isIgnored('package.json')).toBe(false);
+      expect(gitIgnore.isGitIgnored('frontend/src/App.tsx')).toBe(false);
+      expect(gitIgnore.isGitIgnored('package.json')).toBe(false);
     });
 
     test('blank lines do not create catch-all patterns', () => {
-      expect(gitIgnore.isIgnored('README.md')).toBe(false);
-      expect(gitIgnore.isIgnored('scripts/deploy.sh')).toBe(false);
+      expect(gitIgnore.isGitIgnored('README.md')).toBe(false);
+      expect(gitIgnore.isGitIgnored('scripts/deploy.sh')).toBe(false);
     });
   });
 
-  // ── isIgnored post-filter ──────────────────────────────────────────
+  // ── isGitIgnored post-filter ──────────────────────────────────────────
 
-  describe('isIgnored post-filter', () => {
-    test('gitignore directory patterns are caught by isIgnored', () => {
-      expect(gitIgnore.isIgnored('build/output.js')).toBe(true);
-      expect(gitIgnore.isIgnored('dist/bundle.js')).toBe(true);
-      expect(gitIgnore.isIgnored('coverage/report.html')).toBe(true);
-      expect(gitIgnore.isIgnored('frontend/.next/cache.js')).toBe(true);
-      expect(gitIgnore.isIgnored('backend/venv/lib/site.py')).toBe(true);
-      expect(gitIgnore.isIgnored('infra/.terraform/state.json')).toBe(true);
+  describe('isGitIgnored post-filter', () => {
+    test('gitignore directory patterns are caught by isGitIgnored', () => {
+      expect(gitIgnore.isGitIgnored('build/output.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('dist/bundle.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('coverage/report.html')).toBe(true);
+      expect(gitIgnore.isGitIgnored('frontend/.next/cache.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('backend/venv/lib/site.py')).toBe(true);
+      expect(gitIgnore.isGitIgnored('infra/.terraform/state.json')).toBe(true);
     });
   });
 
@@ -534,21 +534,21 @@ describe('Gitignore conventions: multi-gitignore monorepo', () => {
 
   describe('Windows backslash paths', () => {
     test('root patterns work with backslashes', () => {
-      expect(gitIgnore.isIgnored('node_modules\\lodash\\index.js')).toBe(true);
-      expect(gitIgnore.isIgnored('build\\output.js')).toBe(true);
-      expect(gitIgnore.isIgnored('scripts\\deploy.sh')).toBe(false);
+      expect(gitIgnore.isGitIgnored('node_modules\\lodash\\index.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('build\\output.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('scripts\\deploy.sh')).toBe(false);
     });
 
     test('nested patterns work with backslashes', () => {
-      expect(gitIgnore.isIgnored('frontend\\.next\\static\\chunk.js')).toBe(true);
-      expect(gitIgnore.isIgnored('backend\\venv\\lib\\pkg.txt')).toBe(true);
-      expect(gitIgnore.isIgnored('services\\bin\\api.dll')).toBe(true);
+      expect(gitIgnore.isGitIgnored('frontend\\.next\\static\\chunk.js')).toBe(true);
+      expect(gitIgnore.isGitIgnored('backend\\venv\\lib\\pkg.txt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('services\\bin\\api.dll')).toBe(true);
     });
 
     test('negated files work with backslashes', () => {
-      expect(gitIgnore.isIgnored('backend\\requirements.txt')).toBe(false);
-      expect(gitIgnore.isIgnored('docs\\guide.pdf')).toBe(false);
-      expect(gitIgnore.isIgnored('data\\schema.csv')).toBe(false);
+      expect(gitIgnore.isGitIgnored('backend\\requirements.txt')).toBe(false);
+      expect(gitIgnore.isGitIgnored('docs\\guide.pdf')).toBe(false);
+      expect(gitIgnore.isGitIgnored('data\\schema.csv')).toBe(false);
     });
   });
 });

@@ -14,7 +14,11 @@
       "WebFetch(domain:adamcoster.com)",
       "Bash(npx tsc:*)",
       "Bash(bun:*)",
-      "Bash(bunx tsc:*)"
+      "Bash(bunx tsc:*)",
+      "WebFetch(domain:code.visualstudio.com)",
+      "Bash(ls tsconfig*.json)",
+      "Bash(where bun:*)",
+      "Bash(npx vitest:*)"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeAll } from 'bun:test';
+import { describe, test, expect, vi, beforeAll } from 'vitest';
 import path from 'path';
 
 // Simulates an ML project (like ppg-sleep-stage-classifier) with:
@@ -6,7 +6,7 @@ import path from 'path';
 // - Large output/checkpoint files in gitignored directories
 // - Regression test: gitignored dirs like outputs/ must be discoverable in "everything mode"
 
-const FIXTURE_ROOT = path.resolve(import.meta.dir, 'fixtures/ml-project').replace(/\\/g, '/');
+const FIXTURE_ROOT = path.resolve(__dirname, 'fixtures/ml-project').replace(/\\/g, '/');
 
 // --- .gitignore file definitions ---
 
@@ -99,8 +99,8 @@ const ALL_FILES = [
 
 // --- Mock vscode ---
 
-mock.module('vscode', () => {
-  const base = require('./__mocks__/vscode');
+vi.doMock('vscode', async () => {
+  const base: any = await import('./__mocks__/vscode');
   const rootUri = base.Uri.file(FIXTURE_ROOT);
 
   base.workspace.workspaceFolders = [{ uri: rootUri, name: 'ml-project', index: 0 }];
@@ -178,46 +178,46 @@ describe('ML project: everything mode regression', () => {
 
   describe('GitIgnoreManager', () => {
     test('outputs/ directory contents are ignored', () => {
-      expect(gitIgnore.isIgnored('outputs/checkpoints/epoch_10.ckpt')).toBe(true);
-      expect(gitIgnore.isIgnored('outputs/checkpoints/best.ckpt')).toBe(true);
-      expect(gitIgnore.isIgnored('outputs/logs/training.log')).toBe(true);
-      expect(gitIgnore.isIgnored('outputs/predictions/test_preds.csv')).toBe(true);
-      expect(gitIgnore.isIgnored('outputs/models/final_model.pt')).toBe(true);
-      expect(gitIgnore.isIgnored('outputs/models/exported.h5')).toBe(true);
+      expect(gitIgnore.isGitIgnored('outputs/checkpoints/epoch_10.ckpt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('outputs/checkpoints/best.ckpt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('outputs/logs/training.log')).toBe(true);
+      expect(gitIgnore.isGitIgnored('outputs/predictions/test_preds.csv')).toBe(true);
+      expect(gitIgnore.isGitIgnored('outputs/models/final_model.pt')).toBe(true);
+      expect(gitIgnore.isGitIgnored('outputs/models/exported.h5')).toBe(true);
     });
 
     test('data/raw/ contents are ignored', () => {
-      expect(gitIgnore.isIgnored('data/raw/subject_001.edf')).toBe(true);
-      expect(gitIgnore.isIgnored('data/raw/subject_002.edf')).toBe(true);
-      expect(gitIgnore.isIgnored('data/raw/annotations.csv')).toBe(true);
+      expect(gitIgnore.isGitIgnored('data/raw/subject_001.edf')).toBe(true);
+      expect(gitIgnore.isGitIgnored('data/raw/subject_002.edf')).toBe(true);
+      expect(gitIgnore.isGitIgnored('data/raw/annotations.csv')).toBe(true);
     });
 
     test('__pycache__/ contents are ignored', () => {
-      expect(gitIgnore.isIgnored('__pycache__/train.cpython-311.pyc')).toBe(true);
-      expect(gitIgnore.isIgnored('src/__pycache__/models.cpython-311.pyc')).toBe(true);
+      expect(gitIgnore.isGitIgnored('__pycache__/train.cpython-311.pyc')).toBe(true);
+      expect(gitIgnore.isGitIgnored('src/__pycache__/models.cpython-311.pyc')).toBe(true);
     });
 
     test('nested gitignore: src/*.log is ignored', () => {
-      expect(gitIgnore.isIgnored('src/debug.log')).toBe(true);
+      expect(gitIgnore.isGitIgnored('src/debug.log')).toBe(true);
     });
 
     test('nested gitignore: .ipynb_checkpoints/ is ignored', () => {
-      expect(gitIgnore.isIgnored('notebooks/.ipynb_checkpoints/exploration-checkpoint.ipynb')).toBe(true);
+      expect(gitIgnore.isGitIgnored('notebooks/.ipynb_checkpoints/exploration-checkpoint.ipynb')).toBe(true);
     });
 
     test('.env is ignored', () => {
-      expect(gitIgnore.isIgnored('.env')).toBe(true);
+      expect(gitIgnore.isGitIgnored('.env')).toBe(true);
     });
 
     test('tracked source files are NOT ignored', () => {
-      expect(gitIgnore.isIgnored('src/train.py')).toBe(false);
-      expect(gitIgnore.isIgnored('src/models/resnet.py')).toBe(false);
-      expect(gitIgnore.isIgnored('src/data/loader.py')).toBe(false);
-      expect(gitIgnore.isIgnored('notebooks/exploration.ipynb')).toBe(false);
-      expect(gitIgnore.isIgnored('data/processed/features.csv')).toBe(false);
-      expect(gitIgnore.isIgnored('data/splits/train.txt')).toBe(false);
-      expect(gitIgnore.isIgnored('scripts/run_training.sh')).toBe(false);
-      expect(gitIgnore.isIgnored('config.yaml')).toBe(false);
+      expect(gitIgnore.isGitIgnored('src/train.py')).toBe(false);
+      expect(gitIgnore.isGitIgnored('src/models/resnet.py')).toBe(false);
+      expect(gitIgnore.isGitIgnored('src/data/loader.py')).toBe(false);
+      expect(gitIgnore.isGitIgnored('notebooks/exploration.ipynb')).toBe(false);
+      expect(gitIgnore.isGitIgnored('data/processed/features.csv')).toBe(false);
+      expect(gitIgnore.isGitIgnored('data/splits/train.txt')).toBe(false);
+      expect(gitIgnore.isGitIgnored('scripts/run_training.sh')).toBe(false);
+      expect(gitIgnore.isGitIgnored('config.yaml')).toBe(false);
     });
 
   });

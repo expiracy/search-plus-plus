@@ -1,5 +1,8 @@
-import { describe, test, expect } from 'bun:test';
-import { debounce } from '../src/utils';
+import { describe, test, expect } from 'vitest';
+import { debounce, getEnabledSections } from '../src/utils';
+import { ResultSection } from '../src/providers/types';
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 describe('debounce', () => {
   test('calls function after delay', async () => {
@@ -7,7 +10,7 @@ describe('debounce', () => {
     const fn = debounce(() => { called = true; }, 20);
     fn();
     expect(called).toBe(false);
-    await Bun.sleep(40);
+    await sleep(40);
     expect(called).toBe(true);
   });
 
@@ -15,7 +18,7 @@ describe('debounce', () => {
     let called = false;
     const fn = debounce(() => { called = true; }, 50);
     fn();
-    await Bun.sleep(10);
+    await sleep(10);
     expect(called).toBe(false);
     fn.cancel();
   });
@@ -24,11 +27,11 @@ describe('debounce', () => {
     const calls: number[] = [];
     const fn = debounce((val: number) => { calls.push(val); }, 30);
     fn(1);
-    await Bun.sleep(10);
+    await sleep(10);
     fn(2);
-    await Bun.sleep(10);
+    await sleep(10);
     fn(3);
-    await Bun.sleep(50);
+    await sleep(50);
     expect(calls).toEqual([3]);
   });
 
@@ -37,7 +40,7 @@ describe('debounce', () => {
     const fn = debounce(() => { called = true; }, 20);
     fn();
     fn.cancel();
-    await Bun.sleep(40);
+    await sleep(40);
     expect(called).toBe(false);
   });
 
@@ -50,7 +53,42 @@ describe('debounce', () => {
     let receivedArgs: any[] = [];
     const fn = debounce((...args: any[]) => { receivedArgs = args; }, 20);
     fn('a', 42, true);
-    await Bun.sleep(40);
+    await sleep(40);
     expect(receivedArgs).toEqual(['a', 42, true]);
+  });
+});
+
+describe('getEnabledSections', () => {
+  test('returns defaults for non-array input', () => {
+    expect(getEnabledSections(undefined)).toEqual([
+      ResultSection.Files, ResultSection.Folders, ResultSection.Text, ResultSection.Symbols, ResultSection.Commands,
+    ]);
+    expect(getEnabledSections(null)).toEqual([
+      ResultSection.Files, ResultSection.Folders, ResultSection.Text, ResultSection.Symbols, ResultSection.Commands,
+    ]);
+  });
+
+  test('preserves custom order', () => {
+    expect(getEnabledSections(['text', 'files'])).toEqual([
+      ResultSection.Text, ResultSection.Files,
+    ]);
+  });
+
+  test('filters invalid section names', () => {
+    expect(getEnabledSections(['files', 'invalid', 'text'])).toEqual([
+      ResultSection.Files, ResultSection.Text,
+    ]);
+  });
+
+  test('deduplicates keeping first occurrence', () => {
+    expect(getEnabledSections(['files', 'files'])).toEqual([ResultSection.Files]);
+  });
+
+  test('returns empty array for empty input', () => {
+    expect(getEnabledSections([])).toEqual([]);
+  });
+
+  test('skips non-string entries', () => {
+    expect(getEnabledSections([null, 123, 'commands'])).toEqual([ResultSection.Commands]);
   });
 });

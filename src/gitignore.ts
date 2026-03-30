@@ -3,7 +3,9 @@ import ignore, { Ignore } from 'ignore';
 
 export class GitIgnoreManager implements vscode.Disposable {
   private ig: Ignore = ignore();
+  private vscodeIg: Ignore = ignore();
   private customIg: Ignore = ignore();
+  private vscodeExcludePatterns: string[] = [];
   private directoryExcludes: string[] = [];
   private watchers: vscode.Disposable[] = [];
   private _onDidChange = new vscode.EventEmitter<void>();
@@ -11,7 +13,9 @@ export class GitIgnoreManager implements vscode.Disposable {
 
   async load(): Promise<void> {
     this.ig = ignore();
+    this.vscodeIg = ignore();
     this.customIg = ignore();
+    this.vscodeExcludePatterns = [];
     this.directoryExcludes = ['**/node_modules/**', '**/.git/**'];
 
     const folders = vscode.workspace.workspaceFolders;
@@ -59,12 +63,13 @@ export class GitIgnoreManager implements vscode.Disposable {
       }
     }
 
-    // Also respect files.exclude and search.exclude settings
+    // VS Code's files.exclude and search.exclude (separate from gitignore)
     const filesExclude = vscode.workspace.getConfiguration('files').get<Record<string, boolean>>('exclude', {});
     const searchExclude = vscode.workspace.getConfiguration('search').get<Record<string, boolean>>('exclude', {});
     for (const [pattern, enabled] of Object.entries({ ...filesExclude, ...searchExclude })) {
       if (enabled) {
-        this.ig.add(pattern);
+        this.vscodeIg.add(pattern);
+        this.vscodeExcludePatterns.push(pattern);
       }
     }
 
@@ -73,7 +78,6 @@ export class GitIgnoreManager implements vscode.Disposable {
       .getConfiguration('searchPlusPlus')
       .get<string[]>('excludePaths', []);
     for (const pattern of customExcludes) {
-      this.ig.add(pattern);
       this.customIg.add(pattern);
       if (pattern.includes('/**') || pattern.endsWith('/')) {
         this.directoryExcludes.push(pattern);
@@ -112,9 +116,17 @@ export class GitIgnoreManager implements vscode.Disposable {
     this._onDidChange.fire();
   }
 
-  isIgnored(relativePath: string): boolean {
+  isGitIgnored(relativePath: string): boolean {
     try {
       return this.ig.ignores(relativePath.replace(/\\/g, '/'));
+    } catch {
+      return false;
+    }
+  }
+
+  isVscodeExcluded(relativePath: string): boolean {
+    try {
+      return this.vscodeIg.ignores(relativePath.replace(/\\/g, '/'));
     } catch {
       return false;
     }
@@ -132,6 +144,10 @@ export class GitIgnoreManager implements vscode.Disposable {
     return vscode.workspace
       .getConfiguration('searchPlusPlus')
       .get<string[]>('excludePaths', []);
+  }
+
+  getVscodeExcludePatterns(): string[] {
+    return [...this.vscodeExcludePatterns];
   }
 
   getExcludeGlob(): string | undefined {

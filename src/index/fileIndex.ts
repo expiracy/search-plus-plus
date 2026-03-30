@@ -9,9 +9,13 @@ export interface FileEntry {
 
 export class FileIndex implements vscode.Disposable {
   private entries: FileEntry[] = [];
+  private gitFilteredEntries: FileEntry[] = [];
+  private vscodeFilteredEntries: FileEntry[] = [];
   private filteredEntries: FileEntry[] = [];
   private fzfInstance: Fzf<FileEntry> | null = null;
   private unfilteredFzfInstance: Fzf<FileEntry> | null = null;
+  private gitOnlyFzfInstance: Fzf<FileEntry> | null = null;
+  private vscodeOnlyFzfInstance: Fzf<FileEntry> | null = null;
   private fzfDirty = false;
   private watcher: vscode.FileSystemWatcher | null = null;
 
@@ -57,9 +61,13 @@ export class FileIndex implements vscode.Disposable {
 
     this._isStale = false;
     this.entries = [];
+    this.gitFilteredEntries = [];
+    this.vscodeFilteredEntries = [];
     this.filteredEntries = [];
     this.fzfInstance = null;
     this.unfilteredFzfInstance = null;
+    this.gitOnlyFzfInstance = null;
+    this.vscodeOnlyFzfInstance = null;
     this.fzfDirty = false;
 
     // Clear any pending batch state to prevent stale updates
@@ -84,20 +92,28 @@ export class FileIndex implements vscode.Disposable {
       uri,
     })).filter((e) => !this.gitIgnore.isCustomExcluded(e.relativePath));
 
+    this.gitFilteredEntries = this.entries.filter(
+      (e) => !this.gitIgnore.isGitIgnored(e.relativePath),
+    );
+
+    this.vscodeFilteredEntries = this.entries.filter(
+      (e) => !this.gitIgnore.isVscodeExcluded(e.relativePath),
+    );
+
     this.filteredEntries = this.entries.filter(
-      (e) => !this.gitIgnore.isIgnored(e.relativePath),
+      (e) => !this.gitIgnore.isGitIgnored(e.relativePath) && !this.gitIgnore.isVscodeExcluded(e.relativePath),
     );
 
     this.rebuildFzf();
     this.setupWatcher();
   }
 
-  find(query: string, limit = 200, excludeGitIgnored = true): FzfResultItem<FileEntry>[] {
+  find(query: string, limit = 200, excludeGitIgnored = true, excludeVscodeExcluded = true): FzfResultItem<FileEntry>[] {
     if (this.fzfDirty) {
       this.rebuildFzf();
       this.fzfDirty = false;
     }
-    const fzf = excludeGitIgnored ? this.fzfInstance : this.getUnfilteredFzf();
+    const fzf = this.getFzfFor(excludeGitIgnored, excludeVscodeExcluded);
     if (!fzf) return [];
     return fzf.find(query).slice(0, limit);
   }
@@ -108,8 +124,9 @@ export class FileIndex implements vscode.Disposable {
     excludeGitIgnored = true,
     caseSensitive = false,
     matchWholeWord = false,
+    excludeVscodeExcluded = true,
   ): FileEntry[] {
-    const entries = excludeGitIgnored ? this.filteredEntries : this.entries;
+    const entries = this.getEntriesFor(excludeGitIgnored, excludeVscodeExcluded);
     const q = caseSensitive ? query : query.toLowerCase();
 
     const matches: FileEntry[] = [];
@@ -132,12 +149,33 @@ export class FileIndex implements vscode.Disposable {
   }
 
   /** Populate the index directly (for testing without findFiles) */
-  buildFromEntries(filtered: FileEntry[], unfiltered?: FileEntry[]): void {
+  buildFromEntries(
+    filtered: FileEntry[],
+    unfiltered?: FileEntry[],
+    gitFiltered?: FileEntry[],
+    vscodeFiltered?: FileEntry[],
+  ): void {
     this._isStale = false;
     this.filteredEntries = filtered;
     this.entries = unfiltered ?? filtered;
+    this.gitFilteredEntries = gitFiltered ?? filtered;
+    this.vscodeFilteredEntries = vscodeFiltered ?? (unfiltered ?? filtered);
     this.fzfDirty = false;
     this.rebuildFzf();
+  }
+
+  private getEntriesFor(excludeGit: boolean, excludeVscode: boolean): FileEntry[] {
+    if (excludeGit && excludeVscode) return this.filteredEntries;
+    if (excludeGit) return this.gitFilteredEntries;
+    if (excludeVscode) return this.vscodeFilteredEntries;
+    return this.entries;
+  }
+
+  private getFzfFor(excludeGit: boolean, excludeVscode: boolean): Fzf<FileEntry> | null {
+    if (excludeGit && excludeVscode) return this.fzfInstance;
+    if (excludeGit) return this.getGitOnlyFzf();
+    if (excludeVscode) return this.getVscodeOnlyFzf();
+    return this.getUnfilteredFzf();
   }
 
   private rebuildFzf(): void {
@@ -150,19 +188,39 @@ export class FileIndex implements vscode.Disposable {
       ],
     });
     this.unfilteredFzfInstance = null;
+    this.gitOnlyFzfInstance = null;
+    this.vscodeOnlyFzfInstance = null;
+  }
+
+  private buildLazyFzf(entries: FileEntry[]): Fzf<FileEntry> | null {
+    if (entries.length === 0) return null;
+    return new Fzf(entries, {
+      selector: (item) => item.relativePath,
+      tiebreakers: [
+        (a, b) => a.item.relativePath.length - b.item.relativePath.length,
+      ],
+    });
   }
 
   private getUnfilteredFzf(): Fzf<FileEntry> | null {
-    if (this.entries.length === 0) return null;
     if (!this.unfilteredFzfInstance) {
-      this.unfilteredFzfInstance = new Fzf(this.entries, {
-        selector: (item) => item.relativePath,
-        tiebreakers: [
-          (a, b) => a.item.relativePath.length - b.item.relativePath.length,
-        ],
-      });
+      this.unfilteredFzfInstance = this.buildLazyFzf(this.entries);
     }
     return this.unfilteredFzfInstance;
+  }
+
+  private getGitOnlyFzf(): Fzf<FileEntry> | null {
+    if (!this.gitOnlyFzfInstance) {
+      this.gitOnlyFzfInstance = this.buildLazyFzf(this.gitFilteredEntries);
+    }
+    return this.gitOnlyFzfInstance;
+  }
+
+  private getVscodeOnlyFzf(): Fzf<FileEntry> | null {
+    if (!this.vscodeOnlyFzfInstance) {
+      this.vscodeOnlyFzfInstance = this.buildLazyFzf(this.vscodeFilteredEntries);
+    }
+    return this.vscodeOnlyFzfInstance;
   }
 
   private setupWatcher(): void {
@@ -210,12 +268,11 @@ export class FileIndex implements vscode.Disposable {
 
   private applyBatchUpdate(): void {
     if (this.pendingRemoves.size > 0) {
-      this.entries = this.entries.filter(
-        (e) => !this.pendingRemoves.has(e.relativePath),
-      );
-      this.filteredEntries = this.filteredEntries.filter(
-        (e) => !this.pendingRemoves.has(e.relativePath),
-      );
+      const notRemoved = (e: FileEntry) => !this.pendingRemoves.has(e.relativePath);
+      this.entries = this.entries.filter(notRemoved);
+      this.gitFilteredEntries = this.gitFilteredEntries.filter(notRemoved);
+      this.vscodeFilteredEntries = this.vscodeFilteredEntries.filter(notRemoved);
+      this.filteredEntries = this.filteredEntries.filter(notRemoved);
     }
 
     if (this.pendingAdds.length > 0) {
@@ -223,10 +280,21 @@ export class FileIndex implements vscode.Disposable {
         (e) => !this.gitIgnore.isCustomExcluded(e.relativePath),
       );
       this.entries.push(...customFiltered);
-      const nonIgnored = customFiltered.filter(
-        (e) => !this.gitIgnore.isIgnored(e.relativePath),
+
+      const notGitIgnored = customFiltered.filter(
+        (e) => !this.gitIgnore.isGitIgnored(e.relativePath),
       );
-      this.filteredEntries.push(...nonIgnored);
+      this.gitFilteredEntries.push(...notGitIgnored);
+
+      const notVscodeExcluded = customFiltered.filter(
+        (e) => !this.gitIgnore.isVscodeExcluded(e.relativePath),
+      );
+      this.vscodeFilteredEntries.push(...notVscodeExcluded);
+
+      const notEither = customFiltered.filter(
+        (e) => !this.gitIgnore.isGitIgnored(e.relativePath) && !this.gitIgnore.isVscodeExcluded(e.relativePath),
+      );
+      this.filteredEntries.push(...notEither);
     }
 
     this.pendingAdds = [];
