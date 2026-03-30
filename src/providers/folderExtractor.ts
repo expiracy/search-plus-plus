@@ -20,16 +20,20 @@ export function extractFolders(
   const queryLower = query.toLowerCase();
 
   for (const entry of entries) {
+    const wsFolder = vscode.workspace.getWorkspaceFolder(entry.uri);
     const parts = entry.relativePath.split('/');
     for (let i = 1; i < parts.length; i++) {
       const folderPath = parts.slice(0, i).join('/');
       if (!seenFolders.has(folderPath) && folderPath.toLowerCase().includes(queryLower)) {
         seenFolders.add(folderPath);
+        const folderUri = wsFolder
+          ? vscode.Uri.joinPath(wsFolder.uri, folderPath)
+          : vscode.Uri.joinPath(entry.uri, ...Array(parts.length - i).fill('..'));
         folderResults.push({
           label: parts[i - 1],
           description: folderPath,
           mode,
-          uri: vscode.Uri.joinPath(entry.uri, ...Array(parts.length - i).fill('..')),
+          uri: folderUri,
           iconPath: vscode.ThemeIcon.Folder,
           alwaysShow: true,
           isFolder: true,

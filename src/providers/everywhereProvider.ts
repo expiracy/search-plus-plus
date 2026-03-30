@@ -51,6 +51,18 @@ export class EverywhereProvider implements SearchProvider {
       [ResultSection.Commands]: { searchMode: SearchMode.Command, tabLabel: 'Commands' },
     };
 
+    let mergeScheduled = false;
+    let disposed = false;
+
+    const scheduleMerge = () => {
+      if (mergeScheduled || disposed) return;
+      mergeScheduled = true;
+      queueMicrotask(() => {
+        mergeScheduled = false;
+        if (!disposed) buildMergedResults();
+      });
+    };
+
     const buildMergedResults = () => {
       const merged: SearchResult[] = [];
 
@@ -86,7 +98,7 @@ export class EverywhereProvider implements SearchProvider {
       disposables.push(
         this.fileProvider.search(query, options, (results) => {
           resultStore[ResultSection.Files] = results;
-          buildMergedResults();
+          scheduleMerge();
         }),
       );
     }
@@ -96,7 +108,7 @@ export class EverywhereProvider implements SearchProvider {
       disposables.push(
         this.folderProvider.search(query, options, (results) => {
           resultStore[ResultSection.Folders] = results;
-          buildMergedResults();
+          scheduleMerge();
         }),
       );
     }
@@ -116,7 +128,7 @@ export class EverywhereProvider implements SearchProvider {
         symbolSearchDisposable?.dispose();
         symbolSearchDisposable = this.symbolProvider.search(query, options, (results) => {
           resultStore[ResultSection.Symbols] = results;
-          buildMergedResults();
+          scheduleMerge();
         });
       };
 
@@ -132,7 +144,7 @@ export class EverywhereProvider implements SearchProvider {
         commandSearchDisposable?.dispose();
         commandSearchDisposable = this.commandProvider.search(query, options, (results) => {
           resultStore[ResultSection.Commands] = results;
-          buildMergedResults();
+          scheduleMerge();
         });
       };
 
@@ -144,6 +156,7 @@ export class EverywhereProvider implements SearchProvider {
 
     return {
       dispose: () => {
+        disposed = true;
         textSearchDisposable?.dispose();
         symbolSearchDisposable?.dispose();
         commandSearchDisposable?.dispose();

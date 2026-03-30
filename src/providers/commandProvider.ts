@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { Fzf, type FzfResultItem } from 'fzf';
-import { SearchMode, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { Fzf } from 'fzf';
+import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 
 interface CommandEntry {
   id: string;
@@ -31,8 +31,7 @@ export class CommandProvider implements SearchProvider {
   ): vscode.Disposable {
     let cancelled = false;
 
-    const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    const maxResults = config.get<number>('maxResults', 200);
+    const maxResults = getMaxResults();
 
     this.ensureIndex().then(() => {
       if (cancelled) return;
@@ -49,11 +48,18 @@ export class CommandProvider implements SearchProvider {
     // Build title/category map from extension metadata
     const metadata = new Map<string, { title: string; category?: string }>();
     for (const ext of vscode.extensions.all) {
-      const commands = ext.packageJSON?.contributes?.commands;
+      const contributes: unknown = ext.packageJSON?.contributes;
+      if (typeof contributes !== 'object' || contributes === null) continue;
+      const commands: unknown = (contributes as Record<string, unknown>).commands;
       if (!Array.isArray(commands)) continue;
-      for (const cmd of commands) {
-        if (cmd.command && cmd.title) {
-          metadata.set(cmd.command, { title: cmd.title, category: cmd.category });
+      for (const raw of commands) {
+        if (typeof raw !== 'object' || raw === null) continue;
+        const obj = raw as Record<string, unknown>;
+        const command = typeof obj.command === 'string' ? obj.command : undefined;
+        const title = typeof obj.title === 'string' ? obj.title : undefined;
+        if (command && title) {
+          const category = typeof obj.category === 'string' ? obj.category : undefined;
+          metadata.set(command, { title, category });
         }
       }
     }
@@ -133,6 +139,7 @@ export class CommandProvider implements SearchProvider {
       mode: SearchMode.Command,
       commandId: entry.id,
       alwaysShow: true,
+      belongsToSection: ResultSection.Commands,
     };
   }
 

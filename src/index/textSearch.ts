@@ -3,12 +3,14 @@ import * as path from 'path';
 import { existsSync } from 'fs';
 import { spawn, type ChildProcess } from 'child_process';
 import type { GitIgnoreManager } from '../gitignore';
+import type { TextSearchOptions } from '../providers/types';
 
 function resolveRgPath(): string {
   const rgBin = process.platform === 'win32' ? 'rg.exe' : 'rg';
 
   // Strategy 1: @vscode/ripgrep npm package (works in development)
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const rgPath: string = require('@vscode/ripgrep').rgPath;
     if (existsSync(rgPath)) {
       return rgPath;
@@ -29,7 +31,13 @@ function resolveRgPath(): string {
   return 'rg';
 }
 
-const defaultRgPath = resolveRgPath();
+let cachedRgPath: string | undefined;
+function getDefaultRgPath(): string {
+  if (cachedRgPath === undefined) {
+    cachedRgPath = resolveRgPath();
+  }
+  return cachedRgPath;
+}
 
 interface RgMatch {
   type: 'match';
@@ -55,13 +63,26 @@ interface NotebookJson {
   cells?: NotebookCell[];
 }
 
-export interface TextSearchOptions {
-  caseSensitive: boolean;
-  useRegex: boolean;
-  excludeGitIgnored: boolean;
-  excludeSearchIgnored: boolean;
-  matchWholeWord: boolean;
-  maxResults: number;
+function isRgMatch(value: unknown): value is RgMatch {
+  if (typeof value !== 'object' || value === null) return false;
+  const msg = value as Record<string, unknown>;
+  if (msg.type !== 'match') return false;
+  const data = msg.data;
+  if (typeof data !== 'object' || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.path === 'object' && d.path !== null &&
+    typeof (d.path as Record<string, unknown>).text === 'string' &&
+    typeof d.line_number === 'number' &&
+    typeof d.lines === 'object' && d.lines !== null &&
+    Array.isArray(d.submatches)
+  );
+}
+
+function isNotebookJson(value: unknown): value is NotebookJson {
+  if (typeof value !== 'object' || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return obj.cells === undefined || Array.isArray(obj.cells);
 }
 
 export interface TextMatch {
@@ -80,7 +101,7 @@ export class TextSearch implements vscode.Disposable {
   private searchIgnorePatterns: string[] = [];
 
   constructor(rgPath?: string, private gitIgnore?: GitIgnoreManager) {
-    this.rgPath = rgPath ?? defaultRgPath;
+    this.rgPath = rgPath ?? getDefaultRgPath();
   }
 
   setExcludePatterns(patterns: string[]): void {
@@ -182,9 +203,9 @@ export class TextSearch implements vscode.Disposable {
         }
 
         try {
-          const parsed = JSON.parse(line);
-          if (parsed.type === 'match') {
-            const match = parsed as RgMatch;
+          const parsed: unknown = JSON.parse(line);
+          if (isRgMatch(parsed)) {
+            const match = parsed;
             const filePath = match.data.path.text;
             const lineText = match.data.lines.text.trim();
             const lineNumber = match.data.line_number;
@@ -253,19 +274,17 @@ export class TextSearch implements vscode.Disposable {
     if (!folders) return;
 
     try {
+      const gi = this.gitIgnore;
       const allNotebookUris = await vscode.workspace.findFiles(
         '**/*.ipynb',
-        this.gitIgnore?.getExcludeGlob(),
+        gi?.getExcludeGlob(),
         100,
       );
 
-      const notebookUris = this.gitIgnore
+      const notebookUris = gi
         ? allNotebookUris.filter((uri) => {
             const rel = vscode.workspace.asRelativePath(uri);
-            if (this.gitIgnore!.isCustomExcluded(rel)) return false;
-            if (options.excludeSearchIgnored && this.gitIgnore!.isSearchIgnored(rel)) return false;
-            if (options.excludeGitIgnored && this.gitIgnore!.isGitIgnored(rel)) return false;
-            return true;
+            return !gi.shouldExclude(rel, options);
           })
         : allNotebookUris;
 
@@ -288,8 +307,9 @@ export class TextSearch implements vscode.Disposable {
 
         try {
           const raw = await vscode.workspace.fs.readFile(uri);
-          const notebook: NotebookJson = JSON.parse(new TextDecoder().decode(raw));
-          if (!notebook.cells) continue;
+          const parsed: unknown = JSON.parse(new TextDecoder().decode(raw));
+          if (!isNotebookJson(parsed) || !parsed.cells) continue;
+          const notebook = parsed;
 
           const filePath = uri.fsPath;
           const relativePath = vscode.workspace.asRelativePath(uri);

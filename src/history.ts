@@ -14,7 +14,7 @@ interface RecentFileEntry {
 export class SearchHistory {
   constructor(private state: vscode.Memento) {}
 
-  addOpened(uri: vscode.Uri, lineNumber?: number, column?: number): void {
+  async addOpened(uri: vscode.Uri, lineNumber?: number, column?: number): Promise<void> {
     const relativePath = vscode.workspace.asRelativePath(uri);
     const entry: RecentFileEntry = { relativePath, fsPath: uri.fsPath, lineNumber, column };
 
@@ -22,18 +22,18 @@ export class SearchHistory {
     // Remove duplicate if exists
     const filtered = recent.filter((e) => e.fsPath !== entry.fsPath || e.lineNumber !== entry.lineNumber);
     filtered.unshift(entry);
-    this.state.update(RECENT_FILES_KEY, filtered.slice(0, MAX_RECENT));
+    await this.state.update(RECENT_FILES_KEY, filtered.slice(0, MAX_RECENT));
 
     // Lazily prune stale entries in the background
-    this.pruneStaleEntries(filtered);
+    this.pruneStaleEntries(filtered).catch(() => {});
   }
 
-  removeEntry(fsPath: string, lineNumber?: number): void {
+  async removeEntry(fsPath: string, lineNumber?: number): Promise<void> {
     const recent = this.getRecentEntries();
     const filtered = recent.filter(
       (e) => !(e.fsPath === fsPath && e.lineNumber === lineNumber),
     );
-    this.state.update(RECENT_FILES_KEY, filtered);
+    await this.state.update(RECENT_FILES_KEY, filtered);
   }
 
   private async pruneStaleEntries(entries: RecentFileEntry[]): Promise<void> {
@@ -47,7 +47,7 @@ export class SearchHistory {
       }
     }
     if (valid.length < entries.length) {
-      this.state.update(RECENT_FILES_KEY, valid);
+      await this.state.update(RECENT_FILES_KEY, valid);
     }
   }
 

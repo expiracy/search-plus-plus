@@ -42,6 +42,15 @@ export interface SearchOptions {
 }
 
 export const DEFAULT_EVERYWHERE_LIMIT = 20;
+export const DEFAULT_MAX_RESULTS = 200;
+
+export function getMaxResults(): number {
+  return vscode.workspace.getConfiguration('searchPlusPlus').get<number>('maxResults', DEFAULT_MAX_RESULTS);
+}
+
+export interface TextSearchOptions extends Omit<SearchOptions, 'fuzzySearch'> {
+  maxResults: number;
+}
 
 export const DEFAULT_SECTIONS: ResultSection[] = [
   ResultSection.Files,

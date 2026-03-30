@@ -6,6 +6,7 @@ export class GitIgnoreManager implements vscode.Disposable {
   private customIg: Ignore = ignore();
   private searchIg: Ignore = ignore();
   private searchIgnorePatterns: string[] = [];
+  private cachedCustomExcludes: string[] = [];
   private directoryExcludes: string[] = [];
   private watchers: vscode.Disposable[] = [];
   private _onDidChange = new vscode.EventEmitter<void>();
@@ -25,10 +26,10 @@ export class GitIgnoreManager implements vscode.Disposable {
     this.searchIgnorePatterns = await this.loadIgnoreFiles('**/.searchignore', this.searchIg, folders);
 
     // Custom exclude patterns from searchPlusPlus.excludePaths
-    const customExcludes = vscode.workspace
+    this.cachedCustomExcludes = vscode.workspace
       .getConfiguration('searchPlusPlus')
       .get<string[]>('excludePaths', []);
-    for (const pattern of customExcludes) {
+    for (const pattern of this.cachedCustomExcludes) {
       this.customIg.add(pattern);
       if (pattern.includes('/**') || pattern.endsWith('/')) {
         this.directoryExcludes.push(pattern);
@@ -126,33 +127,34 @@ export class GitIgnoreManager implements vscode.Disposable {
   }
 
   isGitIgnored(relativePath: string): boolean {
-    try {
-      return this.ig.ignores(relativePath.replace(/\\/g, '/'));
-    } catch {
-      return false;
-    }
+    return this.testIgnore(this.ig, relativePath);
   }
 
   isCustomExcluded(relativePath: string): boolean {
-    try {
-      return this.customIg.ignores(relativePath.replace(/\\/g, '/'));
-    } catch {
-      return false;
-    }
+    return this.testIgnore(this.customIg, relativePath);
   }
 
   isSearchIgnored(relativePath: string): boolean {
-    try {
-      return this.searchIg.ignores(relativePath.replace(/\\/g, '/'));
-    } catch {
-      return false;
-    }
+    return this.testIgnore(this.searchIg, relativePath);
+  }
+
+  shouldExclude(relativePath: string, options: { excludeGitIgnored: boolean; excludeSearchIgnored: boolean }): boolean {
+    if (this.isCustomExcluded(relativePath)) return true;
+    if (options.excludeSearchIgnored && this.isSearchIgnored(relativePath)) return true;
+    if (options.excludeGitIgnored && this.isGitIgnored(relativePath)) return true;
+    return false;
   }
 
   getCustomExcludePatterns(): string[] {
-    return vscode.workspace
-      .getConfiguration('searchPlusPlus')
-      .get<string[]>('excludePaths', []);
+    return [...this.cachedCustomExcludes];
+  }
+
+  private testIgnore(ig: Ignore, relativePath: string): boolean {
+    try {
+      return ig.ignores(relativePath.replace(/\\/g, '/'));
+    } catch {
+      return false;
+    }
   }
 
   getSearchIgnorePatterns(): string[] {
