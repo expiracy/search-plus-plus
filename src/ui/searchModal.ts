@@ -84,7 +84,7 @@ export class SearchModal implements vscode.Disposable {
 
   // Search option toggles
   private excludeGitIgnored: boolean;
-  private excludeVscodeExcluded: boolean;
+  private excludeSearchIgnored: boolean;
   private caseSensitive = false;
   private useRegex = false;
   private fuzzySearch = false;
@@ -109,7 +109,7 @@ export class SearchModal implements vscode.Disposable {
   constructor(private indexManager: IndexManager, private history: SearchHistory) {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     this.excludeGitIgnored = config.get<boolean>('excludeGitIgnored', true);
-    this.excludeVscodeExcluded = config.get<boolean>('excludeVscodeExcluded', true);
+    this.excludeSearchIgnored = config.get<boolean>('excludeSearchIgnored', true);
 
     const fileProvider = new FileProvider(indexManager.fileIndex, indexManager.gitIgnore);
     const textProvider = new TextProvider(indexManager.textSearch);
@@ -258,7 +258,7 @@ export class SearchModal implements vscode.Disposable {
 
     const getOptions = (): SearchOptions => ({
       excludeGitIgnored: this.excludeGitIgnored,
-      excludeVscodeExcluded: this.excludeVscodeExcluded,
+      excludeSearchIgnored: this.excludeSearchIgnored,
       caseSensitive: this.caseSensitive,
       useRegex: this.useRegex,
       fuzzySearch: this.fuzzySearch,
@@ -623,7 +623,7 @@ export class SearchModal implements vscode.Disposable {
       // Search options (inline)
       this.toggle('source-control', 'Exclude Git Ignored (Alt+G)', this.excludeGitIgnored,
         vscode.QuickInputButtonLocation.Inline),
-      this.toggle('vscode', 'Exclude VS Code Excluded (Alt+V)', this.excludeVscodeExcluded,
+      this.toggle('eye-closed', 'Exclude Search Ignored (Alt+S)', this.excludeSearchIgnored,
         vscode.QuickInputButtonLocation.Inline),
       this.toggle('case-sensitive', 'Case Sensitive (Alt+C)', this.caseSensitive,
         vscode.QuickInputButtonLocation.Inline),
@@ -643,7 +643,7 @@ export class SearchModal implements vscode.Disposable {
       4: () => { this.switchTab(SearchMode.Symbol); },
       5: () => { this.switchTab(SearchMode.Command); },
       6: () => { this.excludeGitIgnored = !this.excludeGitIgnored; },
-      7: () => { this.excludeVscodeExcluded = !this.excludeVscodeExcluded; },
+      7: () => { this.excludeSearchIgnored = !this.excludeSearchIgnored; },
       8: () => { this.caseSensitive = !this.caseSensitive; },
       9: () => { this.useRegex = !this.useRegex; },
       10: () => { this.matchWholeWord = !this.matchWholeWord; },
@@ -683,8 +683,8 @@ export class SearchModal implements vscode.Disposable {
     this.applyOptionToggle();
   }
 
-  toggleVscodeExclude(): void {
-    this.excludeVscodeExcluded = !this.excludeVscodeExcluded;
+  toggleSearchIgnore(): void {
+    this.excludeSearchIgnored = !this.excludeSearchIgnored;
     this.applyOptionToggle();
   }
 

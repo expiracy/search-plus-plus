@@ -76,8 +76,8 @@ export class SymbolProvider implements SearchProvider {
         if (!r.uri) return true;
         const rel = vscode.workspace.asRelativePath(r.uri);
         if (this.gitIgnore.isCustomExcluded(rel)) return false;
+        if (options.excludeSearchIgnored && this.gitIgnore.isSearchIgnored(rel)) return false;
         if (options.excludeGitIgnored && this.gitIgnore.isGitIgnored(rel)) return false;
-        if (options.excludeVscodeExcluded && this.gitIgnore.isVscodeExcluded(rel)) return false;
         return true;
       });
 

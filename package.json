@@ -1,8 +1,8 @@
 {
   "name": "search-plus-plus",
   "displayName": "search++",
-  "description": "Blazingly fast unified search for files, folders, text, symbols and commands. Supports fuzzy matching, regex, match case, match word, exclude gitignored files, exclude VS Code excluded files. Double-shift to open, tab and shift-tab to cycle between pages, arrow keys to navigate search results. Inspired by JetBrains IDEs",
-  "version": "1.2.1",
+  "description": "Blazingly fast unified search for files, folders, text, symbols and commands. Supports fuzzy matching, regex, match case, match word, exclude gitignored files. Double-shift to open, tab and shift-tab to cycle between pages, arrow keys to navigate search results. Inspired by JetBrains IDEs",
+  "version": "2.0.0",
   "publisher": "expiracy",
   "repository": {
     "type": "git",
@@ -90,8 +90,8 @@
         "title": "search++: Toggle Only Git Trackable"
       },
       {
-        "command": "searchPlusPlus.toggleVscodeExclude",
-        "title": "search++: Toggle VS Code Excluded"
+        "command": "searchPlusPlus.toggleSearchIgnore",
+        "title": "search++: Toggle Exclude Search Ignored"
       },
       {
         "command": "searchPlusPlus.toggleFuzzySearch",
@@ -144,8 +144,8 @@
         "when": "searchPlusPlusModalOpen"
       },
       {
-        "command": "searchPlusPlus.toggleVscodeExclude",
-        "key": "alt+v",
+        "command": "searchPlusPlus.toggleSearchIgnore",
+        "key": "alt+s",
         "when": "searchPlusPlusModalOpen"
       },
       {
@@ -196,11 +196,11 @@
             "default": true,
             "description": "Exclude git-ignored files and folders from search results by default"
           },
-          "searchPlusPlus.excludeVscodeExcluded": {
+          "searchPlusPlus.excludeSearchIgnored": {
             "order": 2,
             "type": "boolean",
             "default": true,
-            "description": "Exclude files matching VS Code's files.exclude and search.exclude patterns from search results by default"
+            "description": "Exclude files matching .searchignore patterns from search results by default"
           },
           "searchPlusPlus.excludePaths": {
             "order": 3,
@@ -209,7 +209,7 @@
               "type": "string"
             },
             "default": [],
-            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore and VS Code's exclude settings."
+            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
           },
           "searchPlusPlus.maxResults": {
             "order": 4,

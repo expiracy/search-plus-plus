@@ -46,8 +46,6 @@ export class IndexManager implements vscode.Disposable {
       vscode.workspace.onDidChangeWorkspaceFolders(() => this.rebuildFileIndex()),
     );
 
-    // Config changes for files.exclude / search.exclude are handled by
-    // GitIgnoreManager.onDidChange (above), which already triggers rebuildFileIndex.
   }
 
   get state(): IndexState {
@@ -60,7 +58,7 @@ export class IndexManager implements vscode.Disposable {
     try {
       await this.gitIgnore.load();
       this.textSearch.setExcludePatterns(this.gitIgnore.getCustomExcludePatterns());
-      this.textSearch.setVscodeExcludePatterns(this.gitIgnore.getVscodeExcludePatterns());
+      this.textSearch.setSearchIgnorePatterns(this.gitIgnore.getSearchIgnorePatterns());
       await this.fileIndex.build();
       this.updateStatusBar('ready');
     } catch (err) {

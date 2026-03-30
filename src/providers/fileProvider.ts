@@ -24,7 +24,7 @@ export class FileProvider implements SearchProvider {
       let fileResults: SearchResult[];
 
       if (options.fuzzySearch) {
-        const matches = this.fileIndex.find(query, maxResults, options.excludeGitIgnored, options.excludeVscodeExcluded);
+        const matches = this.fileIndex.find(query, maxResults, options.excludeGitIgnored, options.excludeSearchIgnored);
         fileResults = matches.map((match) => ({
           label: match.item.relativePath.split('/').pop() || match.item.relativePath,
           description: match.item.relativePath,
@@ -37,7 +37,8 @@ export class FileProvider implements SearchProvider {
       } else {
         const entries = this.fileIndex.filter(
           query, maxResults, options.excludeGitIgnored,
-          options.caseSensitive, options.matchWholeWord, options.excludeVscodeExcluded,
+          options.caseSensitive, options.matchWholeWord,
+          options.excludeSearchIgnored,
         );
         fileResults = entries.map((entry) => ({
           label: entry.relativePath.split('/').pop() || entry.relativePath,
@@ -74,8 +75,8 @@ export class FileProvider implements SearchProvider {
       for (const uri of uris) {
         const relativePath = vscode.workspace.asRelativePath(uri);
         if (this.gitIgnore.isCustomExcluded(relativePath)) continue;
+        if (options.excludeSearchIgnored && this.gitIgnore.isSearchIgnored(relativePath)) continue;
         if (options.excludeGitIgnored && this.gitIgnore.isGitIgnored(relativePath)) continue;
-        if (options.excludeVscodeExcluded && this.gitIgnore.isVscodeExcluded(relativePath)) continue;
 
         fileResults.push({
           label: relativePath.split('/').pop() || relativePath,

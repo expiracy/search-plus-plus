@@ -24,12 +24,13 @@ export class FolderProvider implements SearchProvider {
 
       let entries;
       if (options.fuzzySearch) {
-        const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored, options.excludeVscodeExcluded);
+        const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored, options.excludeSearchIgnored);
         entries = matches.map((m) => m.item);
       } else {
         entries = this.fileIndex.filter(
           query, 1000, options.excludeGitIgnored,
-          options.caseSensitive, options.matchWholeWord, options.excludeVscodeExcluded,
+          options.caseSensitive, options.matchWholeWord,
+          options.excludeSearchIgnored,
         );
       }
 
@@ -58,8 +59,8 @@ export class FolderProvider implements SearchProvider {
       for (const uri of uris) {
         const relativePath = vscode.workspace.asRelativePath(uri);
         if (this.gitIgnore.isCustomExcluded(relativePath)) continue;
+        if (options.excludeSearchIgnored && this.gitIgnore.isSearchIgnored(relativePath)) continue;
         if (options.excludeGitIgnored && this.gitIgnore.isGitIgnored(relativePath)) continue;
-        if (options.excludeVscodeExcluded && this.gitIgnore.isVscodeExcluded(relativePath)) continue;
         entries.push({ relativePath, uri });
       }
       const folderResults = extractFolders(entries, query, SearchMode.Folder);

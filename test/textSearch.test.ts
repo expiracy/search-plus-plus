@@ -28,7 +28,7 @@ const { TextSearch } = await import('../src/index/textSearch');
 function searchAsync(
   ts: InstanceType<typeof TextSearch>,
   query: string,
-  options: { caseSensitive: boolean; useRegex: boolean; excludeGitIgnored: boolean; matchWholeWord: boolean; maxResults: number },
+  options: { caseSensitive: boolean; useRegex: boolean; excludeGitIgnored: boolean; excludeSearchIgnored: boolean; matchWholeWord: boolean; maxResults: number },
 ): Promise<any[]> {
   return new Promise((resolve) => {
     let lastResults: any[] = [];
@@ -48,7 +48,7 @@ const defaultOpts = {
   caseSensitive: false,
   useRegex: false,
   excludeGitIgnored: true,
-  excludeVscodeExcluded: true,
+  excludeSearchIgnored: true,
   matchWholeWord: false,
   maxResults: 200,
 };

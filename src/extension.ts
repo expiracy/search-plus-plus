@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('searchPlusPlus.toggleCaseSensitive', () => modal.toggleCaseSensitive()),
     vscode.commands.registerCommand('searchPlusPlus.toggleRegex', () => modal.toggleRegex()),
     vscode.commands.registerCommand('searchPlusPlus.toggleGitIgnore', () => modal.toggleGitIgnore()),
-    vscode.commands.registerCommand('searchPlusPlus.toggleVscodeExclude', () => modal.toggleVscodeExclude()),
+    vscode.commands.registerCommand('searchPlusPlus.toggleSearchIgnore', () => modal.toggleSearchIgnore()),
     vscode.commands.registerCommand('searchPlusPlus.toggleFuzzySearch', () => modal.toggleFuzzySearch()),
     vscode.commands.registerCommand('searchPlusPlus.toggleMatchWholeWord', () => modal.toggleMatchWholeWord()),
     vscode.commands.registerCommand('searchPlusPlus.autofillPath', () => modal.autofillSelectedPath()),

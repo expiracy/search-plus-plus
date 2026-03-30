@@ -59,7 +59,7 @@ export interface TextSearchOptions {
   caseSensitive: boolean;
   useRegex: boolean;
   excludeGitIgnored: boolean;
-  excludeVscodeExcluded: boolean;
+  excludeSearchIgnored: boolean;
   matchWholeWord: boolean;
   maxResults: number;
 }
@@ -77,7 +77,7 @@ export class TextSearch implements vscode.Disposable {
   private activeProcess: ChildProcess | null = null;
   private rgPath: string;
   private excludePatterns: string[] = [];
-  private vscodeExcludePatterns: string[] = [];
+  private searchIgnorePatterns: string[] = [];
 
   constructor(rgPath?: string, private gitIgnore?: GitIgnoreManager) {
     this.rgPath = rgPath ?? defaultRgPath;
@@ -87,8 +87,8 @@ export class TextSearch implements vscode.Disposable {
     this.excludePatterns = patterns;
   }
 
-  setVscodeExcludePatterns(patterns: string[]): void {
-    this.vscodeExcludePatterns = patterns;
+  setSearchIgnorePatterns(patterns: string[]): void {
+    this.searchIgnorePatterns = patterns;
   }
 
   search(
@@ -132,9 +132,9 @@ export class TextSearch implements vscode.Disposable {
       args.push('--glob', `!${pattern}`);
     }
 
-    // VS Code's files.exclude / search.exclude patterns
-    if (options.excludeVscodeExcluded) {
-      for (const pattern of this.vscodeExcludePatterns) {
+    // .searchignore patterns (when toggle is enabled)
+    if (options.excludeSearchIgnored) {
+      for (const pattern of this.searchIgnorePatterns) {
         args.push('--glob', `!${pattern}`);
       }
     }
@@ -263,8 +263,8 @@ export class TextSearch implements vscode.Disposable {
         ? allNotebookUris.filter((uri) => {
             const rel = vscode.workspace.asRelativePath(uri);
             if (this.gitIgnore!.isCustomExcluded(rel)) return false;
+            if (options.excludeSearchIgnored && this.gitIgnore!.isSearchIgnored(rel)) return false;
             if (options.excludeGitIgnored && this.gitIgnore!.isGitIgnored(rel)) return false;
-            if (options.excludeVscodeExcluded && this.gitIgnore!.isVscodeExcluded(rel)) return false;
             return true;
           })
         : allNotebookUris;

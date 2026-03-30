@@ -34,7 +34,7 @@ export interface SearchResult extends vscode.QuickPickItem {
 
 export interface SearchOptions {
   excludeGitIgnored: boolean;
-  excludeVscodeExcluded: boolean;
+  excludeSearchIgnored: boolean;
   caseSensitive: boolean;
   useRegex: boolean;
   fuzzySearch: boolean;
