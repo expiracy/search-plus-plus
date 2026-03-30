@@ -31,8 +31,6 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('searchPlusPlus.autofillPath', () => modal.autofillSelectedPath()),
     vscode.commands.registerCommand('searchPlusPlus.nextTab', () => modal.nextTab()),
     vscode.commands.registerCommand('searchPlusPlus.prevTab', () => modal.prevTab()),
-    vscode.commands.registerCommand('searchPlusPlus.nextSection', () => modal.nextSection()),
-    vscode.commands.registerCommand('searchPlusPlus.prevSection', () => modal.prevSection()),
   );
 }
    

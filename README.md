@@ -58,10 +58,6 @@ Text search includes Jupyter `.ipynb` notebook cells.
 
 Click the split-editor button on any file or text result to open it in a side editor group.
 
-### Section Navigation
-
-On the **Everywhere** tab, use **Ctrl+Down** / **Cmd+Down** and **Ctrl+Up** / **Cmd+Up** to jump between sections.
-
 ## Keyboard Shortcuts
 
 | Shortcut | Action | Context |
@@ -74,8 +70,6 @@ On the **Everywhere** tab, use **Ctrl+Down** / **Cmd+Down** and **Ctrl+Up** / **
 | **Alt+F** | Toggle fuzzy search | Modal open |
 | **Alt+G** | Toggle exclude git ignored | Modal open |
 | **Alt+S** | Toggle exclude search ignored | Modal open |
-| **Ctrl+Down** / **Cmd+Down** | Next section | Everywhere tab |
-| **Ctrl+Up** / **Cmd+Up** | Previous section | Everywhere tab |
 | **Right Arrow** | Autofill file path | Files tab |
 
 ## Commands
@@ -108,8 +102,6 @@ These are also callable from the command palette and can be used in custom keybi
 | `search++: Next Tab` | Switch to the next tab |
 | `search++: Previous Tab` | Switch to the previous tab |
 | `search++: Autofill File Path` | Autofill the selected file's path |
-| `search++: Next Section` | Jump to the next section (Everywhere tab) |
-| `search++: Previous Section` | Jump to the previous section (Everywhere tab) |
 
 ## Settings
 
