@@ -99,9 +99,17 @@ export class FileIndex implements vscode.Disposable {
     }
     const fzf = this.getFzfFor(excludeGitIgnored);
     if (!fzf) return [];
-    const results = fzf.find(query);
+    let results = fzf.find(query);
     if (excludeSearchIgnored) {
-      return results.filter((r) => !this.gitIgnore.isSearchIgnored(r.item.relativePath)).slice(0, limit);
+      results = results.filter((r) => !this.gitIgnore.isSearchIgnored(r.item.relativePath));
+    }
+    // Stable re-sort: prioritize results where the match falls in the filename
+    if (query.length > 0) {
+      results.sort((a, b) => {
+        const aInFilename = a.start > a.item.relativePath.lastIndexOf('/') ? 0 : 1;
+        const bInFilename = b.start > b.item.relativePath.lastIndexOf('/') ? 0 : 1;
+        return aInFilename - bInFilename;
+      });
     }
     return results.slice(0, limit);
   }
@@ -164,6 +172,7 @@ export class FileIndex implements vscode.Disposable {
     this.fzfInstance = new Fzf(this.filteredEntries, {
       selector: (item) => item.relativePath,
       limit: 1000,
+      forward: false,
       tiebreakers: [
         // Prefer shorter paths (less nested)
         (a, b) => a.item.relativePath.length - b.item.relativePath.length,
@@ -176,6 +185,7 @@ export class FileIndex implements vscode.Disposable {
     if (entries.length === 0) return null;
     return new Fzf(entries, {
       selector: (item) => item.relativePath,
+      forward: false,
       tiebreakers: [
         (a, b) => a.item.relativePath.length - b.item.relativePath.length,
       ],

@@ -420,4 +420,40 @@ describe('FileIndex', () => {
     const match = results.find((r) => r.relativePath === 'docs/README.md');
     expect(match).toBeDefined();
   });
+
+  // --- fuzzy ranking: filename matches should rank above directory-only matches ---
+
+  describe('fuzzy ranking prefers filename matches', () => {
+    let rankIndex: InstanceType<typeof FileIndex>;
+
+    beforeEach(() => {
+      rankIndex = new FileIndex(mockGitIgnore);
+      rankIndex.buildFromEntries([
+        makeEntry('src/button-utils/index.ts'),
+        makeEntry('src/components/Button.tsx'),
+        makeEntry('src/button-utils/helpers.ts'),
+        makeEntry('lib/Button.vue'),
+      ]);
+    });
+
+    test('filename match ranks above directory-only match', () => {
+      const results = rankIndex.find('button');
+      const paths = results.map((r) => r.item.relativePath);
+      const filenameIdx = paths.indexOf('src/components/Button.tsx');
+      const dirOnlyIdx = paths.indexOf('src/button-utils/index.ts');
+      expect(filenameIdx).toBeGreaterThanOrEqual(0);
+      expect(dirOnlyIdx).toBeGreaterThanOrEqual(0);
+      expect(filenameIdx).toBeLessThan(dirOnlyIdx);
+    });
+
+    test('shorter filename match ranks above longer path with same filename match', () => {
+      const results = rankIndex.find('button');
+      const paths = results.map((r) => r.item.relativePath);
+      const shortIdx = paths.indexOf('lib/Button.vue');
+      const longIdx = paths.indexOf('src/components/Button.tsx');
+      expect(shortIdx).toBeGreaterThanOrEqual(0);
+      expect(longIdx).toBeGreaterThanOrEqual(0);
+      expect(shortIdx).toBeLessThan(longIdx);
+    });
+  });
 });

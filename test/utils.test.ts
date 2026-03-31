@@ -1,6 +1,9 @@
-import { describe, test, expect } from 'vitest';
-import { debounce, getEnabledSections } from '../src/utils';
-import { ResultSection } from '../src/providers/types';
+import { describe, test, expect, vi } from 'vitest';
+
+vi.mock('vscode', () => import('./__mocks__/vscode'));
+
+const { debounce, getEnabledSections } = await import('../src/utils');
+const { ResultSection } = await import('../src/providers/types');
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
