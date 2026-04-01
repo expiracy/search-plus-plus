@@ -289,6 +289,11 @@ export class SearchModal implements vscode.Disposable {
       qp.title = `${TAB_NAMES[this.activeTab]}: 0 results`;
     };
 
+    let busyTimer: ReturnType<typeof setTimeout> | undefined;
+    const clearBusyTimer = () => {
+      if (busyTimer) { clearTimeout(busyTimer); busyTimer = undefined; }
+    };
+
     const handleResults = (results: SearchResult[]) => {
       this.fullResults = results;
       if (results.length === 0) {
@@ -296,7 +301,14 @@ export class SearchModal implements vscode.Disposable {
       } else {
         this.filterAndDisplay();
       }
-      qp.busy = false;
+
+      if (this.activeTab === SearchMode.Everywhere) {
+        // Debounce: keep spinner visible while text results are still streaming
+        clearBusyTimer();
+        busyTimer = setTimeout(() => { qp.busy = false; }, 400);
+      } else {
+        qp.busy = false;
+      }
     };
 
     const clearSearch = () => {
@@ -304,6 +316,7 @@ export class SearchModal implements vscode.Disposable {
       this.fullResults = [];
       this.gotoLine = undefined;
       this.gotoColumn = undefined;
+      clearBusyTimer();
       qp.items = buildEmptyQueryItems();
       qp.busy = false;
       qp.title = TAB_NAMES[this.activeTab];
@@ -373,6 +386,7 @@ export class SearchModal implements vscode.Disposable {
     // Cleanup on hide
     const hideDisposable = qp.onDidHide(() => {
       debouncedSearch.cancel();
+      clearBusyTimer();
 
       vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', false);
       vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', false);

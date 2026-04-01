@@ -113,12 +113,38 @@ export class EverywhereProvider implements SearchProvider {
       );
     }
 
-    // Text search (async ripgrep)
+    // Text search (async ripgrep) -- throttled to reduce UI churn on Everything tab
     if (enabledSections.has(ResultSection.Text)) {
+      let lastTextMerge = 0;
+      let textMergeTimer: ReturnType<typeof setTimeout> | undefined;
+      const TEXT_THROTTLE_MS = 300;
+
+      const scheduleTextMerge = () => {
+        if (textMergeTimer || disposed) return;
+        const elapsed = Date.now() - lastTextMerge;
+        if (elapsed >= TEXT_THROTTLE_MS) {
+          lastTextMerge = Date.now();
+          buildMergedResults();
+        } else {
+          textMergeTimer = setTimeout(() => {
+            textMergeTimer = undefined;
+            if (disposed) return;
+            lastTextMerge = Date.now();
+            buildMergedResults();
+          }, TEXT_THROTTLE_MS - elapsed);
+        }
+      };
+
       textSearchDisposable = this.textProvider.search(query, options, (results) => {
         resultStore[ResultSection.Text] = results;
         textDelivered = true;
-        buildMergedResults();
+        scheduleTextMerge();
+      });
+
+      disposables.push({
+        dispose: () => {
+          if (textMergeTimer) clearTimeout(textMergeTimer);
+        },
       });
     }
 

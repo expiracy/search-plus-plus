@@ -162,7 +162,7 @@
       },
       {
         "command": "searchPlusPlus.autofillPath",
-        "key": "right",
+        "key": "ctrl+enter",
         "when": "searchPlusPlusModalOpen && searchPlusPlusFileTab"
       }
     ],
@@ -200,7 +200,7 @@
           "searchPlusPlus.debounceMs": {
             "order": 5,
             "type": "number",
-            "default": 100,
+            "default": 300,
             "description": "Debounce delay in milliseconds before triggering search"
           }
         }
