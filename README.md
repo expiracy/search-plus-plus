@@ -2,6 +2,8 @@
 
 A fast, unified search for VS Code inspired by JetBrains IDEs. Press **Shift+Shift** to search across files, folders, text, symbols, and commands -- all in one place.
 
+![Everywhere tab](media/everywhere.png)
+
 ## Getting Started
 
 1. Install search++ from the VS Code Marketplace.
@@ -16,6 +18,14 @@ A fast, unified search for VS Code inspired by JetBrains IDEs. Press **Shift+Shi
 | **Text** | File contents (powered by ripgrep) |
 | **Symbols** | Functions, classes, variables via VS Code's language providers |
 | **Commands** | All VS Code commands (built-in and from extensions) |
+
+| ![Files](media/files.png) | ![Folders](media/folders.png) | ![Text](media/text.png) |
+|:---:|:---:|:---:|
+| Files | Folders | Text |
+
+| ![Symbols](media/symbols.png) | ![Commands](media/commands.png) |
+|:---:|:---:|
+| Symbols | Commands |
 
 ## Features
 
@@ -40,7 +50,7 @@ searchModal.ts:42
 searchModal.ts:42:5
 ```
 
-Press the **Right Arrow** key to autofill the selected file's path, then type `:line:col`.
+Press **Ctrl+Enter** to autofill the selected file's path, then type `:line:col`.
 
 ### Absolute Path Support
 
@@ -70,7 +80,7 @@ Click the split-editor button on any file or text result to open it in a side ed
 | **Alt+F** | Toggle fuzzy search | Modal open |
 | **Alt+G** | Toggle exclude git ignored | Modal open |
 | **Alt+S** | Toggle exclude search ignored | Modal open |
-| **Right Arrow** | Autofill file path | Files tab |
+| **Ctrl+Enter** | Autofill file path | Files tab |
 
 ## Commands
 
@@ -180,3 +190,11 @@ Example:
 - **Text search** spawns [ripgrep](https://github.com/BurntSushi/ripgrep) with streaming JSON output for fast content search.
 - **Symbol search** delegates to VS Code's workspace symbol providers, so results depend on your installed language extensions.
 - **Command search** indexes all registered VS Code commands (built-in and from extensions).
+
+
+![Everything page](image.png)
+![File page](image-2.png)
+![Folder page](image-1.png)
+![Text page](image-3.png)
+![Symbol page](image-4.png)
+![Command page](image-5.png)
