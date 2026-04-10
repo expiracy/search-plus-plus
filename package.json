@@ -2,7 +2,7 @@
   "name": "search-plus-plus",
   "displayName": "search++",
   "description": "Blazingly fast unified search for files, folders, text, symbols and commands. Supports fuzzy matching, regex, match case, match word, exclude gitignored files. Double-shift to open, tab and shift-tab to cycle between pages, arrow keys to navigate search results. Inspired by JetBrains IDEs",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "publisher": "expiracy",
   "icon": "icon.png",
   "repository": {
