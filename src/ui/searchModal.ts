@@ -6,7 +6,7 @@ import { FolderProvider } from '../providers/folderProvider';
 import { SymbolProvider } from '../providers/symbolProvider';
 import { CommandProvider } from '../providers/commandProvider';
 import { EverywhereProvider } from '../providers/everywhereProvider';
-import type { IndexManager } from '../index/indexManager';
+import type { IndexManager, IndexState } from '../index/indexManager';
 import type { SearchHistory } from '../history';
 import { debounce, isAbsolutePath } from '../utils';
 
@@ -63,6 +63,11 @@ const removeFromHistoryButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('close'),
   tooltip: 'Remove from History',
 };
+
+/** Prepend an indexing indicator to the title when the file index is still building. */
+export function buildTitle(baseTitle: string, state: IndexState): string {
+  return state === 'building' ? `Indexing... | ${baseTitle}` : baseTitle;
+}
 
 /** Parse :line:col suffix from query (only used on Files tab) */
 export function parseLineCol(value: string): { query: string; gotoLine?: number; gotoColumn?: number } {
@@ -205,10 +210,12 @@ export class SearchModal implements vscode.Disposable {
   ): void {
     const tabName = TAB_NAMES[this.activeTab];
 
+    const state = this.indexManager.state;
+
     if (this.activeTab === SearchMode.Everywhere) {
       const total = counts[ResultSection.Folders] + counts[ResultSection.Files] + counts[ResultSection.Text] + counts[ResultSection.Symbols] + counts[ResultSection.Commands];
       if (total === 0) {
-        qp.title = tabName;
+        qp.title = buildTitle(tabName, state);
         return;
       }
       const parts: string[] = [];
@@ -217,11 +224,11 @@ export class SearchModal implements vscode.Disposable {
       if (counts[ResultSection.Text] > 0) parts.push(`${counts[ResultSection.Text]} text`);
       if (counts[ResultSection.Symbols] > 0) parts.push(`${counts[ResultSection.Symbols]} symbols`);
       if (counts[ResultSection.Commands] > 0) parts.push(`${counts[ResultSection.Commands]} commands`);
-      qp.title = `${tabName}: ${parts.join(', ')}`;
+      qp.title = buildTitle(`${tabName}: ${parts.join(', ')}`, state);
     } else {
       const count = this.fullResults.length;
       if (count === 0) {
-        qp.title = tabName;
+        qp.title = buildTitle(tabName, state);
       } else {
         const unit =
           this.activeTab === SearchMode.File ? 'files' :
@@ -229,7 +236,7 @@ export class SearchModal implements vscode.Disposable {
           this.activeTab === SearchMode.Text ? 'matches' :
           this.activeTab === SearchMode.Symbol ? 'symbols' :
           this.activeTab === SearchMode.Command ? 'commands' : 'results';
-        qp.title = `${tabName}: ${count} ${unit}`;
+        qp.title = buildTitle(`${tabName}: ${count} ${unit}`, state);
       }
     }
   }
@@ -245,7 +252,7 @@ export class SearchModal implements vscode.Disposable {
     qp.keepScrollPosition = true;
 
     this.rebuildButtons(qp);
-    qp.title = TAB_NAMES[this.activeTab];
+    qp.title = buildTitle(TAB_NAMES[this.activeTab], this.indexManager.state);
 
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     const debounceMs = config.get<number>('debounceMs', 200);
@@ -280,9 +287,27 @@ export class SearchModal implements vscode.Disposable {
     qp.items = buildEmptyQueryItems();
 
     const showNoResults = () => {
+      const state = this.indexManager.state;
+      if (state === 'building') {
+        qp.items = [{
+          label: '$(sync) Indexing workspace...',
+          description: 'Results will appear as files are discovered',
+          mode: this.activeTab,
+          alwaysShow: true,
+        }];
+        qp.title = buildTitle(`${TAB_NAMES[this.activeTab]}: indexing...`, state);
+        return;
+      }
+      const hints = ['Try a different search term'];
+      if (this.excludeGitIgnored || this.excludeSearchIgnored) {
+        const toggles: string[] = [];
+        if (this.excludeGitIgnored) toggles.push('gitignore (Alt+G)');
+        if (this.excludeSearchIgnored) toggles.push('search-ignore (Alt+S)');
+        hints.push(`or toggle ${toggles.join(', ')} to include excluded files`);
+      }
       qp.items = [{
         label: '$(search-stop) No results found',
-        description: 'Try a different search term',
+        description: hints.join(', '),
         mode: this.activeTab,
         alwaysShow: true,
       }];
@@ -319,14 +344,14 @@ export class SearchModal implements vscode.Disposable {
       clearBusyTimer();
       qp.items = buildEmptyQueryItems();
       qp.busy = false;
-      qp.title = TAB_NAMES[this.activeTab];
+      qp.title = buildTitle(TAB_NAMES[this.activeTab], this.indexManager.state);
     };
 
     // Execute search via the current tab's provider
     const executeSearch = (query: string) => {
       this.currentSearch?.dispose();
       qp.busy = true;
-      qp.title = `${TAB_NAMES[this.activeTab]}: Searching...`;
+      qp.title = buildTitle(`${TAB_NAMES[this.activeTab]}: Searching...`, this.indexManager.state);
       const provider = this.providers.get(this.activeTab);
       if (!provider) return;
 
@@ -647,22 +672,28 @@ export class SearchModal implements vscode.Disposable {
   private setupStaleHandler(qp: vscode.QuickPick<SearchResult>): vscode.Disposable {
     return this.indexManager.onDidChangeState((state) => {
       if (state === 'stale') {
-        qp.title = '$(warning) Index may be stale';
-      } else if (state === 'building') {
-        qp.title = '$(sync~spin) Reindexing...';
-      } else if (state === 'ready') {
-        const counts: Record<ResultSection, number> = {
-          [ResultSection.Folders]: 0,
-          [ResultSection.Files]: 0,
-          [ResultSection.Text]: 0,
-          [ResultSection.Symbols]: 0,
-          [ResultSection.Commands]: 0,
-        };
-        for (const item of this.fullResults) {
-          if (item.belongsToSection) counts[item.belongsToSection]++;
-        }
-        this.updateTitle(qp, counts);
+        qp.title = 'Index may be stale';
+        return;
       }
+
+      // On 'building' or 'ready': re-run the current search if a query is active
+      // so result counts and the buildTitle prefix stay in sync with state.
+      if (qp.value.trim() && this.triggerSearch) {
+        this.triggerSearch();
+        return;
+      }
+
+      const counts: Record<ResultSection, number> = {
+        [ResultSection.Folders]: 0,
+        [ResultSection.Files]: 0,
+        [ResultSection.Text]: 0,
+        [ResultSection.Symbols]: 0,
+        [ResultSection.Commands]: 0,
+      };
+      for (const item of this.fullResults) {
+        if (item.belongsToSection) counts[item.belongsToSection]++;
+      }
+      this.updateTitle(qp, counts);
     });
   }
 
