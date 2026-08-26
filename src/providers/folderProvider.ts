@@ -22,8 +22,12 @@ export class FolderProvider implements SearchProvider {
       const maxResults = getMaxResults();
 
       let entries;
-      if (options.fuzzySearch) {
-        const matches = this.fileIndex.find(query, 1000, options.excludeGitIgnored, options.excludeSearchIgnored);
+      // Whole-word matching is inherently non-fuzzy, so it forces the substring path
+      if (options.fuzzySearch && !options.matchWholeWord) {
+        const matches = this.fileIndex.find(
+          query, 1000, options.excludeGitIgnored,
+          options.excludeSearchIgnored, options.caseSensitive,
+        );
         entries = matches.map((m) => m.item);
       } else {
         entries = this.fileIndex.filter(
@@ -33,7 +37,7 @@ export class FolderProvider implements SearchProvider {
         );
       }
 
-      const folderResults = extractFolders(entries, query, SearchMode.Folder);
+      const folderResults = extractFolders(entries, query, SearchMode.Folder, options);
 
       if (!cancelled) {
         onResults(folderResults.slice(0, maxResults));
@@ -60,7 +64,7 @@ export class FolderProvider implements SearchProvider {
         if (this.gitIgnore.shouldExclude(relativePath, options)) continue;
         entries.push({ relativePath, uri });
       }
-      const folderResults = extractFolders(entries, query, SearchMode.Folder);
+      const folderResults = extractFolders(entries, query, SearchMode.Folder, options);
 
       onResults(folderResults);
     } catch {

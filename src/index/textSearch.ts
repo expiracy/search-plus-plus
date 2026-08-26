@@ -136,10 +136,13 @@ export class TextSearch implements vscode.Disposable {
       args.push('--case-sensitive');
     }
 
+    // --fixed-strings and --word-regexp compose: the query stays literal while
+    // ripgrep adds the word boundaries
+    if (!options.useRegex) {
+      args.push('--fixed-strings');
+    }
     if (options.matchWholeWord) {
       args.push('--word-regexp');
-    } else if (!options.useRegex) {
-      args.push('--fixed-strings');
     }
 
     if (options.excludeGitIgnored) {
@@ -293,7 +296,7 @@ export class TextSearch implements vscode.Disposable {
       try {
         const flags = isCaseSensitive ? 'g' : 'gi';
         if (options.useRegex) {
-          pattern = new RegExp(options.matchWholeWord ? `\\b${query}\\b` : query, flags);
+          pattern = new RegExp(options.matchWholeWord ? `\\b(?:${query})\\b` : query, flags);
         } else {
           const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           pattern = new RegExp(options.matchWholeWord ? `\\b${escaped}\\b` : escaped, flags);

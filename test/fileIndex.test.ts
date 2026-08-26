@@ -270,12 +270,11 @@ describe('FileIndex', () => {
 
   // --- filter() matchWholeWord ---
 
-  test('filter matchWholeWord=true: "src" matches paths with "src" as a segment', () => {
+  test('filter matchWholeWord=true: "src" matches paths with "src" as a whole word', () => {
     const results = index.filter('src', 200, true, false, true);
     expect(results.length).toBeGreaterThan(0);
     for (const r of results) {
-      const segments = r.relativePath.toLowerCase().split(/[/\\\-_.]/);
-      expect(segments).toContain('src');
+      expect(/(^|[^A-Za-z0-9_])src([^A-Za-z0-9_]|$)/i.test(r.relativePath)).toBe(true);
     }
   });
 
@@ -295,6 +294,79 @@ describe('FileIndex', () => {
     const results = index.filter('inde', 200, true, false, false);
     const match = results.find((r) => r.relativePath === 'src/index.ts');
     expect(match).toBeDefined();
+  });
+
+  // --- match case + whole word restrict results correctly (bug report repro) ---
+
+  describe('match case and whole word combinations', () => {
+    let wordIndex: InstanceType<typeof FileIndex>;
+
+    const WORD_FIXTURES = [
+      'src/test_path.cpp',
+      'src/AddPathMode.cpp',
+      'src/path/config.ts',
+      'include/path.h',
+      'src/mypath.ts',
+      'src/Path/index.ts',
+    ];
+
+    beforeEach(() => {
+      wordIndex = new FileIndex(mockGitIgnore);
+      wordIndex.buildFromEntries(WORD_FIXTURES.map(makeEntry));
+    });
+
+    test('wholeWord: "path" does NOT match test_path.cpp (underscore is a word char)', () => {
+      const results = wordIndex.filter('path', 200, true, false, true);
+      const paths = results.map((r) => r.relativePath);
+      expect(paths).not.toContain('src/test_path.cpp');
+    });
+
+    test('wholeWord: "path" does NOT match AddPathMode.cpp or mypath.ts', () => {
+      const results = wordIndex.filter('path', 200, true, false, true);
+      const paths = results.map((r) => r.relativePath);
+      expect(paths).not.toContain('src/AddPathMode.cpp');
+      expect(paths).not.toContain('src/mypath.ts');
+    });
+
+    test('wholeWord: "path" matches standalone path segments and filenames', () => {
+      const results = wordIndex.filter('path', 200, true, false, true);
+      const paths = results.map((r) => r.relativePath);
+      expect(paths).toContain('src/path/config.ts');
+      expect(paths).toContain('include/path.h');
+      expect(paths).toContain('src/Path/index.ts'); // case-insensitive without matchCase
+    });
+
+    test('matchCase + wholeWord: only exact-case standalone "path" matches', () => {
+      const results = wordIndex.filter('path', 200, true, true, true);
+      const paths = results.map((r) => r.relativePath);
+      expect(paths).toEqual(expect.arrayContaining(['src/path/config.ts', 'include/path.h']));
+      expect(paths).not.toContain('src/Path/index.ts');
+      expect(paths).not.toContain('src/test_path.cpp');
+      expect(paths).not.toContain('src/AddPathMode.cpp');
+    });
+
+    test('matchCase substring: "Path" matches AddPathMode.cpp but not lowercase paths', () => {
+      const results = wordIndex.filter('Path', 200, true, true, false);
+      const paths = results.map((r) => r.relativePath);
+      expect(paths).toContain('src/AddPathMode.cpp');
+      expect(paths).toContain('src/Path/index.ts');
+      expect(paths).not.toContain('src/path/config.ts');
+    });
+
+    test('find with caseSensitive=true drops wrong-case fuzzy matches', () => {
+      const results = wordIndex.find('Path', 200, true, false, true);
+      const paths = results.map((r) => r.item.relativePath);
+      expect(paths).toContain('src/AddPathMode.cpp');
+      expect(paths).toContain('src/Path/index.ts');
+      expect(paths).not.toContain('include/path.h');
+    });
+
+    test('find with caseSensitive=false keeps all-case fuzzy matches', () => {
+      const results = wordIndex.find('path', 200, true, false, false);
+      const paths = results.map((r) => r.item.relativePath);
+      expect(paths).toContain('src/AddPathMode.cpp');
+      expect(paths).toContain('include/path.h');
+    });
   });
 
   // --- binary / non-text files in index ---

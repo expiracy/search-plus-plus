@@ -16,6 +16,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm test
+
       - run: npx @vscode/vsce publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
