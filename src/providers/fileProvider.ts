@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { FileIndex } from '../index/fileIndex';
 import { GitIgnoreManager } from '../gitignore';
+import { containsQuery } from '../utils';
 
 export class FileProvider implements SearchProvider {
   readonly mode = SearchMode.File;
@@ -22,8 +23,12 @@ export class FileProvider implements SearchProvider {
 
       let fileResults: SearchResult[];
 
-      if (options.fuzzySearch) {
-        const matches = this.fileIndex.find(query, maxResults, options.excludeGitIgnored, options.excludeSearchIgnored);
+      // Whole-word matching is inherently non-fuzzy, so it forces the substring path
+      if (options.fuzzySearch && !options.matchWholeWord) {
+        const matches = this.fileIndex.find(
+          query, maxResults, options.excludeGitIgnored,
+          options.excludeSearchIgnored, options.caseSensitive,
+        );
         fileResults = matches.map((match) => this.toFileResult(match.item.relativePath, match.item.uri));
       } else {
         const entries = this.fileIndex.filter(
@@ -70,6 +75,7 @@ export class FileProvider implements SearchProvider {
       for (const uri of uris) {
         const relativePath = vscode.workspace.asRelativePath(uri);
         if (this.gitIgnore.shouldExclude(relativePath, options)) continue;
+        if (!containsQuery(relativePath, query, options)) continue;
         fileResults.push(this.toFileResult(relativePath, uri));
       }
 

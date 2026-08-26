@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Fzf, type FzfResultItem } from 'fzf';
 import { GitIgnoreManager } from '../gitignore';
+import { containsQuery, hasCaseSensitiveSubsequence } from '../utils';
 
 export interface FileEntry {
   relativePath: string;
@@ -92,7 +93,7 @@ export class FileIndex implements vscode.Disposable {
     this.setupWatcher();
   }
 
-  find(query: string, limit = 200, excludeGitIgnored = true, excludeSearchIgnored = true): FzfResultItem<FileEntry>[] {
+  find(query: string, limit = 200, excludeGitIgnored = true, excludeSearchIgnored = true, caseSensitive = false): FzfResultItem<FileEntry>[] {
     if (this.fzfDirty) {
       this.rebuildFzf();
       this.fzfDirty = false;
@@ -102,6 +103,11 @@ export class FileIndex implements vscode.Disposable {
     let results = fzf.find(query);
     if (excludeSearchIgnored) {
       results = results.filter((r) => !this.gitIgnore.isSearchIgnored(r.item.relativePath));
+    }
+    // fzf uses smart-case; when match case is on, require the query to appear
+    // as an exact-case subsequence
+    if (caseSensitive && query.length > 0) {
+      results = results.filter((r) => hasCaseSensitiveSubsequence(r.item.relativePath, query));
     }
     // Stable re-sort: prioritize results where the match falls in the filename
     if (query.length > 0) {
@@ -123,21 +129,11 @@ export class FileIndex implements vscode.Disposable {
     excludeSearchIgnored = true,
   ): FileEntry[] {
     const entries = this.getEntriesFor(excludeGitIgnored);
-    const q = caseSensitive ? query : query.toLowerCase();
 
     const matches: FileEntry[] = [];
     for (const entry of entries) {
       if (excludeSearchIgnored && this.gitIgnore.isSearchIgnored(entry.relativePath)) continue;
-
-      const path = caseSensitive ? entry.relativePath : entry.relativePath.toLowerCase();
-
-      if (matchWholeWord) {
-        // Split path on common separators and check for exact segment match
-        const segments = path.split(/[/\\\-_.]/);
-        if (!segments.some((seg) => seg === q)) continue;
-      } else {
-        if (!path.includes(q)) continue;
-      }
+      if (!containsQuery(entry.relativePath, query, { caseSensitive, matchWholeWord })) continue;
 
       matches.push(entry);
       if (matches.length >= limit) break;

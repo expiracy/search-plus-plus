@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { GitIgnoreManager } from '../gitignore';
+import { containsQuery, hasCaseSensitiveSubsequence } from '../utils';
 
 const SYMBOL_ICONS: Partial<Record<vscode.SymbolKind, string>> = {
   [vscode.SymbolKind.File]: 'symbol-file',
@@ -53,7 +54,9 @@ export class SymbolProvider implements SearchProvider {
         return;
       }
 
-      let results: SearchResult[] = symbols.slice(0, maxResults).map((sym) => {
+      const matching = symbols.filter((sym) => this.matchesQueryOptions(sym.name, query, options));
+
+      let results: SearchResult[] = matching.slice(0, maxResults).map((sym) => {
         const line = sym.location.range.start.line;
         const col = sym.location.range.start.character;
         const relativePath = vscode.workspace.asRelativePath(sym.location.uri);
@@ -82,5 +85,20 @@ export class SymbolProvider implements SearchProvider {
     });
 
     return { dispose: () => { cancelled = true; } };
+  }
+
+  /**
+   * The workspace symbol provider always fuzzy-matches case-insensitively, so
+   * the match-case, whole-word, and fuzzy toggles must be enforced here.
+   */
+  private matchesQueryOptions(name: string, query: string, options: SearchOptions): boolean {
+    if (query.length === 0) return true;
+    if (options.matchWholeWord || !options.fuzzySearch) {
+      return containsQuery(name, query, options);
+    }
+    if (options.caseSensitive) {
+      return hasCaseSensitiveSubsequence(name, query);
+    }
+    return true;
   }
 }

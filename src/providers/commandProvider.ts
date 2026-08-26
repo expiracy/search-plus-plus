@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Fzf } from 'fzf';
 import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { containsQuery, hasCaseSensitiveSubsequence } from '../utils';
 
 interface CommandEntry {
   id: string;
@@ -88,13 +89,14 @@ export class CommandProvider implements SearchProvider {
   }
 
   private performSearch(query: string, options: SearchOptions, maxResults: number): SearchResult[] {
-    if (options.fuzzySearch) {
-      return this.fuzzySearch(query, maxResults);
+    // Whole-word matching is inherently non-fuzzy, so it forces the substring path
+    if (options.fuzzySearch && !options.matchWholeWord) {
+      return this.fuzzySearch(query, options, maxResults);
     }
     return this.substringSearch(query, options, maxResults);
   }
 
-  private fuzzySearch(query: string, maxResults: number): SearchResult[] {
+  private fuzzySearch(query: string, options: SearchOptions, maxResults: number): SearchResult[] {
     if (!this.fzfInstance) {
       this.fzfInstance = new Fzf(this.entries, {
         selector: (item) => item.searchText,
@@ -102,24 +104,23 @@ export class CommandProvider implements SearchProvider {
       });
     }
 
-    return this.fzfInstance.find(query).slice(0, maxResults).map((result) =>
+    let results = this.fzfInstance.find(query);
+    // fzf uses smart-case; when match case is on, require the query to appear
+    // as an exact-case subsequence
+    if (options.caseSensitive && query.length > 0) {
+      results = results.filter((r) => hasCaseSensitiveSubsequence(r.item.searchText, query));
+    }
+
+    return results.slice(0, maxResults).map((result) =>
       this.toSearchResult(result.item),
     );
   }
 
   private substringSearch(query: string, options: SearchOptions, maxResults: number): SearchResult[] {
-    const q = options.caseSensitive ? query : query.toLowerCase();
     const matches: CommandEntry[] = [];
 
     for (const entry of this.entries) {
-      const text = options.caseSensitive ? entry.searchText : entry.searchText.toLowerCase();
-
-      if (options.matchWholeWord) {
-        const words = text.split(/[\s:.\-_]/);
-        if (!words.some((w) => w === q)) continue;
-      } else {
-        if (!text.includes(q)) continue;
-      }
+      if (!containsQuery(entry.searchText, query, options)) continue;
 
       matches.push(entry);
       if (matches.length >= maxResults) break;

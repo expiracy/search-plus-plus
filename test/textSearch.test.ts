@@ -175,6 +175,14 @@ describe('TextSearch', () => {
     expect(match).toBeDefined();
   });
 
+  test('matchWholeWord=true keeps the query literal (regex metachars)', async () => {
+    // Previously --fixed-strings was dropped when whole-word was on, so
+    // "useState(0)" was parsed as a regex and matched nothing
+    const results = await searchAsync(ts, 'useState(0)', { ...defaultOpts, matchWholeWord: true });
+    expect(results.length).toBeGreaterThanOrEqual(1);
+    expect(results.every((r: any) => r.lineText.includes('useState(0)'))).toBe(true);
+  });
+
   // --- React / JSX patterns ---
 
   test('finds "useEffect" in .tsx files', async () => {

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { ResultSection, SearchMode, type SearchResult } from './types';
+import { ResultSection, SearchMode, type SearchOptions, type SearchResult } from './types';
+import { containsQuery } from '../utils';
 
 interface PathEntry {
   relativePath: string;
@@ -8,23 +9,24 @@ interface PathEntry {
 
 /**
  * Extract matching folders from a list of file paths.
- * Deduplicates and filters by case-insensitive substring match on the query.
+ * Deduplicates and filters by substring match on the query, honoring the
+ * match-case and whole-word toggles when provided.
  */
 export function extractFolders(
   entries: PathEntry[],
   query: string,
   mode: SearchMode,
+  options: Pick<SearchOptions, 'caseSensitive' | 'matchWholeWord'> = { caseSensitive: false, matchWholeWord: false },
 ): SearchResult[] {
   const seenFolders = new Set<string>();
   const folderResults: SearchResult[] = [];
-  const queryLower = query.toLowerCase();
 
   for (const entry of entries) {
     const wsFolder = vscode.workspace.getWorkspaceFolder(entry.uri);
     const parts = entry.relativePath.split('/');
     for (let i = 1; i < parts.length; i++) {
       const folderPath = parts.slice(0, i).join('/');
-      if (!seenFolders.has(folderPath) && folderPath.toLowerCase().includes(queryLower)) {
+      if (!seenFolders.has(folderPath) && containsQuery(folderPath, query, options)) {
         seenFolders.add(folderPath);
         const folderUri = wsFolder
           ? vscode.Uri.joinPath(wsFolder.uri, folderPath)
