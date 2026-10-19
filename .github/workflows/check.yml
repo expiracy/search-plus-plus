@@ -35,6 +35,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: npm run check
 
   extension-host:
@@ -54,6 +56,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: xvfb-run -a npm run test:host
         env:
           VSCODE_VERSION: ${{ matrix.vscode }}
@@ -72,6 +76,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: npm run package
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

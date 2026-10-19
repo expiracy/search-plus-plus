@@ -237,7 +237,9 @@ To release after merging the changes into `master`, update the version with
 example, the next patch after 2.1.0 is `git push origin master v2.1.1`. Each release
 needs a new version; reusing a published version fails visibly.
 
-The workflows pin action commits and use a cached, locked npm install. Publishing
+The workflows pin action commits and use a cached, locked npm install. The install
+step receives the read-only GitHub job token so ripgrep binary downloads avoid
+anonymous API rate limits. Publishing
 credentials must retain Marketplace publishing access. Microsoft recommends
 [identity-based publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#secure-automated-publishing-to-visual-studio-marketplace)
 and is retiring global Azure DevOps PATs on December 1, 2026; migrate the existing

@@ -31,6 +31,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Validate the release version and branch
         run: |
           npm run check:release
