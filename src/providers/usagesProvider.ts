@@ -20,7 +20,6 @@ export class UsagesProvider implements SearchProvider {
       for (const location of locations) {
         if (cancelled) return [];
         const relative = vscode.workspace.asRelativePath(location.uri);
-        if (options.pathFilter && !options.pathFilter(location.uri)) continue;
         if (this.gitIgnore.shouldExclude(relative, options, location.uri)) continue;
         const key = `${location.uri.toString()}:${location.range.start.line}:${location.range.start.character}`;
         if (seen.has(key)) continue;
@@ -43,6 +42,7 @@ export class UsagesProvider implements SearchProvider {
           label,
           description: `${vscode.workspace.asRelativePath(location.uri)}:${location.range.start.line + 1}`,
           mode: SearchMode.Usages, uri: location.uri,
+          alwaysShow: true,
           lineNumber: location.range.start.line, column: location.range.start.character,
         });
         if (results.length >= maxResults) break;

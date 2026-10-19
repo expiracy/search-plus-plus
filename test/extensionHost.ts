@@ -6,7 +6,7 @@ import { FileIndex } from '../src/index/fileIndex';
 import { TextSearch, type TextMatch } from '../src/index/textSearch';
 import { FileProvider } from '../src/providers/fileProvider';
 import { UsagesProvider } from '../src/providers/usagesProvider';
-import { compilePathFilter } from '../src/pathFilter';
+import { SymbolProvider } from '../src/providers/symbolProvider';
 import { FolderProvider } from '../src/providers/folderProvider';
 import { type SearchOptions, type SearchResult } from '../src/providers/types';
 
@@ -47,9 +47,6 @@ export async function run(): Promise<void> {
     assert.ok(matches.some(result => result.relativePath === 'src/index.ts' && result.lineNumber === 1));
     const ignored = await collect<TextMatch>((publish, fail) => text.search('built', { ...options, maxResults: 200 }, publish, fail));
     assert.ok(ignored.every(result => !result.relativePath.startsWith('build/')));
-    const scoped = await collect<SearchResult>((publish, fail) => files.search('index', { ...options, pathFilter: compilePathFilter('^src/', true) }, publish, fail));
-    assert.ok(scoped.some(result => result.description === 'src/index.ts'));
-    assert.ok(scoped.every(result => String(result.description).startsWith('src/')));
     const root = vscode.workspace.workspaceFolders![0].uri;
     const target = vscode.Uri.joinPath(root, 'semantic.fixture');
     await vscode.workspace.fs.writeFile(target, Buffer.from('greet();\n'));
@@ -59,31 +56,60 @@ export async function run(): Promise<void> {
       provideReferences(document, position) {
         assert.equal(document.uri.toString(), target.toString());
         assert.equal(position.character, 1);
-        return [new vscode.Location(target, new vscode.Range(0, 0, 0, 5)), reference, reference];
+        return [reference, reference];
       },
     });
     try {
       const usages = await collect<SearchResult>((publish, fail) => new UsagesProvider(rules).search('', {
-        ...options, pathFilter: compilePathFilter('src/**', false), usageTarget: { uri: target, position: new vscode.Position(0, 1), name: 'greet' },
+        ...options, usageTarget: { uri: target, position: new vscode.Position(0, 1), name: 'greet' },
       }, publish, fail));
       assert.equal(usages.length, 1);
       assert.equal(usages[0].uri?.toString(), reference.uri.toString());
       assert.equal(usages[0].lineNumber, 1);
       assert.equal(usages[0].column, 2);
     } finally { registration.dispose(); }
+    await verifyTypeScriptUsages(root, rules);
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
     for (const command of ['searchPlusPlus.openFiles', 'searchPlusPlus.openText', 'searchPlusPlus.openSymbols', 'searchPlusPlus.openCommands']) {
+      const activeEditor = vscode.window.tabGroups.activeTabGroup.activeTab;
       await vscode.commands.executeCommand(command);
-      assert.ok(vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputWebview, 'search opens an editor webview and its client reports ready');
+      assert.equal(vscode.window.tabGroups.activeTabGroup.activeTab, activeEditor, 'native search does not open an editor tab');
       await vscode.commands.executeCommand('searchPlusPlus.nextTab');
       await vscode.commands.executeCommand('searchPlusPlus.prevTab');
-      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
     }
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, glob/regex scope, semantic references, webview readiness and mode commands, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup and mode commands, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
+}
+
+async function verifyTypeScriptUsages(root: vscode.Uri, rules: GitIgnoreManager): Promise<void> {
+  const definition = vscode.Uri.joinPath(root, 'usage-definition.ts');
+  const consumer = vscode.Uri.joinPath(root, 'usage-consumer.ts');
+  const symbolName = 'searchPlusPlusUsageFixture';
+  await vscode.workspace.fs.writeFile(definition, Buffer.from(`export function ${symbolName}(value: number) { return value; }\n`));
+  await vscode.workspace.fs.writeFile(consumer, Buffer.from([
+    `import { ${symbolName} } from './usage-definition';`,
+    `export const actualUsage = ${symbolName}(42);`,
+    'function unrelated() {',
+    `  const ${symbolName} = (value: number) => value;`,
+    `  return ${symbolName}(1);`,
+    '}',
+  ].join('\n')));
+  await vscode.extensions.getExtension('vscode.typescript-language-features')?.activate();
+  await vscode.workspace.openTextDocument(consumer);
+  await vscode.workspace.openTextDocument(definition);
+  await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', definition);
+  const symbols = await collect<SearchResult>((publish, fail) => new SymbolProvider(rules).search(symbolName, options, publish, fail));
+  const symbol = symbols.find(result => result.uri?.toString() === definition.toString());
+  assert.ok(symbol, 'real TypeScript workspace search finds the declaration');
+  const usageTarget = { uri: symbol.uri!, position: new vscode.Position(symbol.lineNumber!, symbol.column!), name: symbolName };
+  const results = await collect<SearchResult>((publish, fail) => new UsagesProvider(rules).search('', { ...options, usageTarget }, publish, fail));
+  assert.ok(results.some(result => result.uri?.toString() === consumer.toString() && result.lineNumber === 1), 'workspace symbol resolves its real cross-file call');
+  assert.ok(results.every(result => result.uri?.toString() !== consumer.toString() || (result.lineNumber !== 3 && result.lineNumber !== 4)), 'unrelated same-name symbols are not treated as usages');
+  assert.ok(results.every(result => result.alwaysShow), 'native filtering preserves reference results');
 }

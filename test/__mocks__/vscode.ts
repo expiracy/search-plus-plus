@@ -236,7 +236,6 @@ export const workspace = {
 export const window = {
   activeTextEditor: undefined,
   showTextDocument: async () => ({}),
-  createWebviewPanel: (..._args: any[]): any => ({}),
   createQuickPick: () => ({
     onDidChangeValue: () => ({ dispose() {} }),
     onDidAccept: () => ({ dispose() {} }),
@@ -283,3 +282,4 @@ export const extensions = {
 };
 
 export const env = { appRoot: '' };
+export const version = '1.142.0';

@@ -1,7 +1,7 @@
 # Search architecture
 
-search++ runs inside the VS Code extension host and presents a two-input search view
-in an editor webview. It indexes workspace paths in memory and searches file
+search++ runs inside the VS Code extension host and presents results through the
+native QuickPick interface. It indexes workspace paths in memory and searches file
 contents on demand. The UI, request coordinator, providers, and workspace services
 have separate responsibilities so changes to the input or index can be handled
 without mixing results from different searches.
@@ -10,9 +10,7 @@ without mixing results from different searches.
 
 ```mermaid
 flowchart TD
-    Client[Webview: inputs, controls, results, keyboard focus]
-    UI[SearchView: request state, messages, navigation]
-    Scope[Path filter: glob or regex predicate]
+    UI[SearchModal: input, tabs, rendering, navigation]
     Session[SearchSession: latest request, debounce, cancellation]
     Providers[File, Folder, Text, Symbol, Usages, Command providers]
     Everywhere[EverywhereProvider: compose section results]
@@ -20,8 +18,6 @@ flowchart TD
     Rules[GitIgnoreManager: scoped exclusion policy]
     Text[TextSearch: ripgrep process and notebook adapter]
     Lifecycle[IndexManager: rebuild lifecycle and status]
-    Client <-->|typed messages| UI
-    UI --> Scope
     UI --> Session
     Session --> Providers
     Session --> Everywhere
@@ -36,15 +32,13 @@ flowchart TD
 ```
 
 [Activation](src/extension.ts) creates the workspace services, history, providers,
-and search view, then registers their disposables with VS Code. The
-[provider factory](src/providers/createProviders.ts) supplies the view with a
+and modal, then registers their disposables with VS Code. The
+[provider factory](src/providers/createProviders.ts) supplies the modal with a
 registry of providers that share the same search contract.
 
 | Component | Responsibility |
 | --- | --- |
-| Webview renderer | Display two inputs, modes, options, and results; manage field focus and selection. |
-| `SearchView` | Own query, scope, options, symbol target, and result identities; dispatch requests and navigate. |
-| Path filter | Compile glob includes or a path regex into a shared resource predicate. |
+| `SearchModal` | Read input and options, select a provider, render results, and navigate to the selected resource. |
 | `SearchSession` | Own the current request, its debounce timer, cancellation, and delivery of current results and errors. |
 | Search providers | Implement files, folders, text, symbols, usages, or commands through the `SearchProvider` contract. |
 | `EverywhereProvider` | Combine enabled providers into the Everything tab's ordered sections. |
@@ -64,7 +58,7 @@ search from a failed search.
 [SearchSession](src/searchSession.ts) cancels the previous request before starting
 or scheduling another one. Each request captures a version number; its callbacks
 can update the UI only while that version is current. The same guard covers
-asynchronous absolute-path lookups. Clearing the input or closing the view
+asynchronous absolute-path lookups. Starting a query clears old actionable rows. Clearing the input or closing the modal
 cancels active work and any pending debounce timer.
 
 File and folder searches use the same index matcher during startup and normal
@@ -77,29 +71,6 @@ delay. Section errors appear alongside results from the other providers.
 `searchPlusPlus.maxResults` limits results returned by each provider. The
 Everything tab applies its own section order and display limit to those results,
 with a link to the individual tab when more results are available.
-
-## View boundary and path scope
-
-The extension host retains search results and accepts result IDs for navigation,
-command execution, and reference lookup. The webview sends input and control
-messages. It receives display data, with provider text inserted through DOM text
-nodes. A content security policy permits only local styles and fonts and a
-nonce-authorized script. Webview resources are restricted to the packaged asset
-directory.
-
-Each input change has a revision. The renderer rejects snapshots for older input,
-and `SearchSession` rejects callbacks from older requests. These guards cover both
-sides of the asynchronous message boundary. The host clears old actionable results
-when starting a new search. Keyboard context keys are enabled only while the search
-view has focus, so terminal and command-palette keys retain their normal behavior.
-
-The `in:` field compiles to a predicate over full resource URIs. Glob includes
-support comma-separated alternatives, braces, implicit descendant matching, root
-anchoring, and workspace names in multi-root workspaces. Regex uses normalized
-workspace-relative paths. Invalid regex cancels the request and displays an error.
-Providers apply scope and exclusion predicates before their result limits. Folder
-scope matches derived folder URIs; text scope also filters notebooks before reads.
-Commands are global.
 
 ## Workspace discovery and exclusions
 
@@ -132,7 +103,7 @@ descendants. Directory creation and bulk changes mark the index stale so
 [IndexManager](src/index/indexManager.ts) can schedule a rescan. Rebuild requests
 are serialized, and the status bar reports building, ready, stale, or error state.
 
-The search view owns its search session, IndexManager owns the workspace services, and
+The modal owns its search session, IndexManager owns the workspace services, and
 the provider factory owns the command provider's extension-change subscription.
 Disposal cancels requests and builds, clears timers, stops processes, and releases
 watchers and event subscriptions.
@@ -160,22 +131,31 @@ unsupported.
 Symbol search requests candidates from VS Code's workspace symbol providers, then
 applies name-matching options and path exclusions before limiting results. Its
 coverage depends on the installed language extensions and their indexing state.
-The usages provider calls `vscode.executeReferenceProvider` for a selected symbol’s
-URI and position. It deduplicates references, applies path and exclusion rules,
-reads previews from open documents, and filters previews and paths before limiting
-results. Each request shares document reads within that request; references are
-resolved again for subsequent searches so stale locations are not retained in a
-cross-query cache. A missing preview keeps its reference navigable. Cancellation
-suppresses late callbacks and stops further document reads. Language-provider
-failures are reported separately from empty reference lists.
+
+Usages is a two-step interaction within the native popup. Without a target,
+queries use the symbol provider and Enter chooses a symbol. The modal retains
+its URI and position as a `UsageTarget`, clears the symbol query, and dispatches
+to `UsagesProvider`. The original symbol query and reference filter have separate
+state so changing modes or choosing another symbol cannot reuse the wrong input.
+Closing the popup clears that context.
+
+The usages provider calls `vscode.executeReferenceProvider`, deduplicates returned
+locations, applies exclusion rules, and reads previews from open documents. Reads
+are shared within a request. Queries filter previews and paths before the result
+limit, and rows set `alwaysShow` so native label filtering cannot hide path matches.
+A missing preview keeps its reference navigable. Cancellation stops subsequent
+reads and suppresses late callbacks. Reference locations are resolved again for
+new requests; no cross-query cache retains stale positions.
 
 Command search builds a catalog from registered commands and extension metadata;
 extension changes invalidate that catalog.
 
 ## Support and performance
 
-The extension targets VS Code 1.96 and newer compatible releases. Filesystem
-workspaces can be searched on a remote extension host when ripgrep is available
+The extension targets VS Code 1.96 and newer compatible releases. Button locations
+and toggles are enabled from VS Code 1.109, when those APIs were
+[finalized](https://code.visualstudio.com/updates/v1_109#_extensions-and-api). Older
+hosts use title-bar buttons with option states in tooltips. Filesystem workspaces can be searched on a remote extension host when ripgrep is available
 there. Text search for virtual workspace schemes is unsupported.
 
 The path index includes ignored candidates, so large dependency trees increase
@@ -185,16 +165,17 @@ eligible indexed files; empty directories do not appear.
 
 ## Validation
 
-`npm run check` runs extension and browser TypeScript checking, linting, tests, and the production build.
+`npm run check` runs TypeScript checking, linting, tests, and the production build.
 The tests cover workspace discovery, exclusion scope, request cancellation, index
-updates, matching, process failures, Unicode handling, navigation, notebook source extraction, path scopes, semantic usages, safe
-DOM rendering, input revisions, and keyboard focus. Real ripgrep fixtures complement deterministic lifecycle tests.
+updates, matching, process failures, Unicode handling, navigation, notebook source
+extraction, symbol selection for usages, and native popup reference filtering.
+Real ripgrep fixtures complement deterministic lifecycle tests.
 Text tests wait for completion, including the notebook stage. Test files run
 serially to keep filesystem and scalability checks from competing for resources.
 
 `npm run test:host` exercises activation, file and folder search, exclusion
-toggles, real text search, glob and regex scopes, semantic references, webview
-readiness, mode commands, and reindexing in an isolated VS Code
+toggles, real text search, real TypeScript workspace-symbol and cross-file
+reference lookup, popup commands, and reindexing in an isolated VS Code
 host. CI runs this smoke test on Linux against VS Code 1.96.0 and current stable,
 and runs the standard checks on Linux, macOS, and Windows before packaging the
 VSIX. See the [development and release procedures](README.md#development-and-validation)

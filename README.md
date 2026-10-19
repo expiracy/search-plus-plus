@@ -1,16 +1,15 @@
 # search++
 
 A unified search for VS Code inspired by JetBrains IDEs. Press **Shift+Shift** to
-search workspace files, folders, text, symbols, usages, and commands in a search
-view that opens in an editor tab.
+search workspace files, folders, text, symbols, usages, and commands in one popup.
+
+![Everything tab](media/everywhere.png)
 
 ## Getting Started
 
 1. Install search++ from the VS Code Marketplace.
-2. Press **Shift+Shift** to open the search view.
-3. Type your query, then use the **in:** row to limit files and folders.
-4. Use **Tab** to switch inputs, **Shift+Tab** for the next mode, and **Ctrl+Tab**
-   for the previous mode.
+2. Press **Shift+Shift** to open the search modal.
+3. Start typing to search. Use **Tab** to cycle between search modes.
 
 | Tab | What it searches |
 |-----|-----------------|
@@ -19,14 +18,22 @@ view that opens in an editor tab.
 | **Folders** | Folders containing searchable files |
 | **Text** | File contents (powered by ripgrep) |
 | **Symbols** | Functions, classes, variables via VS Code's language providers |
-| **Usages** | Semantic references to a selected symbol, using VS Code’s language providers |
+| **Usages** | Find a symbol, then list its semantic references |
 | **Commands** | All VS Code commands (built-in and from extensions) |
+
+| ![Files](media/files.png) | ![Folders](media/folders.png) | ![Text](media/text.png) |
+|:---:|:---:|:---:|
+| Files | Folders | Text |
+
+| ![Symbols](media/symbols.png) | ![Commands](media/commands.png) |
+|:---:|:---:|
+| Symbols | Commands |
 
 ## Features
 
 ### Search Options
 
-Toggle these while the search view is active:
+Toggle these while the search modal is open:
 
 | Toggle | Shortcut | Description |
 |--------|----------|-------------|
@@ -38,44 +45,30 @@ Toggle these while the search view is active:
 | Exclude Search Ignored | **Alt+S** | Hide files excluded by `.searchignore` |
 
 Regex applies to text search. Fuzzy matching applies to files, folders, commands,
-symbols, and usage previews; text search uses literal text or a regular expression. Match Whole
-Word uses literal matching for files, folders, and commands, and filters symbol
-names returned by the language provider.
-
-### Search in Files and Folders
-
-The **in:** row filters paths before result limits are applied. Leave it blank to
-search the workspace. It applies to Files, Folders, Text, Symbols, and Usages;
-commands remain global. Folder results match the folder path itself.
-
-By default, the field accepts glob includes like VS Code’s Search view:
-
-| Include | Matches |
-|---------|---------|
-| `src` or `src/**` | A `src` folder and its descendants, at any depth |
-| `./src` | `src` at a workspace root |
-| `**/*.{ts,tsx}` | TypeScript and TSX files |
-| `src/**, tests/**` | Either folder tree |
-| `./server/src` | `src` in the `server` root of a multi-root workspace |
-
-Enable the **.* button beside in:** to use a path regular expression instead,
-for example `^src/.*.tsx?$` or `(^|/)(components|hooks)/`. Regex is case-sensitive
-and matches workspace-relative paths with `/` separators, without `/.../`
-delimiters. An invalid regex displays an error and cancels the search. This path
-regex control is independent of **Alt+R**, which controls text-content regex.
+symbols, and usage previews; text search uses literal text or a regular
+expression. Match Whole Word uses literal matching for files, folders, commands,
+and usage previews, and filters symbol names returned by the language provider.
 
 ### Find Usages
 
-1. Search for a symbol in **Symbols** or the Symbols section of **Everything**.
-2. Select it with the arrow keys and press **Shift+F12**, or click its **Find Usages** button.
-3. The **Usages** mode lists references. Use the query to filter previews or paths,
-   and **in:** to limit the files and folders shown.
-4. Open a result to jump to its reference location.
+Open **Usages**, type a symbol name, select the matching symbol, and press
+**Enter** to list its references. You can also select a symbol in **Symbols** or
+**Everything**, then press **Shift+F12** or click its **Find Usages** button.
 
-The editor context menu and command palette also offer **search++: Find Usages**
-for the symbol at the cursor. Results come from the same VS Code reference-provider
-API used for semantic references. They depend on the installed language extension
-and may include declarations when that provider returns them.
+The popup shows the selected symbol in its title. Type text or a filename to
+filter its reference previews and paths. Select a result to jump to that exact
+reference. **Choose Another Symbol** returns to the symbol search; returning to
+**Symbols** restores the original symbol query.
+
+From an editor, use **search++: Find Usages** in the command palette or context
+menu to find references to the symbol at the cursor. Without an editor symbol,
+the command opens the symbol chooser.
+
+References come from VS Code's language providers. Coverage depends on installed
+language extensions and their indexing state; declarations appear when the
+provider includes them. Empty reference lists and language-provider failures are
+shown separately. Git-ignore, search-ignore, and custom exclusions also apply to
+references.
 
 ### Go to Line and Column
 
@@ -83,11 +76,12 @@ On the **Files** or **Everything** tab, append `:line` or `:line:column` to jump
 a specific location. Line and column numbers start at 1:
 
 ```
-searchView.ts:42
-searchView.ts:42:5
+searchModal.ts:42
+searchModal.ts:42:5
 ```
 
-Press **Ctrl+Enter** to autofill the selected file's path, then type the line and optional column after the inserted colon.
+Press **Ctrl+Enter** to autofill the selected file's path, then type the line and
+optional column after the inserted colon.
 
 ### Absolute Path Support
 
@@ -97,9 +91,8 @@ file or reveal the folder in the Explorer.
 
 ### Search History
 
-Recently opened files and locations appear when both inputs are empty, except
-in Usages mode.
-History is stored per workspace. Use the remove button to delete an entry;
+Recently opened files and locations appear when the search input is empty,
+except in Usages mode. History is stored per workspace. Use the remove button to delete an entry;
 deleted-file entries are pruned in the background when another file is added to
 history.
 
@@ -110,13 +103,12 @@ opens the notebook. Navigation to the exact matching cell is unsupported.
 
 ### Open to Side
 
-Click the split-editor button on a resource result, or press **Alt+Enter**, to
-open it in a side editor group.
+Click the split-editor button on any file or text result to open it in a side editor group.
 
 ## Search Coverage
 
 search++ requires VS Code 1.96 or a newer compatible release. Folder search shows
-folders containing files eligible under the exclusion rules; empty directories do
+folders containing files included by the current filters; empty directories do
 not appear. Symbol and usage results depend on installed language extensions and their
 indexing state.
 
@@ -128,19 +120,15 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 
 | Shortcut | Action | Context |
 |----------|--------|---------|
-| **Shift+Shift** | Open or return to search | Global |
-| **Tab** | Switch query / in: input | View active |
-| **Shift+Tab** | Next mode | View active |
-| **Ctrl+Tab** | Previous mode | View active |
-| **Shift+F12** | Find usages of the selected symbol | View active |
-| **Enter** / **Alt+Enter** | Open / open to the side | View active |
-| **Escape** | Close search | View active |
-| **Alt+C** | Toggle case sensitive | View active |
-| **Alt+R** | Toggle regex | View active |
-| **Alt+W** | Toggle match whole word | View active |
-| **Alt+F** | Toggle fuzzy search | View active |
-| **Alt+G** | Toggle exclude git ignored | View active |
-| **Alt+S** | Toggle exclude search ignored | View active |
+| **Shift+Shift** | Open search (Everything tab) | Global |
+| **Tab** | Next search mode | Modal open |
+| **Shift+F12** | Find usages of the selected symbol | Modal open |
+| **Alt+C** | Toggle case sensitive | Modal open |
+| **Alt+R** | Toggle regex | Modal open |
+| **Alt+W** | Toggle match whole word | Modal open |
+| **Alt+F** | Toggle fuzzy search | Modal open |
+| **Alt+G** | Toggle exclude git ignored | Modal open |
+| **Alt+S** | Toggle exclude search ignored | Modal open |
 | **Ctrl+Enter** | Autofill file path | Files or Everything tab |
 
 ## Commands
@@ -151,7 +139,7 @@ These commands are available from the command palette (`Ctrl+Shift+P` / `Cmd+Shi
 
 | Command | Description |
 |---------|-------------|
-| `search++: Open Search` | Open or return to the search view |
+| `search++: Open Search` | Open the search modal (Everything tab) |
 | `search++: Search Files` | Open directly to the Files tab |
 | `search++: Search Text` | Open directly to the Text tab |
 | `search++: Search Symbols` | Open directly to the Symbols tab |
@@ -207,7 +195,7 @@ Nested `.searchignore` files are supported. Patterns are scoped to the directory
 containing the file, just like `.gitignore`. Changes reload the rules and rebuild
 the index automatically; a manual reindex is unnecessary.
 
-Toggle this filter on or off with **Alt+S** while the search view is active.
+Toggle this filter on or off with **Alt+S** while the search modal is open.
 
 ### How Exclusions Layer
 
@@ -237,9 +225,9 @@ The extension sets context keys you can use in custom `keybindings.json` `when` 
 
 | Context Key | When it is `true` |
 |-------------|-------------------|
-| `searchPlusPlusModalOpen` | The search view is active |
-| `searchPlusPlusFileTab` | The search view has focus in Files or Everything mode |
-| `searchPlusPlusEverythingTab` | The search view has focus in Everything mode |
+| `searchPlusPlusModalOpen` | The search modal is open |
+| `searchPlusPlusFileTab` | The Files tab or Everything tab is active |
+| `searchPlusPlusEverythingTab` | The Everything tab is active |
 
 Example:
 
@@ -269,8 +257,8 @@ Run `npm run test:host` for a smoke test in an isolated VS Code window. On macOS
 uses `/Applications/Visual Studio Code.app`; elsewhere it uses `code` on PATH. Set
 `VSCODE_EXECUTABLE_PATH` to test another installation. The runner copies its fixture
 workspace into a temporary directory and checks activation, search providers,
-exclusions, path filters, semantic references, webview readiness, mode commands,
-and reindexing.
+exclusions, real TypeScript symbol-to-reference navigation, popup commands, and
+reindexing.
 
 Set `VSCODE_VERSION=1.96.0` or `VSCODE_VERSION=stable` to download and test a specific
 VS Code release through the official extension test runner. Linux CI runs these
@@ -285,8 +273,8 @@ This project ships as a VS Code extension. `private: true` prevents accidental n
 registry publication; npm manages the development tools and scripts.
 
 `npm run package` builds `search-plus-plus.vsix` using the locked `@vscode/vsce`
-version. The package includes the production extension and webview bundles, local icon font, manifest,
-documentation, and image assets. Development files and dependency trees are excluded. The command
+version. The package includes the production bundle, third-party notices, manifest, documentation, icon,
+and screenshots. Development files and dependency trees are excluded. The command
 uses `--skip-license` because this repository currently has no license file.
 
 Every branch push and pull request runs checks on Linux, macOS, and Windows, plus

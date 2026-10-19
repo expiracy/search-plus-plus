@@ -20,12 +20,12 @@ test('semantic usages resolve the selected symbol and open each returned locatio
   expect(results).toMatchObject([{ mode: SearchMode.Usages, lineNumber: 4, column: 7, label: 'return greet();' }]);
 });
 
-test('scope and exclusion rules run before the usages limit and duplicates are removed', async () => {
+test('exclusion rules run before the usages limit and duplicates are removed', async () => {
   vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'maxResults' ? 2 : fallback } as any);
   vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue([location('outside.ts', 0), location('src/a.ts', 1), location('src/a.ts', 1), location('src/ignored.ts', 0), location('src/b.ts', 3)] as any);
   const read = vi.spyOn(vscode.workspace, 'openTextDocument').mockResolvedValue({ lineAt: () => ({ text: 'greet();' }) } as any);
-  const provider = new UsagesProvider({ shouldExclude: (_rel: string, _options: any, uri: any) => uri.path.endsWith('ignored.ts') } as any);
-  const results = await new Promise<any[]>(resolve => provider.search('', { ...options, usageTarget: target, pathFilter: (uri: any) => uri.path.includes('/src/') } as any, resolve));
+  const provider = new UsagesProvider({ shouldExclude: (_rel: string, _options: any, uri: any) => uri.path.endsWith('ignored.ts') || uri.path.endsWith('outside.ts') } as any);
+  const results = await new Promise<any[]>(resolve => provider.search('', { ...options, usageTarget: target } as any, resolve));
   expect(results.map(result => result.uri.path)).toEqual(['/workspace/src/a.ts', '/workspace/src/b.ts']);
   expect(read).toHaveBeenCalledTimes(2);
 });
@@ -77,4 +77,11 @@ test('multiple references in one document share its open buffer within a request
   const results = await new Promise<any[]>(resolve => new UsagesProvider(rules as any).search('', { ...options, usageTarget: target } as any, resolve));
   expect(results).toHaveLength(2);
   expect(read).toHaveBeenCalledTimes(1);
+});
+
+test('a path query keeps reference rows visible in native QuickPick filtering', async () => {
+  vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue([location('consumer.ts', 4, 7)] as any);
+  vi.spyOn(vscode.workspace, 'openTextDocument').mockResolvedValue({ lineAt: () => ({ text: 'greet();' }) } as any);
+  const results = await new Promise<any[]>(resolve => new UsagesProvider(rules as any).search('consumer.ts', { ...options, usageTarget: target } as any, resolve));
+  expect(results).toMatchObject([{ label: 'greet();', alwaysShow: true, lineNumber: 4, column: 7 }]);
 });

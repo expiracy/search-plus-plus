@@ -57,7 +57,6 @@ export class SymbolProvider implements SearchProvider {
       }
 
       const matching = symbols.filter((sym) => this.matchesQueryOptions(sym.name, query, options)
-        && (!options.pathFilter || options.pathFilter(sym.location.uri))
         && !this.gitIgnore.shouldExclude(vscode.workspace.asRelativePath(sym.location.uri), options, sym.location.uri));
 
       const results: SearchResult[] = matching.slice(0, maxResults).map((sym) => {

@@ -17,10 +17,10 @@ beforeEach(async () => {
 });
 afterEach(async () => { search.dispose(); vi.restoreAllMocks(); await rm(root, { recursive: true, force: true }); });
 
-function collect(query: string, overrides = {}): Promise<any[]> {
+function collect(query: string): Promise<any[]> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Search timed out')), 5000);
-    search.search(query, { ...options, ...overrides }, results => { clearTimeout(timer); resolve(results); }, reject);
+    search.search(query, options, results => { clearTimeout(timer); resolve(results); }, reject);
   });
 }
 
@@ -44,12 +44,4 @@ test('notebook results contain cell source without a duplicate raw JSON match', 
   vi.spyOn(vscode.workspace.fs, 'readFile').mockImplementation(value => readFile(value.fsPath));
   const results = await collect('notebookneedle');
   expect(results.map(r => r.lineText)).toEqual(['print("notebookneedle")']);
-});
-
-test('out-of-scope notebooks are not read or displayed', async () => {
-  const uri = vscode.Uri.file(path.join(root, 'example.ipynb'));
-  vi.spyOn(vscode.workspace, 'findFiles').mockResolvedValue([uri]);
-  const read = vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValue(Buffer.from(JSON.stringify({ cells: [{ cell_type: 'code', source: 'needle' }] })));
-  expect(await collect('needle', { pathFilter: () => false })).toEqual([]);
-  expect(read).not.toHaveBeenCalled();
 });

@@ -16,8 +16,7 @@ export class FolderProvider implements SearchProvider {
       if (cancelled) return;
       // Deduplicate all eligible folders before matching and applying the UI limit.
       const entries = this.fileIndex.filter('', Infinity, options.excludeGitIgnored, false, false, options.excludeSearchIgnored);
-      const folders = extractFolders(entries, '', SearchMode.Folder)
-        .filter(folder => !options.pathFilter || (!!folder.uri && options.pathFilter(folder.uri)));
+      const folders = extractFolders(entries, '', SearchMode.Folder);
       let results: SearchResult[];
       if (options.fuzzySearch && !options.matchWholeWord) {
         const finder = new Fzf(folders, { selector: item => item.description ?? '', casing: 'case-insensitive' });

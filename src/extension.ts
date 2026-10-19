@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SearchView } from './ui/searchView';
+import { SearchModal } from './ui/searchModal';
 import { IndexManager } from './index/indexManager';
 import { SearchHistory } from './history';
 import { SearchMode } from './providers/types';
@@ -13,28 +13,28 @@ export function activate(context: vscode.ExtensionContext) {
 
   const history = new SearchHistory(context.workspaceState);
   const providers = createProviders(indexManager);
-  const view = new SearchView(context.extensionUri, indexManager, history, providers.providers);
+  const modal = new SearchModal(indexManager, history, providers.providers);
 
   context.subscriptions.push(
     indexManager,
-    view,
+    modal,
     providers,
-    vscode.commands.registerCommand('searchPlusPlus.open', () => view.show()),
-    vscode.commands.registerCommand('searchPlusPlus.openFiles', () => view.show(SearchMode.File)),
-    vscode.commands.registerCommand('searchPlusPlus.openText', () => view.show(SearchMode.Text)),
-    vscode.commands.registerCommand('searchPlusPlus.openSymbols', () => view.show(SearchMode.Symbol)),
-    vscode.commands.registerCommand('searchPlusPlus.openCommands', () => view.show(SearchMode.Command)),
-    vscode.commands.registerCommand('searchPlusPlus.findUsages', () => view.findUsages()),
+    vscode.commands.registerCommand('searchPlusPlus.open', () => modal.show()),
+    vscode.commands.registerCommand('searchPlusPlus.openFiles', () => modal.show(SearchMode.File)),
+    vscode.commands.registerCommand('searchPlusPlus.openText', () => modal.show(SearchMode.Text)),
+    vscode.commands.registerCommand('searchPlusPlus.openSymbols', () => modal.show(SearchMode.Symbol)),
+    vscode.commands.registerCommand('searchPlusPlus.openCommands', () => modal.show(SearchMode.Command)),
+    vscode.commands.registerCommand('searchPlusPlus.findUsages', () => modal.findUsages()),
     vscode.commands.registerCommand('searchPlusPlus.reindex', () => indexManager.reindex()),
-    vscode.commands.registerCommand('searchPlusPlus.toggleCaseSensitive', () => view.toggleCaseSensitive()),
-    vscode.commands.registerCommand('searchPlusPlus.toggleRegex', () => view.toggleRegex()),
-    vscode.commands.registerCommand('searchPlusPlus.toggleGitIgnore', () => view.toggleGitIgnore()),
-    vscode.commands.registerCommand('searchPlusPlus.toggleSearchIgnore', () => view.toggleSearchIgnore()),
-    vscode.commands.registerCommand('searchPlusPlus.toggleFuzzySearch', () => view.toggleFuzzySearch()),
-    vscode.commands.registerCommand('searchPlusPlus.toggleMatchWholeWord', () => view.toggleMatchWholeWord()),
-    vscode.commands.registerCommand('searchPlusPlus.autofillPath', () => view.autofillSelectedPath()),
-    vscode.commands.registerCommand('searchPlusPlus.nextTab', () => view.nextTab()),
-    vscode.commands.registerCommand('searchPlusPlus.prevTab', () => view.prevTab()),
+    vscode.commands.registerCommand('searchPlusPlus.toggleCaseSensitive', () => modal.toggleCaseSensitive()),
+    vscode.commands.registerCommand('searchPlusPlus.toggleRegex', () => modal.toggleRegex()),
+    vscode.commands.registerCommand('searchPlusPlus.toggleGitIgnore', () => modal.toggleGitIgnore()),
+    vscode.commands.registerCommand('searchPlusPlus.toggleSearchIgnore', () => modal.toggleSearchIgnore()),
+    vscode.commands.registerCommand('searchPlusPlus.toggleFuzzySearch', () => modal.toggleFuzzySearch()),
+    vscode.commands.registerCommand('searchPlusPlus.toggleMatchWholeWord', () => modal.toggleMatchWholeWord()),
+    vscode.commands.registerCommand('searchPlusPlus.autofillPath', () => modal.autofillSelectedPath()),
+    vscode.commands.registerCommand('searchPlusPlus.nextTab', () => modal.nextTab()),
+    vscode.commands.registerCommand('searchPlusPlus.prevTab', () => modal.prevTab()),
   );
 }
    

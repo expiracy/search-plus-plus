@@ -34,7 +34,6 @@ export interface UsageTarget {
 
 export interface SearchOptions {
   usageTarget?: UsageTarget;
-  pathFilter?: (uri: vscode.Uri) => boolean;
   excludeGitIgnored: boolean;
   excludeSearchIgnored: boolean;
   caseSensitive: boolean;

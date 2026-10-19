@@ -117,7 +117,7 @@ export class FileIndex implements vscode.Disposable {
     }
   }
 
-  find(query: string, limit = 200, excludeGitIgnored = true, excludeSearchIgnored = true, caseSensitive = false, pathFilter?: (uri: vscode.Uri) => boolean): FzfResultItem<FileEntry>[] {
+  find(query: string, limit = 200, excludeGitIgnored = true, excludeSearchIgnored = true, caseSensitive = false): FzfResultItem<FileEntry>[] {
     if (this.fzfDirty) {
       this.rebuildFzf();
       this.fzfDirty = false;
@@ -125,7 +125,6 @@ export class FileIndex implements vscode.Disposable {
     const fzf = this.getFzfFor(excludeGitIgnored);
     if (!fzf) return [];
     let results = fzf.find(query);
-    if (pathFilter) results = results.filter(result => pathFilter(result.item.uri));
     if (excludeSearchIgnored) {
       results = results.filter((r) => !this.gitIgnore.isSearchIgnored(r.item.relativePath, r.item.uri));
     }
@@ -151,13 +150,11 @@ export class FileIndex implements vscode.Disposable {
     caseSensitive = false,
     matchWholeWord = false,
     excludeSearchIgnored = true,
-    pathFilter?: (uri: vscode.Uri) => boolean,
   ): FileEntry[] {
     const entries = this.getEntriesFor(excludeGitIgnored);
 
     const matches: FileEntry[] = [];
     for (const entry of entries) {
-      if (pathFilter && !pathFilter(entry.uri)) continue;
       if (excludeSearchIgnored && this.gitIgnore.isSearchIgnored(entry.relativePath, entry.uri)) continue;
       if (!containsQuery(entry.relativePath, query, { caseSensitive, matchWholeWord })) continue;
 

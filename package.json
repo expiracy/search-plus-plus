@@ -1,7 +1,7 @@
 {
   "name": "search-plus-plus",
   "displayName": "search++",
-  "description": "Unified search for files, folders, text, symbols, usages and commands, with folder and regex path filters. Inspired by JetBrains IDEs.",
+  "description": "Unified popup search for files, folders, text, symbols, usages and commands. Inspired by JetBrains IDEs.",
   "version": "2.1.0",
   "private": true,
   "publisher": "expiracy",
@@ -158,14 +158,8 @@
       },
       {
         "command": "searchPlusPlus.nextTab",
-        "key": "shift+tab",
+        "key": "tab",
         "when": "searchPlusPlusModalOpen"
-      },
-      {
-        "command": "searchPlusPlus.prevTab",
-        "key": "ctrl+tab",
-        "when": "searchPlusPlusModalOpen",
-        "mac": "ctrl+tab"
       },
       {
         "command": "searchPlusPlus.autofillPath",
@@ -269,7 +263,7 @@
     "build": "node esbuild.config.mjs --production",
     "watch": "node esbuild.config.mjs --watch",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.webview.json",
+    "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "test": "vitest run",
     "test:host": "npm run build && node scripts/test-extension-host.mjs",
@@ -280,16 +274,13 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/picomatch": "4.0.3",
     "@types/vscode": "^1.96.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "@vscode/codicons": "0.0.46-24",
     "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "4.0.0",
     "esbuild": "^0.21.0",
     "eslint": "^8.57.0",
-    "happy-dom": "21.0.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "typescript": "^5.4.0",
@@ -301,7 +292,6 @@
   "dependencies": {
     "@vscode/ripgrep": "^1.15.9",
     "fzf": "^0.5.2",
-    "ignore": "^5.3.0",
-    "picomatch": "4.0.7"
+    "ignore": "^5.3.0"
   }
 }
