@@ -1,178 +1,168 @@
 import * as vscode from 'vscode';
-import ignore, { Ignore } from 'ignore';
+import ignore, { type Ignore } from 'ignore';
+
+interface ScopedRules {
+  root: string;
+  directory: string;
+  matcher: Ignore;
+  patterns: string[];
+}
+
+type ExclusionOptions = { excludeGitIgnored: boolean; excludeSearchIgnored: boolean };
 
 export class GitIgnoreManager implements vscode.Disposable {
-  private ig: Ignore = ignore();
+  private gitRules: ScopedRules[] = [];
+  private searchRules: ScopedRules[] = [];
   private customIg: Ignore = ignore();
-  private searchIg: Ignore = ignore();
-  private searchIgnorePatterns: string[] = [];
   private cachedCustomExcludes: string[] = [];
-  private directoryExcludes: string[] = [];
   private watchers: vscode.Disposable[] = [];
+  private loadPromise?: Promise<void>;
+  private disposed = false;
   private _onDidChange = new vscode.EventEmitter<void>();
   readonly onDidChange = this._onDidChange.event;
 
-  async load(): Promise<void> {
-    this.ig = ignore();
-    this.customIg = ignore();
-    this.searchIg = ignore();
-    this.searchIgnorePatterns = [];
-    this.directoryExcludes = ['**/node_modules/**', '**/.git/**'];
-
-    const folders = vscode.workspace.workspaceFolders;
-    if (!folders) return;
-
-    await this.loadIgnoreFiles('**/.gitignore', this.ig, folders);
-    this.searchIgnorePatterns = await this.loadIgnoreFiles('**/.searchignore', this.searchIg, folders);
-
-    // Custom exclude patterns from searchPlusPlus.excludePaths
-    this.cachedCustomExcludes = vscode.workspace
-      .getConfiguration('searchPlusPlus')
-      .get<string[]>('excludePaths', []);
-    for (const pattern of this.cachedCustomExcludes) {
-      this.customIg.add(pattern);
-      if (pattern.includes('/**') || pattern.endsWith('/')) {
-        this.directoryExcludes.push(pattern);
-      }
+  load(): Promise<void> {
+    if (!this.loadPromise) {
+      this.loadPromise = this.loadSnapshot().finally(() => { this.loadPromise = undefined; });
     }
-
-    this.setupWatchers();
+    return this.loadPromise;
   }
 
-  /** Load ignore files matching a glob, add patterns to the given Ignore instance, and return collected patterns. */
-  private async loadIgnoreFiles(
-    glob: string,
-    ig: Ignore,
-    folders: readonly vscode.WorkspaceFolder[],
-  ): Promise<string[]> {
-    const collected: string[] = [];
-    const uris = await vscode.workspace.findFiles(glob, '**/node_modules/**', 1000);
+  private async loadSnapshot(): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    const [gitRules, searchRules] = await Promise.all([
+      this.loadIgnoreFiles('**/.gitignore', folders),
+      this.loadIgnoreFiles('**/.searchignore', folders),
+    ]);
+    const custom = vscode.workspace.getConfiguration('searchPlusPlus').get<string[]>('excludePaths', []);
+    if (this.disposed) return;
 
+    // Publish a complete policy; searches never see half-loaded rules.
+    this.gitRules = gitRules;
+    this.searchRules = searchRules;
+    this.cachedCustomExcludes = [...custom];
+    this.customIg = ignore().add(custom);
+    if (!this.watchers.length) this.setupWatchers();
+  }
+
+  private async loadIgnoreFiles(glob: string, folders: readonly vscode.WorkspaceFolder[]): Promise<ScopedRules[]> {
+    if (!folders.length) return [];
+    const uris = await vscode.workspace.findFiles(glob, this.getExcludeGlob());
+    const rules: ScopedRules[] = [];
     for (const uri of uris) {
+      const folder = vscode.workspace.getWorkspaceFolder(uri);
+      if (!folder) continue;
       try {
-        const content = new TextDecoder().decode(
-          await vscode.workspace.fs.readFile(uri),
-        );
-        const parentUri = vscode.Uri.joinPath(uri, '..');
-        const dir = vscode.workspace.asRelativePath(parentUri).replace(/\\/g, '/');
-        const lines = content.split(/\r?\n/).filter(
-          (line) => line.trim() && !line.startsWith('#'),
-        );
-
-        const isRoot = folders.some(f =>
-          f.uri.path.replace(/\\/g, '/').toLowerCase() ===
-          parentUri.path.replace(/\\/g, '/').toLowerCase(),
-        );
-
-        if (isRoot) {
-          ig.add(lines);
-          collected.push(...lines);
-        } else {
-          const prefixed = lines.map((line) => {
-            if (line.startsWith('/')) return `${dir}${line}`;
-            if (line.startsWith('!')) return `!${dir}/${line.slice(1)}`;
-            return `${dir}/${line}`;
-          });
-          ig.add(prefixed);
-          collected.push(...prefixed);
-        }
-
-        // Track directory-level patterns for exclude glob
-        for (const line of lines) {
-          const pattern = isRoot ? line : `${dir}/${line}`;
-          if (pattern.includes('/**') || pattern.endsWith('/')) {
-            this.directoryExcludes.push(pattern);
-          }
-        }
+        const content = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
+        const rootPath = folder.uri.path.replace(/\/$/, '');
+        const parentPath = vscode.Uri.joinPath(uri, '..').path;
+        const directory = parentPath === rootPath ? '' : parentPath.slice(rootPath.length + 1);
+        rules.push({
+          root: folder.uri.toString(), directory,
+          matcher: ignore().add(content),
+          patterns: content.split(/\r?\n/).filter(line => line.trim() && !line.startsWith('#')),
+        });
       } catch {
-        // File may have been deleted between findFiles and readFile
+        // An ignore file can disappear during discovery.
       }
     }
-
-    return collected;
+    return rules.sort((a, b) => a.directory.length - b.directory.length || a.directory.localeCompare(b.directory));
   }
 
   private setupWatchers(): void {
-    this.disposeWatchers();
-
-    // Watch for .gitignore file changes
-    const gitWatcher = vscode.workspace.createFileSystemWatcher('**/.gitignore');
-    gitWatcher.onDidChange(() => this.reload());
-    gitWatcher.onDidCreate(() => this.reload());
-    gitWatcher.onDidDelete(() => this.reload());
-    this.watchers.push(gitWatcher);
-
-    // Watch for .searchignore file changes
-    const searchWatcher = vscode.workspace.createFileSystemWatcher('**/.searchignore');
-    searchWatcher.onDidChange(() => this.reload());
-    searchWatcher.onDidCreate(() => this.reload());
-    searchWatcher.onDidDelete(() => this.reload());
-    this.watchers.push(searchWatcher);
-
-    // Watch for config changes
-    this.watchers.push(
-      vscode.workspace.onDidChangeConfiguration((e) => {
-        if (
-          e.affectsConfiguration('searchPlusPlus.excludePaths')
-        ) {
-          this.reload();
-        }
-      }),
-    );
+    for (const glob of ['**/.gitignore', '**/.searchignore']) {
+      const watcher = vscode.workspace.createFileSystemWatcher(glob);
+      watcher.onDidChange(() => this.reload());
+      watcher.onDidCreate(() => this.reload());
+      watcher.onDidDelete(() => this.reload());
+      this.watchers.push(watcher);
+    }
+    this.watchers.push(vscode.workspace.onDidChangeConfiguration(e => {
+      if (e.affectsConfiguration('searchPlusPlus.excludePaths')) void this.reload();
+    }));
   }
 
   private async reload(): Promise<void> {
-    await this.load();
-    this._onDidChange.fire();
-  }
-
-  isGitIgnored(relativePath: string): boolean {
-    return this.testIgnore(this.ig, relativePath);
-  }
-
-  isCustomExcluded(relativePath: string): boolean {
-    return this.testIgnore(this.customIg, relativePath);
-  }
-
-  isSearchIgnored(relativePath: string): boolean {
-    return this.testIgnore(this.searchIg, relativePath);
-  }
-
-  shouldExclude(relativePath: string, options: { excludeGitIgnored: boolean; excludeSearchIgnored: boolean }): boolean {
-    if (this.isCustomExcluded(relativePath)) return true;
-    if (options.excludeSearchIgnored && this.isSearchIgnored(relativePath)) return true;
-    if (options.excludeGitIgnored && this.isGitIgnored(relativePath)) return true;
-    return false;
-  }
-
-  getCustomExcludePatterns(): string[] {
-    return [...this.cachedCustomExcludes];
-  }
-
-  private testIgnore(ig: Ignore, relativePath: string): boolean {
     try {
-      return ig.ignores(relativePath.replace(/\\/g, '/'));
-    } catch {
-      return false;
+      await this.load();
+      if (!this.disposed) this._onDidChange.fire();
+    } catch (error) {
+      console.error('[search++] Failed to reload ignore rules:', error);
     }
   }
 
+  isGitIgnored(relativePath: string, uri?: vscode.Uri): boolean {
+    return this.testScoped(this.gitRules, relativePath, uri);
+  }
+
+  isSearchIgnored(relativePath: string, uri?: vscode.Uri): boolean {
+    return this.testScoped(this.searchRules, relativePath, uri);
+  }
+
+  isCustomExcluded(relativePath: string, uri?: vscode.Uri): boolean {
+    const p = this.resolvePath(relativePath, uri).path;
+    if (/(^|\/)\.git(?:\/|$)/.test(p)) return true;
+    try { return this.customIg.ignores(p); } catch { return false; }
+  }
+
+  shouldExclude(relativePath: string, options: ExclusionOptions, uri?: vscode.Uri): boolean {
+    return this.isCustomExcluded(relativePath, uri)
+      || (options.excludeGitIgnored && this.isGitIgnored(relativePath, uri))
+      || (options.excludeSearchIgnored && this.isSearchIgnored(relativePath, uri));
+  }
+
+  private resolvePath(relativePath: string, uri?: vscode.Uri): { root?: string; path: string } {
+    const folder = uri ? vscode.workspace.getWorkspaceFolder(uri) : vscode.workspace.workspaceFolders?.[0];
+    return {
+      root: folder?.uri.toString(),
+      path: uri && folder
+        ? uri.path.slice(folder.uri.path.replace(/\/$/, '').length + 1)
+        : relativePath.replace(/\\/g, '/'),
+    };
+  }
+
+  private testScoped(rules: ScopedRules[], relativePath: string, uri?: vscode.Uri): boolean {
+    const resolved = this.resolvePath(relativePath, uri);
+    const scoped = rules.filter(rule => rule.root === resolved.root);
+    const parts = resolved.path.split('/');
+    // A rule inside an ignored directory cannot re-include that directory's files.
+    for (let i = 1; i < parts.length; i++) {
+      if (this.testAtPath(scoped, parts.slice(0, i).join('/') + '/')) return true;
+    }
+    return this.testAtPath(scoped, resolved.path);
+  }
+
+  private testAtPath(rules: ScopedRules[], path: string): boolean {
+    let ignored = false;
+    for (const rule of rules) {
+      const prefix = rule.directory ? rule.directory + '/' : '';
+      if (!path.startsWith(prefix) || path.length === prefix.length) continue;
+      try {
+        const result = rule.matcher.test(path.slice(prefix.length));
+        if (result.ignored) ignored = true;
+        if (result.unignored) ignored = false;
+      } catch { /* Absolute or empty paths are not workspace candidates. */ }
+    }
+    return ignored;
+  }
+
+  getCustomExcludePatterns(): string[] { return [...this.cachedCustomExcludes]; }
+
   getSearchIgnorePatterns(): string[] {
-    return [...this.searchIgnorePatterns];
+    return this.searchRules.flatMap(rule => rule.patterns.map(pattern =>
+      rule.directory ? `${rule.directory}/${pattern}` : pattern,
+    ));
   }
 
-  getExcludeGlob(): string | undefined {
-    const unique = [...new Set(this.directoryExcludes)];
-    return `{${unique.join(',')}}`;
-  }
-
-  private disposeWatchers(): void {
-    for (const w of this.watchers) w.dispose();
-    this.watchers = [];
+  getExcludeGlob(): string {
+    // Toggle-controlled rules must not remove candidates during discovery.
+    return '**/.git/**';
   }
 
   dispose(): void {
-    this.disposeWatchers();
+    this.disposed = true;
+    for (const watcher of this.watchers) watcher.dispose();
+    this.watchers = [];
     this._onDidChange.dispose();
   }
 }

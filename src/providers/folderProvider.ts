@@ -1,74 +1,40 @@
 import * as vscode from 'vscode';
+import { Fzf } from 'fzf';
 import { SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { extractFolders } from './folderExtractor';
 import { FileIndex } from '../index/fileIndex';
-import { GitIgnoreManager } from '../gitignore';
+import { containsQuery, hasCaseSensitiveSubsequence } from '../utils';
 
 export class FolderProvider implements SearchProvider {
   readonly mode = SearchMode.Folder;
 
-  constructor(private fileIndex: FileIndex, private gitIgnore: GitIgnoreManager) {}
+  constructor(private fileIndex: FileIndex) {}
 
-  search(
-    query: string,
-    options: SearchOptions,
-    onResults: (results: SearchResult[]) => void,
-  ): vscode.Disposable {
+  search(query: string, options: SearchOptions, onResults: (results: SearchResult[]) => void, onError?: (error: unknown) => void): vscode.Disposable {
     let cancelled = false;
-
-    if (!this.fileIndex.isReady) {
-      this.fallbackSearch(query, options, onResults, () => cancelled);
-    } else {
-      const maxResults = getMaxResults();
-
-      let entries;
-      // Whole-word matching is inherently non-fuzzy, so it forces the substring path
+    const run = () => {
+      if (cancelled) return;
+      // Deduplicate all eligible folders before matching and applying the UI limit.
+      const entries = this.fileIndex.filter('', Infinity, options.excludeGitIgnored, false, false, options.excludeSearchIgnored);
+      const folders = extractFolders(entries, '', SearchMode.Folder);
+      let results: SearchResult[];
       if (options.fuzzySearch && !options.matchWholeWord) {
-        const matches = this.fileIndex.find(
-          query, 1000, options.excludeGitIgnored,
-          options.excludeSearchIgnored, options.caseSensitive,
+        const finder = new Fzf(folders, { selector: item => item.description ?? '', casing: 'case-insensitive' });
+        results = finder.find(query).map(match => match.item).filter(item =>
+          !options.caseSensitive || hasCaseSensitiveSubsequence(item.description ?? '', query),
         );
-        entries = matches.map((m) => m.item);
       } else {
-        entries = this.fileIndex.filter(
-          query, 1000, options.excludeGitIgnored,
-          options.caseSensitive, options.matchWholeWord,
-          options.excludeSearchIgnored,
-        );
+        results = folders.filter(item => containsQuery(item.description ?? '', query, options));
       }
-
-      const folderResults = extractFolders(entries, query, SearchMode.Folder, options);
-
+      onResults(results.slice(0, getMaxResults()));
+    };
+    if (this.fileIndex.isReady) run();
+    else void this.fileIndex.ensureReady().then(run, error => {
       if (!cancelled) {
-        onResults(folderResults.slice(0, maxResults));
+        if (onError) onError(error);
+        else onResults([]);
       }
-    }
-
+    });
     return { dispose: () => { cancelled = true; } };
-  }
-
-  private async fallbackSearch(
-    query: string,
-    options: SearchOptions,
-    onResults: (results: SearchResult[]) => void,
-    isCancelled: () => boolean,
-  ): Promise<void> {
-    try {
-      const uris = await vscode.workspace.findFiles('**/*', this.gitIgnore.getExcludeGlob(), 5000);
-
-      if (isCancelled()) return;
-
-      const entries: { relativePath: string; uri: vscode.Uri }[] = [];
-      for (const uri of uris) {
-        const relativePath = vscode.workspace.asRelativePath(uri);
-        if (this.gitIgnore.shouldExclude(relativePath, options)) continue;
-        entries.push({ relativePath, uri });
-      }
-      const folderResults = extractFolders(entries, query, SearchMode.Folder, options);
-
-      onResults(folderResults);
-    } catch {
-      onResults([]);
-    }
   }
 }

@@ -123,7 +123,7 @@ All settings are under the `searchPlusPlus` namespace.
 | `searchPlusPlus.excludeSearchIgnored` | `true` | Exclude files matching `.searchignore` patterns by default |
 | `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
-| `searchPlusPlus.debounceMs` | `100` | Delay in ms before triggering search |
+| `searchPlusPlus.debounceMs` | `300` | Delay in ms before triggering search |
 | `searchPlusPlus.everywhere.sections` | `["files", "folders", "text", "symbols", "commands"]` | Sections shown on the Everywhere tab; array order controls display order |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everywhere tab (1-200) |
 
@@ -190,6 +190,21 @@ Example:
 - **Text search** spawns [ripgrep](https://github.com/BurntSushi/ripgrep) with streaming JSON output for fast content search.
 - **Symbol search** delegates to VS Code's workspace symbol providers, so results depend on your installed language extensions.
 - **Command search** indexes all registered VS Code commands (built-in and from extensions).
+
+## Development and validation
+
+Run `npm ci`, then `npm run check` to type-check, lint, test, and build the extension.
+The test runner searches this checkout's `test/` directory, including real ripgrep
+fixtures and deterministic tests for indexing and request cancellation.
+
+Run `npm run test:host` for a smoke test in an isolated VS Code window. On macOS it
+uses `/Applications/Visual Studio Code.app`; elsewhere it uses `code` on PATH. Set
+`VSCODE_EXECUTABLE_PATH` to test another installation. The runner copies its fixture
+workspace into a temporary directory and checks activation, search providers,
+exclusions, modal commands, and reindexing.
+
+See [the architecture and reliability audit](ARCHITECTURE.md) for the design,
+corrected failure modes, and current support limits.
 
 
 ![Everything page](image.png)

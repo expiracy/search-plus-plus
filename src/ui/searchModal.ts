@@ -1,14 +1,9 @@
 import * as vscode from 'vscode';
 import { ResultSection, SearchMode, type SearchOptions, type SearchProvider, type SearchResult } from '../providers/types';
-import { FileProvider } from '../providers/fileProvider';
-import { TextProvider } from '../providers/textProvider';
-import { FolderProvider } from '../providers/folderProvider';
-import { SymbolProvider } from '../providers/symbolProvider';
-import { CommandProvider } from '../providers/commandProvider';
-import { EverywhereProvider } from '../providers/everywhereProvider';
 import type { IndexManager, IndexState } from '../index/indexManager';
 import type { SearchHistory } from '../history';
-import { debounce, isAbsolutePath } from '../utils';
+import { isAbsolutePath } from '../utils';
+import { SearchSession } from '../searchSession';
 
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
 interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.QuickPick<T> {
@@ -89,8 +84,7 @@ export function parseLineCol(value: string): { query: string; gotoLine?: number;
 }
 
 export class SearchModal implements vscode.Disposable {
-  private providers: Map<SearchMode, SearchProvider>;
-  private currentSearch: vscode.Disposable | undefined;
+  private searchSession = new SearchSession<SearchResult[]>();
 
   // Search option toggles
   private excludeGitIgnored: boolean;
@@ -114,26 +108,14 @@ export class SearchModal implements vscode.Disposable {
   private gotoLine?: number;
   private gotoColumn?: number;
 
-  constructor(private indexManager: IndexManager, private history: SearchHistory) {
+  constructor(
+    private indexManager: IndexManager,
+    private history: SearchHistory,
+    private providers: ReadonlyMap<SearchMode, SearchProvider>,
+  ) {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     this.excludeGitIgnored = config.get<boolean>('excludeGitIgnored', true);
     this.excludeSearchIgnored = config.get<boolean>('excludeSearchIgnored', true);
-
-    const fileProvider = new FileProvider(indexManager.fileIndex, indexManager.gitIgnore);
-    const textProvider = new TextProvider(indexManager.textSearch);
-    const folderProvider = new FolderProvider(indexManager.fileIndex, indexManager.gitIgnore);
-    const symbolProvider = new SymbolProvider(indexManager.gitIgnore);
-    const commandProvider = new CommandProvider();
-    const everywhereProvider = new EverywhereProvider(fileProvider, folderProvider, textProvider, symbolProvider, commandProvider);
-
-    this.providers = new Map<SearchMode, SearchProvider>([
-      [SearchMode.File, fileProvider],
-      [SearchMode.Text, textProvider],
-      [SearchMode.Folder, folderProvider],
-      [SearchMode.Symbol, symbolProvider],
-      [SearchMode.Command, commandProvider],
-      [SearchMode.Everywhere, everywhereProvider],
-    ]);
   }
 
   private filterAndDisplay(): void {
@@ -242,6 +224,12 @@ export class SearchModal implements vscode.Disposable {
   }
 
   show(initialMode?: SearchMode): void {
+    if (this.activeQuickPick) {
+      if (initialMode) this.switchTab(initialMode);
+      this.activeQuickPick.show();
+      return;
+    }
+    this.fullResults = [];
     const qp = vscode.window.createQuickPick<SearchResult>() as SortableQuickPick<SearchResult>;
     this.activeQuickPick = qp;
     this.activeTab = initialMode ?? SearchMode.Everywhere;
@@ -337,7 +325,7 @@ export class SearchModal implements vscode.Disposable {
     };
 
     const clearSearch = () => {
-      this.currentSearch?.dispose();
+      this.searchSession.cancel();
       this.fullResults = [];
       this.gotoLine = undefined;
       this.gotoColumn = undefined;
@@ -347,31 +335,48 @@ export class SearchModal implements vscode.Disposable {
       qp.title = buildTitle(TAB_NAMES[this.activeTab], this.indexManager.state);
     };
 
-    // Execute search via the current tab's provider
-    const executeSearch = (query: string) => {
-      this.currentSearch?.dispose();
+    const handleError = (error: unknown) => {
+      clearBusyTimer();
+      qp.busy = false;
+      this.fullResults = [];
+      qp.items = [{
+        label: '$(error) Search failed',
+        description: error instanceof Error ? error.message : String(error),
+        mode: this.activeTab,
+        alwaysShow: true,
+      }];
+      qp.title = `${TAB_NAMES[this.activeTab]}: search failed`;
+    };
+
+    const executeSearch = (query: string, delayMs = 0) => {
+      clearBusyTimer();
       qp.busy = true;
       qp.title = buildTitle(`${TAB_NAMES[this.activeTab]}: Searching...`, this.indexManager.state);
       const provider = this.providers.get(this.activeTab);
-      if (!provider) return;
-
-      this.currentSearch = provider.search(query, getOptions(), handleResults);
+      if (!provider) { clearSearch(); return; }
+      const options = getOptions();
+      this.searchSession.run(
+        (publish, fail) => provider.search(query, options, publish, fail),
+        handleResults, handleError, delayMs,
+      );
     };
-
-    // Text and Everywhere tabs debounce; File and Folder are instant
-    const debouncedSearch = debounce(executeSearch, debounceMs);
 
     // Main search dispatcher
     const executeSearchForCurrentTab = () => {
-      const rawValue = qp.value.trim();
-      if (!rawValue) { clearSearch(); return; }
+      const rawValue = this.activeTab === SearchMode.Text ? qp.value : qp.value.trim();
+      if (!rawValue.trim()) { clearSearch(); return; }
 
       // Absolute path → stat and show single result
-      if (isAbsolutePath(rawValue)) {
+      if ((this.activeTab === SearchMode.File || this.activeTab === SearchMode.Everywhere || this.activeTab === SearchMode.Folder) && isAbsolutePath(rawValue)) {
         const { query, gotoLine, gotoColumn } = parseLineCol(rawValue);
         this.gotoLine = gotoLine;
         this.gotoColumn = gotoColumn;
-        this.handleAbsolutePath(query, handleResults);
+        clearBusyTimer();
+        qp.busy = true;
+        this.searchSession.run(
+          (publish, fail) => { void this.handleAbsolutePath(query).then(publish, fail); },
+          handleResults, handleError,
+        );
         return;
       }
 
@@ -387,7 +392,7 @@ export class SearchModal implements vscode.Disposable {
       } else if (this.activeTab === SearchMode.Text || this.activeTab === SearchMode.Symbol || this.activeTab === SearchMode.Command) {
         this.gotoLine = undefined;
         this.gotoColumn = undefined;
-        debouncedSearch(rawValue);
+        executeSearch(rawValue, debounceMs);
       } else {
         // Folder (instant fzf)
         this.gotoLine = undefined;
@@ -410,13 +415,12 @@ export class SearchModal implements vscode.Disposable {
 
     // Cleanup on hide
     const hideDisposable = qp.onDidHide(() => {
-      debouncedSearch.cancel();
       clearBusyTimer();
 
       vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', false);
       vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', false);
       vscode.commands.executeCommand('setContext', 'searchPlusPlusEverythingTab', false);
-      this.currentSearch?.dispose();
+      this.searchSession.cancel();
       this.activeQuickPick = undefined;
       this.triggerSearch = undefined;
       this.gotoLine = undefined;
@@ -438,39 +442,22 @@ export class SearchModal implements vscode.Disposable {
 
   // --- Absolute path handling ---
 
-  private async handleAbsolutePath(
-    path: string,
-    onResults: (results: SearchResult[]) => void,
-  ): Promise<void> {
-    const qp = this.activeQuickPick;
-    if (!qp) return;
-    qp.busy = true;
-
+  private async handleAbsolutePath(path: string): Promise<SearchResult[]> {
     const uri = vscode.Uri.file(path);
     try {
       const stat = await vscode.workspace.fs.stat(uri);
       const isDir = (stat.type & vscode.FileType.Directory) !== 0;
       const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
-
-      onResults([{
-        label: name,
-        description: path,
+      return [{
+        label: name, description: path,
         mode: isDir ? SearchMode.Folder : SearchMode.File,
-        uri,
-        iconPath: isDir ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File,
-        alwaysShow: true,
-        isFolder: isDir,
+        uri, iconPath: isDir ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File,
+        alwaysShow: true, isFolder: isDir,
         belongsToSection: isDir ? ResultSection.Folders : ResultSection.Files,
-      }]);
+      }];
     } catch {
-      onResults([{
-        label: '$(warning) Path not found',
-        description: path,
-        mode: this.activeTab,
-        alwaysShow: true,
-      }]);
+      return [{ label: '$(warning) Path not found', description: path, mode: SearchMode.File, alwaysShow: true }];
     }
-    qp.busy = false;
   }
 
   // --- Tab switching ---
@@ -515,17 +502,17 @@ export class SearchModal implements vscode.Disposable {
 
     // Option toggle buttons (inline)
     const gitIgnoreBtn = this.toggle('source-control', 'Exclude Git Ignored (Alt+G)', this.excludeGitIgnored,
-      vscode.QuickInputButtonLocation.Inline);
+      vscode.QuickInputButtonLocation?.Inline);
     const searchIgnoreBtn = this.toggle('eye-closed', 'Exclude Search Ignored (Alt+S)', this.excludeSearchIgnored,
-      vscode.QuickInputButtonLocation.Inline);
+      vscode.QuickInputButtonLocation?.Inline);
     const caseSensitiveBtn = this.toggle('case-sensitive', 'Case Sensitive (Alt+C)', this.caseSensitive,
-      vscode.QuickInputButtonLocation.Inline);
+      vscode.QuickInputButtonLocation?.Inline);
     const regexBtn = this.toggle('regex', 'Regex (Alt+R)', this.useRegex,
-      vscode.QuickInputButtonLocation.Inline);
+      vscode.QuickInputButtonLocation?.Inline);
     const wholeWordBtn = this.toggle('whole-word', 'Match Whole Word (Alt+W)', this.matchWholeWord,
-      vscode.QuickInputButtonLocation.Inline);
+      vscode.QuickInputButtonLocation?.Inline);
     const fuzzyBtn = this.toggle('sparkle', 'Fuzzy Search (Alt+F)', this.fuzzySearch,
-      vscode.QuickInputButtonLocation.Inline);
+      vscode.QuickInputButtonLocation?.Inline);
 
     qp.buttons = [
       everywhereBtn, fileBtn, folderBtn, textBtn, symbolBtn, commandBtn,
@@ -556,12 +543,12 @@ export class SearchModal implements vscode.Disposable {
     return {
       iconPath: new vscode.ThemeIcon(icon),
       tooltip,
-      location: vscode.QuickInputButtonLocation.Title,
+      location: vscode.QuickInputButtonLocation?.Title,
       toggle: { checked: this.activeTab === mode },
     };
   }
 
-  private toggle(icon: string, tooltip: string, checked: boolean, location: vscode.QuickInputButtonLocation): vscode.QuickInputButton {
+  private toggle(icon: string, tooltip: string, checked: boolean, location?: vscode.QuickInputButtonLocation): vscode.QuickInputButton {
     return { iconPath: new vscode.ThemeIcon(icon), tooltip, location, toggle: { checked } };
   }
 
@@ -638,6 +625,11 @@ export class SearchModal implements vscode.Disposable {
       if (!selected.uri) return;
       const uri = selected.uri;
 
+      // Determine line/col: prefer result's own position (text matches),
+      // fall back to file:line:col goto target
+      const line = selected.lineNumber ?? (this.gotoLine !== undefined ? this.gotoLine - 1 : undefined);
+      const col = selected.column ?? (this.gotoColumn !== undefined ? Math.max(0, this.gotoColumn - 1) : 0);
+
       qp.hide();
 
       if (selected.isFolder) {
@@ -647,11 +639,6 @@ export class SearchModal implements vscode.Disposable {
         );
         return;
       }
-
-      // Determine line/col: prefer result's own position (text matches),
-      // fall back to file:line:col goto target
-      const line = selected.lineNumber ?? (this.gotoLine !== undefined ? this.gotoLine - 1 : undefined);
-      const col = selected.column ?? (this.gotoColumn !== undefined ? this.gotoColumn - 1 : 0);
 
       this.history.addOpened(uri, line, col);
 
@@ -747,7 +734,7 @@ export class SearchModal implements vscode.Disposable {
   }
 
   dispose(): void {
-    this.currentSearch?.dispose();
-    this.activeQuickPick?.dispose();
+    this.searchSession.cancel();
+    this.activeQuickPick?.hide();
   }
 }

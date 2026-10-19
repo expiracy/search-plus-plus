@@ -13,11 +13,15 @@ export class IndexManager implements vscode.Disposable {
   private statusBarItem: vscode.StatusBarItem;
   private disposables: vscode.Disposable[] = [];
   private _state: IndexState = 'building';
+  private buildPromise?: Promise<void>;
+  private rebuildRequested = false;
+  private rescanTimer?: ReturnType<typeof setTimeout>;
+  private disposed = false;
 
   private _onDidChangeState = new vscode.EventEmitter<IndexState>();
   readonly onDidChangeState = this._onDidChangeState.event;
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(_context: vscode.ExtensionContext) {
     this.gitIgnore = new GitIgnoreManager();
     this.fileIndex = new FileIndex(this.gitIgnore);
     this.textSearch = new TextSearch(undefined, this.gitIgnore);
@@ -33,7 +37,11 @@ export class IndexManager implements vscode.Disposable {
 
     // File index staleness
     this.disposables.push(
-      this.fileIndex.onDidBecomeStale(() => this.updateStatusBar('stale')),
+      this.fileIndex.onDidBecomeStale(() => {
+        this.updateStatusBar('stale');
+        if (this.rescanTimer) clearTimeout(this.rescanTimer);
+        this.rescanTimer = setTimeout(() => { void this.buildAll(); }, 2000);
+      }),
     );
 
     // Gitignore changes trigger full file rescan
@@ -52,18 +60,29 @@ export class IndexManager implements vscode.Disposable {
     return this._state;
   }
 
-  async buildAll(): Promise<void> {
-    this.updateStatusBar('building');
+  buildAll(): Promise<void> {
+    if (this.disposed) return Promise.resolve();
+    this.rebuildRequested = true;
+    if (!this.buildPromise) {
+      this.buildPromise = this.runBuilds().finally(() => { this.buildPromise = undefined; });
+    }
+    return this.buildPromise;
+  }
 
-    try {
-      await this.gitIgnore.load();
-      this.textSearch.setExcludePatterns(this.gitIgnore.getCustomExcludePatterns());
-      this.textSearch.setSearchIgnorePatterns(this.gitIgnore.getSearchIgnorePatterns());
-      await this.fileIndex.build();
-      this.updateStatusBar('ready');
-    } catch (err) {
-      console.error('[search++] Index build failed:', err);
-      this.updateStatusBar('error');
+  private async runBuilds(): Promise<void> {
+    if (this.rescanTimer) clearTimeout(this.rescanTimer);
+    while (this.rebuildRequested && !this.disposed) {
+      this.rebuildRequested = false;
+      this.updateStatusBar('building');
+      try {
+        await this.gitIgnore.load();
+        if (this.disposed) return;
+        await this.fileIndex.build();
+        if (!this.disposed && !this.rebuildRequested) this.updateStatusBar('ready');
+      } catch (err) {
+        console.error('[search++] Index build failed:', err);
+        if (!this.disposed && !this.rebuildRequested) this.updateStatusBar('error');
+      }
     }
   }
 
@@ -109,6 +128,8 @@ export class IndexManager implements vscode.Disposable {
   }
 
   dispose(): void {
+    this.disposed = true;
+    if (this.rescanTimer) clearTimeout(this.rescanTimer);
     this.fileIndex.dispose();
     this.textSearch.dispose();
     this.gitIgnore.dispose();

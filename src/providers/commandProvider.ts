@@ -14,7 +14,7 @@ export class CommandProvider implements SearchProvider {
   readonly mode = SearchMode.Command;
 
   private entries: CommandEntry[] = [];
-  private fzfInstance: Fzf<CommandEntry> | null = null;
+  private fzfInstance: Fzf<CommandEntry[]> | null = null;
   private dirty = true;
   private extensionChangeDisposable: vscode.Disposable;
 
@@ -29,15 +29,20 @@ export class CommandProvider implements SearchProvider {
     query: string,
     options: SearchOptions,
     onResults: (results: SearchResult[]) => void,
+    onError?: (error: unknown) => void,
   ): vscode.Disposable {
     let cancelled = false;
 
     const maxResults = getMaxResults();
 
-    this.ensureIndex().then(() => {
+    void this.ensureIndex().then(() => {
       if (cancelled) return;
       const results = this.performSearch(query, options, maxResults);
       if (!cancelled) onResults(results);
+    }).catch(error => {
+      if (cancelled) return;
+      if (onError) onError(error);
+      else onResults([]);
     });
 
     return { dispose: () => { cancelled = true; } };
@@ -100,13 +105,12 @@ export class CommandProvider implements SearchProvider {
     if (!this.fzfInstance) {
       this.fzfInstance = new Fzf(this.entries, {
         selector: (item) => item.searchText,
-        limit: 1000,
+        casing: 'case-insensitive',
       });
     }
 
     let results = this.fzfInstance.find(query);
-    // fzf uses smart-case; when match case is on, require the query to appear
-    // as an exact-case subsequence
+    // When match case is on, require an exact-case subsequence after ranking.
     if (options.caseSensitive && query.length > 0) {
       results = results.filter((r) => hasCaseSensitiveSubsequence(r.item.searchText, query));
     }

@@ -11,6 +11,7 @@ export class TextProvider implements SearchProvider {
     query: string,
     options: SearchOptions,
     onResults: (results: SearchResult[]) => void,
+    onError?: (error: unknown) => void,
   ): vscode.Disposable {
     const maxResults = getMaxResults();
 
@@ -36,6 +37,7 @@ export class TextProvider implements SearchProvider {
         });
         onResults(results);
       },
+      onError,
     );
   }
 }

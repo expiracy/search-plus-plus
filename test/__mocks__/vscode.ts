@@ -83,7 +83,8 @@ export const QuickPickItemKind = { Separator: -1 };
 export const StatusBarAlignment = { Left: 1, Right: 2 };
 export const ViewColumn = { Beside: -2 };
 export const TextEditorRevealType = { AtTop: 3 };
-export const QuickInputButtonLocation = { Title: 0, Inline: 1 };
+export const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
+export const QuickInputButtonLocation = { Title: 1, Inline: 2, Input: 3 };
 export const SymbolKind = {
   File: 0, Module: 1, Namespace: 2, Package: 3, Class: 4,
   Method: 5, Property: 6, Field: 7, Constructor: 8, Enum: 9,
@@ -271,4 +272,12 @@ export const window = {
 export const commands = {
   executeCommand: async (..._args: any[]) => {},
   registerCommand: () => ({ dispose() {} }),
+  getCommands: async () => [] as string[],
 };
+
+export const extensions = {
+  all: [] as any[],
+  onDidChange: () => ({ dispose() {} }),
+};
+
+export const env = { appRoot: '' };

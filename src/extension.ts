@@ -3,6 +3,7 @@ import { SearchModal } from './ui/searchModal';
 import { IndexManager } from './index/indexManager';
 import { SearchHistory } from './history';
 import { SearchMode } from './providers/types';
+import { createProviders } from './providers/createProviders';
 
 export function activate(context: vscode.ExtensionContext) {
   const indexManager = new IndexManager(context);
@@ -11,11 +12,13 @@ export function activate(context: vscode.ExtensionContext) {
   indexManager.buildAll();
 
   const history = new SearchHistory(context.workspaceState);
-  const modal = new SearchModal(indexManager, history);
+  const providers = createProviders(indexManager);
+  const modal = new SearchModal(indexManager, history, providers.providers);
 
   context.subscriptions.push(
     indexManager,
     modal,
+    providers,
     vscode.commands.registerCommand('searchPlusPlus.open', () => modal.show()),
     vscode.commands.registerCommand('searchPlusPlus.openFiles', () => modal.show(SearchMode.File)),
     vscode.commands.registerCommand('searchPlusPlus.openText', () => modal.show(SearchMode.Text)),

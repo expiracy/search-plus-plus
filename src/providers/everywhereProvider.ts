@@ -26,6 +26,10 @@ export class EverywhereProvider implements SearchProvider {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     const debounceMs = config.get<number>('debounceMs', 200);
     const sections = getEnabledSections(config.get('everywhere.sections'));
+    if (!sections.length) {
+      onResults([]);
+      return { dispose() {} };
+    }
     const limit = Math.max(1, Math.floor(config.get<number>('everywhere.resultLimit', DEFAULT_EVERYWHERE_LIMIT)));
     const enabledSections = new Set(sections);
 
@@ -93,13 +97,26 @@ export class EverywhereProvider implements SearchProvider {
       }
     };
 
+    const reportFailure = (section: ResultSection) => (error: unknown) => {
+      if (disposed) return;
+      const meta = sectionMeta[section];
+      resultStore[section] = [{
+        label: `$(warning) ${meta.tabLabel} search failed`,
+        description: error instanceof Error ? error.message : String(error),
+        mode: meta.searchMode,
+        alwaysShow: true,
+      }];
+      if (section === ResultSection.Text) textDelivered = true;
+      scheduleMerge();
+    };
+
     // File search (instant, index-based)
     if (enabledSections.has(ResultSection.Files)) {
       disposables.push(
         this.fileProvider.search(query, options, (results) => {
           resultStore[ResultSection.Files] = results;
           scheduleMerge();
-        }),
+        }, reportFailure(ResultSection.Files)),
       );
     }
 
@@ -109,7 +126,7 @@ export class EverywhereProvider implements SearchProvider {
         this.folderProvider.search(query, options, (results) => {
           resultStore[ResultSection.Folders] = results;
           scheduleMerge();
-        }),
+        }, reportFailure(ResultSection.Folders)),
       );
     }
 
@@ -139,7 +156,7 @@ export class EverywhereProvider implements SearchProvider {
         resultStore[ResultSection.Text] = results;
         textDelivered = true;
         scheduleTextMerge();
-      });
+      }, reportFailure(ResultSection.Text));
 
       disposables.push({
         dispose: () => {
@@ -155,7 +172,7 @@ export class EverywhereProvider implements SearchProvider {
         symbolSearchDisposable = this.symbolProvider.search(query, options, (results) => {
           resultStore[ResultSection.Symbols] = results;
           scheduleMerge();
-        });
+        }, reportFailure(ResultSection.Symbols));
       };
 
       const debouncedSymbol = debounce(executeSymbolSearch, debounceMs);
@@ -171,7 +188,7 @@ export class EverywhereProvider implements SearchProvider {
         commandSearchDisposable = this.commandProvider.search(query, options, (results) => {
           resultStore[ResultSection.Commands] = results;
           scheduleMerge();
-        });
+        }, reportFailure(ResultSection.Commands));
       };
 
       const debouncedCommand = debounce(executeCommandSearch, debounceMs);

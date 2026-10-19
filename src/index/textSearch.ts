@@ -21,9 +21,12 @@ function resolveRgPath(): string {
 
   // Strategy 2: VS Code's bundled ripgrep
   for (const modules of ['node_modules.asar.unpacked', 'node_modules']) {
-    const candidate = path.join(vscode.env.appRoot, modules, '@vscode', 'ripgrep', 'bin', rgBin);
-    if (existsSync(candidate)) {
-      return candidate;
+    const candidates = [
+      path.join(vscode.env.appRoot, modules, '@vscode', 'ripgrep', 'bin', rgBin),
+      path.join(vscode.env.appRoot, modules, '@vscode', 'ripgrep-universal', 'bin', `${process.platform}-${process.arch}`, rgBin),
+    ];
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) return candidate;
     }
   }
 
@@ -96,6 +99,7 @@ export interface TextMatch {
 
 export class TextSearch implements vscode.Disposable {
   private activeProcess: ChildProcess | null = null;
+  private activeRequest?: vscode.Disposable;
   private rgPath: string;
   private excludePatterns: string[] = [];
   private searchIgnorePatterns: string[] = [];
@@ -116,6 +120,7 @@ export class TextSearch implements vscode.Disposable {
     query: string,
     options: TextSearchOptions,
     onResults: (results: TextMatch[]) => void,
+    onError?: (error: unknown) => void,
   ): vscode.Disposable {
     // Kill any previous search
     this.killActive();
@@ -128,10 +133,12 @@ export class TextSearch implements vscode.Disposable {
 
     const args: string[] = [
       '--json',
+      '--hidden', '--glob', '!**/.git/**',
+      '--glob', '!*.ipynb',
     ];
 
     if (!options.caseSensitive) {
-      args.push('--smart-case');
+      args.push('--ignore-case');
     } else {
       args.push('--case-sensitive');
     }
@@ -146,7 +153,9 @@ export class TextSearch implements vscode.Disposable {
     }
 
     if (options.excludeGitIgnored) {
-      // ripgrep respects .gitignore by default
+      // Match the workspace policy: .gitignore files within each root, including
+      // workspaces that are not Git repositories.
+      args.push('--no-require-git', '--no-ignore-dot', '--no-ignore-global', '--no-ignore-parent', '--no-ignore-exclude');
     } else {
       args.push('--no-ignore');
     }
@@ -176,31 +185,37 @@ export class TextSearch implements vscode.Disposable {
     let resultCount = 0;
     let cancelled = false;
     let completed = false;
+    let limited = false;
+    let stderr = '';
 
     const rg = spawn(this.rgPath, args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     this.activeProcess = rg;
+    rg.stderr?.on('data', (data: Buffer) => { stderr = (stderr + data.toString()).slice(-8192); });
 
     const flush = () => {
-      if (results.length > 0) {
+      if (!cancelled && !completed && results.length > 0) {
         onResults([...results]);
       }
     };
 
     const scheduleFlush = () => {
-      if (flushTimer) clearTimeout(flushTimer);
-      flushTimer = setTimeout(flush, 50);
+      if (flushTimer) return;
+      flushTimer = setTimeout(() => { flushTimer = undefined; flush(); }, 50);
     };
 
-    rg.stdout.on('data', (data: Buffer) => {
-      buffer += data.toString();
+    rg.stdout.setEncoding('utf8');
+    rg.stdout.on('data', (data: string) => {
+      if (cancelled || completed) return;
+      buffer += data;
       const lines = buffer.split('\n');
       buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
       for (const line of lines) {
         if (!line.trim()) continue;
         if (resultCount >= options.maxResults) {
+          limited = true;
           rg.kill();
           return;
         }
@@ -210,15 +225,18 @@ export class TextSearch implements vscode.Disposable {
           if (isRgMatch(parsed)) {
             const match = parsed;
             const filePath = match.data.path.text;
+            const relativePath = vscode.workspace.asRelativePath(filePath);
+            if (this.gitIgnore?.shouldExclude(relativePath, options, vscode.Uri.file(filePath))) continue;
             const lineText = match.data.lines.text.trim();
             const lineNumber = match.data.line_number;
             const matchText = match.data.submatches[0]?.match?.text ?? lineText;
 
             results.push({
               filePath,
-              relativePath: vscode.workspace.asRelativePath(filePath),
+              relativePath,
               lineNumber: lineNumber - 1, // VSCode is 0-indexed
-              column: match.data.submatches[0]?.start ?? 0,
+              column: Buffer.from(match.data.lines.text, 'utf8')
+                .subarray(0, match.data.submatches[0]?.start ?? 0).toString('utf8').length,
               lineText,
               matchText,
             });
@@ -232,31 +250,43 @@ export class TextSearch implements vscode.Disposable {
       }
     });
 
-    rg.on('close', () => {
+    rg.on('close', (code) => {
       if (flushTimer) clearTimeout(flushTimer);
       if (cancelled || completed) return;
       completed = true;
 
+      if (!limited && code !== 0 && code !== 1) {
+        if (this.activeProcess === rg) this.activeProcess = null;
+        const error = new Error(stderr.trim() || `ripgrep exited with code ${code}`);
+        if (onError) onError(error);
+        else onResults([]);
+        return;
+      }
+
       // Search notebooks after ripgrep finishes, then deliver all results
-      this.searchNotebooks(query, options, results).then(() => {
+      this.searchNotebooks(query, options, results, () => cancelled).then(() => {
+        if (cancelled) return;
         onResults([...results]);
+        if (this.activeRequest === request) this.activeRequest = undefined;
         if (this.activeProcess === rg) {
           this.activeProcess = null;
         }
       });
     });
 
-    rg.on('error', () => {
+    rg.on('error', (error) => {
+      if (flushTimer) clearTimeout(flushTimer);
       if (this.activeProcess === rg) {
         this.activeProcess = null;
       }
       if (!completed && !cancelled) {
         completed = true;
-        onResults([]);
+        if (onError) onError(error);
+        else onResults([]);
       }
     });
 
-    return {
+    const request = {
       dispose: () => {
         cancelled = true;
         if (flushTimer) clearTimeout(flushTimer);
@@ -264,34 +294,38 @@ export class TextSearch implements vscode.Disposable {
         if (this.activeProcess === rg) {
           this.activeProcess = null;
         }
+        if (this.activeRequest === request) this.activeRequest = undefined;
       },
     };
+    this.activeRequest = request;
+    return request;
   }
 
   private async searchNotebooks(
     query: string,
     options: TextSearchOptions,
     results: TextMatch[],
+    isCancelled: () => boolean,
   ): Promise<void> {
     const folders = vscode.workspace.workspaceFolders;
-    if (!folders) return;
+    if (!folders || isCancelled() || results.length >= options.maxResults) return;
 
     try {
       const gi = this.gitIgnore;
       const allNotebookUris = await vscode.workspace.findFiles(
         '**/*.ipynb',
-        gi?.getExcludeGlob(),
-        100,
+        gi?.getExcludeGlob() ?? '**/.git/**',
       );
+      if (isCancelled()) return;
 
       const notebookUris = gi
         ? allNotebookUris.filter((uri) => {
             const rel = vscode.workspace.asRelativePath(uri);
-            return !gi.shouldExclude(rel, options);
+            return !gi.shouldExclude(rel, options, uri);
           })
         : allNotebookUris;
 
-      const isCaseSensitive = options.caseSensitive || query !== query.toLowerCase();
+      const isCaseSensitive = options.caseSensitive;
       let pattern: RegExp;
       try {
         const flags = isCaseSensitive ? 'g' : 'gi';
@@ -306,19 +340,20 @@ export class TextSearch implements vscode.Disposable {
       }
 
       for (const uri of notebookUris) {
-        if (results.length >= options.maxResults) break;
+        if (isCancelled() || results.length >= options.maxResults) break;
 
         try {
           const raw = await vscode.workspace.fs.readFile(uri);
+          if (isCancelled()) return;
           const parsed: unknown = JSON.parse(new TextDecoder().decode(raw));
           if (!isNotebookJson(parsed) || !parsed.cells) continue;
-          const notebook = parsed;
+          const cells = parsed.cells;
 
           const filePath = uri.fsPath;
           const relativePath = vscode.workspace.asRelativePath(uri);
           let lineOffset = 0;
 
-          for (const cell of notebook.cells) {
+          for (const cell of cells) {
             if (results.length >= options.maxResults) break;
 
             const source = Array.isArray(cell.source) ? cell.source.join('') : cell.source;
@@ -354,6 +389,7 @@ export class TextSearch implements vscode.Disposable {
   }
 
   private killActive(): void {
+    this.activeRequest?.dispose();
     if (this.activeProcess) {
       this.activeProcess.kill();
       this.activeProcess = null;

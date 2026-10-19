@@ -1,24 +1,22 @@
 import * as vscode from 'vscode';
 import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { FileIndex } from '../index/fileIndex';
-import { GitIgnoreManager } from '../gitignore';
-import { containsQuery } from '../utils';
 
 export class FileProvider implements SearchProvider {
   readonly mode = SearchMode.File;
 
-  constructor(private fileIndex: FileIndex, private gitIgnore: GitIgnoreManager) {}
+  constructor(private fileIndex: FileIndex) {}
 
   search(
     query: string,
     options: SearchOptions,
     onResults: (results: SearchResult[]) => void,
+    onError?: (error: unknown) => void,
   ): vscode.Disposable {
     let cancelled = false;
 
-    if (!this.fileIndex.isReady) {
-      this.fallbackSearch(query, options, onResults, () => cancelled);
-    } else {
+    const run = () => {
+      if (cancelled) return;
       const maxResults = getMaxResults();
 
       let fileResults: SearchResult[];
@@ -42,7 +40,14 @@ export class FileProvider implements SearchProvider {
       if (!cancelled) {
         onResults(fileResults);
       }
-    }
+    };
+    if (this.fileIndex.isReady) run();
+    else void this.fileIndex.ensureReady().then(run, error => {
+      if (!cancelled) {
+        if (onError) onError(error);
+        else onResults([]);
+      }
+    });
 
     return { dispose: () => { cancelled = true; } };
   }
@@ -59,29 +64,4 @@ export class FileProvider implements SearchProvider {
     };
   }
 
-  private async fallbackSearch(
-    query: string,
-    options: SearchOptions,
-    onResults: (results: SearchResult[]) => void,
-    isCancelled: () => boolean,
-  ): Promise<void> {
-    try {
-      const pattern = `**/*${query}*`;
-      const uris = await vscode.workspace.findFiles(pattern, this.gitIgnore.getExcludeGlob(), 200);
-
-      if (isCancelled()) return;
-
-      const fileResults: SearchResult[] = [];
-      for (const uri of uris) {
-        const relativePath = vscode.workspace.asRelativePath(uri);
-        if (this.gitIgnore.shouldExclude(relativePath, options)) continue;
-        if (!containsQuery(relativePath, query, options)) continue;
-        fileResults.push(this.toFileResult(relativePath, uri));
-      }
-
-      onResults(fileResults);
-    } catch {
-      onResults([]);
-    }
-  }
 }

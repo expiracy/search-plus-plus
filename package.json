@@ -249,7 +249,10 @@
     "build": "node esbuild.config.mjs --production",
     "watch": "node esbuild.config.mjs --watch",
     "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "test": "vitest run",
+    "test:host": "npm run build && node scripts/test-extension-host.mjs",
     "package": "npx @vscode/vsce package",
     "prepare": "husky"
   },

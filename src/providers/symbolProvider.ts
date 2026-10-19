@@ -40,6 +40,7 @@ export class SymbolProvider implements SearchProvider {
     query: string,
     options: SearchOptions,
     onResults: (results: SearchResult[]) => void,
+    onError?: (error: unknown) => void,
   ): vscode.Disposable {
     let cancelled = false;
 
@@ -49,14 +50,16 @@ export class SymbolProvider implements SearchProvider {
       'vscode.executeWorkspaceSymbolProvider',
       query,
     ).then((symbols) => {
-      if (cancelled || !symbols) {
+      if (cancelled) return;
+      if (!symbols) {
         onResults([]);
         return;
       }
 
-      const matching = symbols.filter((sym) => this.matchesQueryOptions(sym.name, query, options));
+      const matching = symbols.filter((sym) => this.matchesQueryOptions(sym.name, query, options)
+        && !this.gitIgnore.shouldExclude(vscode.workspace.asRelativePath(sym.location.uri), options, sym.location.uri));
 
-      let results: SearchResult[] = matching.slice(0, maxResults).map((sym) => {
+      const results: SearchResult[] = matching.slice(0, maxResults).map((sym) => {
         const line = sym.location.range.start.line;
         const col = sym.location.range.start.character;
         const relativePath = vscode.workspace.asRelativePath(sym.location.uri);
@@ -75,13 +78,11 @@ export class SymbolProvider implements SearchProvider {
         };
       });
 
-      results = results.filter((r) => {
-        if (!r.uri) return true;
-        const rel = vscode.workspace.asRelativePath(r.uri);
-        return !this.gitIgnore.shouldExclude(rel, options);
-      });
-
       onResults(results);
+    }).then(undefined, error => {
+      if (cancelled) return;
+      if (onError) onError(error);
+      else onResults([]);
     });
 
     return { dispose: () => { cancelled = true; } };
