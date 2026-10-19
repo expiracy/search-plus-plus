@@ -3,6 +3,7 @@
   "displayName": "search++",
   "description": "Blazingly fast unified search for files, folders, text, symbols and commands. Supports fuzzy matching, regex, match case, match word, exclude gitignored files. Double-shift to open, tab and shift-tab to cycle between pages, arrow keys to navigate search results. Inspired by JetBrains IDEs",
   "version": "2.1.0",
+  "private": true,
   "publisher": "expiracy",
   "icon": "icon.png",
   "repository": {
@@ -253,7 +254,9 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "test": "vitest run",
     "test:host": "npm run build && node scripts/test-extension-host.mjs",
-    "package": "npx @vscode/vsce package",
+    "package": "vsce package --no-dependencies --githubBranch master --skip-license --out search-plus-plus.vsix",
+    "check:release": "node scripts/check-release.mjs",
+    "publish:marketplace": "vsce publish --packagePath search-plus-plus.vsix",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -261,6 +264,8 @@
     "@types/vscode": "^1.96.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
     "esbuild": "^0.21.0",
     "eslint": "^8.57.0",
     "husky": "^9.1.7",

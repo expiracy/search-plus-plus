@@ -30,18 +30,16 @@ function searchAsync(
   query: string,
   options: { caseSensitive: boolean; useRegex: boolean; excludeGitIgnored: boolean; excludeSearchIgnored: boolean; matchWholeWord: boolean; maxResults: number },
 ): Promise<any[]> {
-  return new Promise((resolve) => {
+  let request: { dispose(): void } | undefined;
+  let timer: ReturnType<typeof setTimeout>;
+  const completed = new Promise<any[]>((resolve, reject) => {
     let lastResults: any[] = [];
-    const disposable = ts.search(query, options, (results) => {
+    timer = setTimeout(() => reject(new Error('Text search did not complete')), 10000);
+    request = ts.search(query, options, (results) => {
       lastResults = results;
-    });
-
-    // findTextInFiles resolves quickly on small fixtures. Wait for completion.
-    setTimeout(() => {
-      disposable.dispose();
-      resolve(lastResults);
-    }, 2000);
+    }, undefined, () => resolve(lastResults));
   });
+  return completed.finally(() => { clearTimeout(timer); request?.dispose(); });
 }
 
 const defaultOpts = {

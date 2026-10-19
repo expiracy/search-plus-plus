@@ -108,9 +108,13 @@ process failures, Unicode columns and decoding, line navigation, and notebook
 source extraction. Real ripgrep tests complement deterministic lifecycle tests.
 
 `npm run check` runs TypeScript checking, linting, all Vitest tests, and the
-production bundle. Pull requests and the publish workflow run that command.
-The final local run passed all 319 tests across 23 test files, type checking,
+production bundle. Branch pushes, pull requests, and version-tag releases run that
+command on Linux, macOS, and Windows.
+The final local run passed all 329 tests across 24 test files, type checking,
 linting, and the production build.
 `npm run test:host` checks activation, fuzzy files and folders, both exclusion
 toggles, real text search, modal commands, and reindexing in an isolated host.
 The host smoke test passed on VS Code 1.124.2 on macOS.
+CI also runs downloaded VS Code 1.96.0 and current stable builds on Linux before
+packaging the VSIX. Real text-search tests wait for the search completion signal
+rather than fixed delays, including the notebook stage.

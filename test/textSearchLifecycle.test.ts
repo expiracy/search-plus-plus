@@ -119,3 +119,15 @@ test('continuous output publishes progress without waiting for a quiet period', 
     expect(publish).toHaveBeenCalled();
   } finally { search.dispose(); vi.useRealTimers(); }
 });
+
+test('completion is signaled once after the notebook stage finishes', async () => {
+  let finish!: (uris: vscode.Uri[]) => void;
+  vi.mocked(vscode.workspace.findFiles).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const complete = vi.fn();
+  search.search('needle', options, vi.fn(), undefined, complete);
+  process.emit('close', 0);
+  expect(complete).not.toHaveBeenCalled();
+  finish([]);
+  await new Promise(setImmediate);
+  expect(complete).toHaveBeenCalledTimes(1);
+});

@@ -1,10 +1,11 @@
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
+import path from 'node:path';
 import { expect, test, vi } from 'vitest';
 
 const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }));
 vi.mock('child_process', () => ({ spawn }));
-vi.mock('fs', () => ({ existsSync: (path: string) => path.includes('/ripgrep-universal/bin/') }));
+vi.mock('fs', () => ({ existsSync: (value: string) => value.replace(/\\/g, '/').includes('/ripgrep-universal/bin/') }));
 vi.mock('vscode', () => import('./__mocks__/vscode'));
 
 test('packaged search locates the host ripgrep in the universal package layout', async () => {
@@ -16,6 +17,6 @@ test('packaged search locates the host ripgrep in the universal package layout',
   const search = new TextSearch();
   try {
     search.search('needle', { caseSensitive: false, useRegex: false, matchWholeWord: false, excludeGitIgnored: true, excludeSearchIgnored: true, maxResults: 200 }, vi.fn());
-    expect(spawn.mock.calls[0][0]).toBe(`/Applications/Code.app/Contents/Resources/app/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/${process.platform}-${process.arch}/${process.platform === 'win32' ? 'rg.exe' : 'rg'}`);
+    expect(spawn.mock.calls[0][0]).toBe(path.join(vscode.env.appRoot, 'node_modules.asar.unpacked', '@vscode', 'ripgrep-universal', 'bin', `${process.platform}-${process.arch}`, process.platform === 'win32' ? 'rg.exe' : 'rg'));
   } finally { search.dispose(); }
 });

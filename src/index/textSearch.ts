@@ -121,6 +121,7 @@ export class TextSearch implements vscode.Disposable {
     options: TextSearchOptions,
     onResults: (results: TextMatch[]) => void,
     onError?: (error: unknown) => void,
+    onComplete?: () => void,
   ): vscode.Disposable {
     // Kill any previous search
     this.killActive();
@@ -128,6 +129,7 @@ export class TextSearch implements vscode.Disposable {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || !query) {
       onResults([]);
+      onComplete?.();
       return { dispose: () => {} };
     }
 
@@ -260,6 +262,7 @@ export class TextSearch implements vscode.Disposable {
         const error = new Error(stderr.trim() || `ripgrep exited with code ${code}`);
         if (onError) onError(error);
         else onResults([]);
+        onComplete?.();
         return;
       }
 
@@ -271,6 +274,7 @@ export class TextSearch implements vscode.Disposable {
         if (this.activeProcess === rg) {
           this.activeProcess = null;
         }
+        onComplete?.();
       });
     });
 
@@ -283,6 +287,7 @@ export class TextSearch implements vscode.Disposable {
         completed = true;
         if (onError) onError(error);
         else onResults([]);
+        onComplete?.();
       }
     });
 

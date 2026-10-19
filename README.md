@@ -193,7 +193,8 @@ Example:
 
 ## Development and validation
 
-Run `npm ci`, then `npm run check` to type-check, lint, test, and build the extension.
+Use Node.js 22 (`nvm use`), run `npm ci`, then `npm run check` to type-check, lint,
+test, and build the extension.
 The test runner searches this checkout's `test/` directory, including real ripgrep
 fixtures and deterministic tests for indexing and request cancellation.
 
@@ -203,13 +204,41 @@ uses `/Applications/Visual Studio Code.app`; elsewhere it uses `code` on PATH. S
 workspace into a temporary directory and checks activation, search providers,
 exclusions, modal commands, and reindexing.
 
+Set `VSCODE_VERSION=1.96.0` or `VSCODE_VERSION=stable` to download and test a specific
+VS Code release through the official extension test runner. Linux CI runs these
+tests under `xvfb-run`.
+
 See [the architecture and reliability audit](ARCHITECTURE.md) for the design,
 corrected failure modes, and current support limits.
 
+## Packaging and Marketplace releases
 
-![Everything page](image.png)
-![File page](image-2.png)
-![Folder page](image-1.png)
-![Text page](image-3.png)
-![Symbol page](image-4.png)
-![Command page](image-5.png)
+This project ships as a VS Code extension. `private: true` prevents accidental npm
+registry publication; npm manages the development tools and scripts.
+
+`npm run package` builds `search-plus-plus.vsix` using the locked `@vscode/vsce`
+version. The package includes the production bundle, manifest, documentation, icon,
+and screenshots. Development files and dependency trees are excluded. The command
+uses `--skip-license` because this repository currently has no license file.
+
+Every branch push and pull request runs checks on Linux, macOS, and Windows, plus
+extension-host smoke tests against VS Code 1.96.0 and current stable. Once those
+checks pass, CI builds and retains the VSIX as the `search-plus-plus-vsix` artifact
+for 14 days.
+
+Marketplace publication runs only when a stable version tag such as `v2.1.1` is
+pushed. The workflow repeats validation, requires the tag to match `package.json`
+and both versions in `package-lock.json`, and requires the tagged commit to be in
+`master`. It publishes the validated VSIX artifact using the existing `VSCE_PAT`
+repository secret. The token is available only to the publishing step.
+
+To release after merging the changes into `master`, update the version with
+`npm version patch` and push `master` and the newly created version tag. For
+example, the next patch after 2.1.0 is `git push origin master v2.1.1`. Each release
+needs a new version; reusing a published version fails visibly.
+
+The workflows pin action commits and use a cached, locked npm install. Publishing
+credentials must retain Marketplace publishing access. Microsoft recommends
+[identity-based publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#secure-automated-publishing-to-visual-studio-marketplace)
+and is retiring global Azure DevOps PATs on December 1, 2026; migrate the existing
+credential setup before that deadline if it uses a global PAT.
