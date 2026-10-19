@@ -2,7 +2,7 @@ import { describe, test, expect, vi } from 'vitest';
 
 vi.mock('vscode', () => import('./__mocks__/vscode'));
 
-const { buildTitle } = await import('../src/ui/searchModal');
+const { buildTitle } = await import('../src/ui/searchModel');
 
 describe('buildTitle', () => {
   test('returns base title unchanged when state is ready', () => {

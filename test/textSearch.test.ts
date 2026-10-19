@@ -62,6 +62,16 @@ describe('TextSearch', () => {
     ts.dispose();
   });
 
+  test('path filtering happens before the text result limit', async () => {
+    const results = await searchAsync(ts, 'function', { ...defaultOpts, maxResults: 1,
+      pathFilter: (uri: any) => uri.path.endsWith('/src/utils.ts'),
+    } as any);
+    expect(results).toHaveLength(1);
+    expect(results[0].relativePath).toBe('src/utils.ts');
+    const excluded = await searchAsync(ts, 'function', { ...defaultOpts, pathFilter: () => false } as any);
+    expect(excluded).toEqual([]);
+  });
+
   test('finds "hello world" in src/index.ts', async () => {
     const results = await searchAsync(ts, 'hello world', defaultOpts);
     expect(results.length).toBeGreaterThanOrEqual(1);

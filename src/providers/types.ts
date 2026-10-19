@@ -1,13 +1,7 @@
 import * as vscode from 'vscode';
 
-export enum SearchMode {
-  Everywhere = 'everywhere',
-  File = 'file',
-  Folder = 'folder',
-  Text = 'text',
-  Symbol = 'symbol',
-  Command = 'command',
-}
+import { SearchMode } from '../searchModes';
+export { SearchMode } from '../searchModes';
 
 export enum ResultSection {
   Folders = 'folders',
@@ -32,7 +26,15 @@ export interface SearchResult extends vscode.QuickPickItem {
   moreCount?: number;
 }
 
+export interface UsageTarget {
+  uri: vscode.Uri;
+  position: vscode.Position;
+  name: string;
+}
+
 export interface SearchOptions {
+  usageTarget?: UsageTarget;
+  pathFilter?: (uri: vscode.Uri) => boolean;
   excludeGitIgnored: boolean;
   excludeSearchIgnored: boolean;
   caseSensitive: boolean;

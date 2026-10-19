@@ -123,6 +123,7 @@ export const workspace = {
     return folders.find((f: { uri: Uri }) => uriPath.startsWith(f.uri.path.replace(/\\/g, '/')));
   },
   findFiles: async () => [] as Uri[],
+  openTextDocument: async (_uri: Uri) => ({ lineAt: (_line: number) => ({ text: '' }) }),
   findTextInFiles: async (
     query: { pattern: string; isRegExp?: boolean; isCaseSensitive?: boolean; isWordMatch?: boolean },
     optionsOrCallback: any,
@@ -235,6 +236,7 @@ export const workspace = {
 export const window = {
   activeTextEditor: undefined,
   showTextDocument: async () => ({}),
+  createWebviewPanel: (..._args: any[]): any => ({}),
   createQuickPick: () => ({
     onDidChangeValue: () => ({ dispose() {} }),
     onDidAccept: () => ({ dispose() {} }),

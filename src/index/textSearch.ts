@@ -228,6 +228,7 @@ export class TextSearch implements vscode.Disposable {
             const match = parsed;
             const filePath = match.data.path.text;
             const relativePath = vscode.workspace.asRelativePath(filePath);
+            if (options.pathFilter && !options.pathFilter(vscode.Uri.file(filePath))) continue;
             if (this.gitIgnore?.shouldExclude(relativePath, options, vscode.Uri.file(filePath))) continue;
             const lineText = match.data.lines.text.trim();
             const lineNumber = match.data.line_number;
@@ -346,6 +347,7 @@ export class TextSearch implements vscode.Disposable {
 
       for (const uri of notebookUris) {
         if (isCancelled() || results.length >= options.maxResults) break;
+        if (options.pathFilter && !options.pathFilter(uri)) continue;
 
         try {
           const raw = await vscode.workspace.fs.readFile(uri);

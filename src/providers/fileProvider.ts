@@ -25,14 +25,14 @@ export class FileProvider implements SearchProvider {
       if (options.fuzzySearch && !options.matchWholeWord) {
         const matches = this.fileIndex.find(
           query, maxResults, options.excludeGitIgnored,
-          options.excludeSearchIgnored, options.caseSensitive,
+          options.excludeSearchIgnored, options.caseSensitive, options.pathFilter,
         );
         fileResults = matches.map((match) => this.toFileResult(match.item.relativePath, match.item.uri));
       } else {
         const entries = this.fileIndex.filter(
           query, maxResults, options.excludeGitIgnored,
           options.caseSensitive, options.matchWholeWord,
-          options.excludeSearchIgnored,
+          options.excludeSearchIgnored, options.pathFilter,
         );
         fileResults = entries.map((entry) => this.toFileResult(entry.relativePath, entry.uri));
       }

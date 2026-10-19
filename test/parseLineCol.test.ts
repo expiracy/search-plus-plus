@@ -2,7 +2,7 @@ import { describe, test, expect, vi } from 'vitest';
 
 vi.mock('vscode', () => import('./__mocks__/vscode'));
 
-const { parseLineCol } = await import('../src/ui/searchModal');
+const { parseLineCol } = await import('../src/ui/searchModel');
 const { isAbsolutePath } = await import('../src/utils');
 
 describe('parseLineCol', () => {

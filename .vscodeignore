@@ -5,5 +5,7 @@
 !icon.png
 !media/**
 !dist/extension.js
+!dist/THIRD_PARTY_NOTICES.txt
+!dist/webview/**
 !LICENSE*
 !CHANGELOG.md
