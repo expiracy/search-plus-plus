@@ -118,6 +118,10 @@
       {
         "command": "searchPlusPlus.findUsages",
         "title": "search++: Find Usages"
+      },
+      {
+        "command": "searchPlusPlus.preview",
+        "title": "search++: Preview Selected Result"
       }
     ],
     "keybindings": [
@@ -169,6 +173,11 @@
       {
         "command": "searchPlusPlus.findUsages",
         "key": "shift+f12",
+        "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.preview",
+        "key": "right",
         "when": "searchPlusPlusModalOpen"
       }
     ],

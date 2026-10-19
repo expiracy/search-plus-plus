@@ -6,6 +6,7 @@ import { FileIndex } from '../src/index/fileIndex';
 import { TextSearch, type TextMatch } from '../src/index/textSearch';
 import { FileProvider } from '../src/providers/fileProvider';
 import { UsagesProvider } from '../src/providers/usagesProvider';
+import { ResultPreview } from '../src/ui/resultPreview';
 import { SymbolProvider } from '../src/providers/symbolProvider';
 import { FolderProvider } from '../src/providers/folderProvider';
 import { type SearchOptions, type SearchResult } from '../src/providers/types';
@@ -69,8 +70,10 @@ export async function run(): Promise<void> {
       assert.equal(usages[0].column, 2);
     } finally { registration.dispose(); }
     await verifyTypeScriptUsages(root, rules);
+    await verifyResultPreview(root);
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
+    assert.ok(commands.includes('searchPlusPlus.preview'));
     for (const command of ['searchPlusPlus.openFiles', 'searchPlusPlus.openText', 'searchPlusPlus.openSymbols', 'searchPlusPlus.openCommands']) {
       const activeEditor = vscode.window.tabGroups.activeTabGroup.activeTab;
       await vscode.commands.executeCommand(command);
@@ -82,7 +85,7 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup and mode commands, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup and mode commands, reusable preview tab with both preview settings, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
 }
@@ -112,4 +115,45 @@ async function verifyTypeScriptUsages(root: vscode.Uri, rules: GitIgnoreManager)
   assert.ok(results.some(result => result.uri?.toString() === consumer.toString() && result.lineNumber === 1), 'workspace symbol resolves its real cross-file call');
   assert.ok(results.every(result => result.uri?.toString() !== consumer.toString() || (result.lineNumber !== 3 && result.lineNumber !== 4)), 'unrelated same-name symbols are not treated as usages');
   assert.ok(results.every(result => result.alwaysShow), 'native filtering preserves reference results');
+}
+
+async function verifyResultPreview(root: vscode.Uri): Promise<void> {
+  const config = vscode.workspace.getConfiguration('workbench.editor');
+  const previous = config.inspect<boolean>('enablePreview')?.workspaceValue;
+  const baselineUri = vscode.Uri.joinPath(root, 'src/index.ts');
+  await vscode.window.showTextDocument(baselineUri, { preview: false });
+  const tabs = () => vscode.window.tabGroups.all.flatMap(group => group.tabs);
+  try {
+    for (const enabled of [false, true]) {
+      await config.update('enablePreview', enabled, vscode.ConfigurationTarget.Workspace);
+      const key = (tab: vscode.Tab) => `${tab.group.viewColumn}:${tab.input instanceof vscode.TabInputText ? tab.input.uri.toString() : tab.label}`;
+      const baseline = new Set(tabs().map(key));
+      const preview = new ResultPreview();
+      const picker = vscode.window.createQuickPick();
+      picker.items = [{ label: 'Preview fixture' }];
+      let hidden = false;
+      const hideListener = picker.onDidHide(() => { hidden = true; });
+      picker.show();
+      try {
+        const first = vscode.Uri.joinPath(root, 'src/utils.ts');
+        const second = vscode.Uri.joinPath(root, 'usage-consumer.ts');
+        const position = new vscode.Position(1, 3);
+        await preview.show(first, new vscode.Selection(position, position));
+        assert.equal(tabs().length, baseline.size + 1, 'first preview adds one tab');
+        assert.ok(vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() === first.toString() && editor.selection.active.isEqual(position)), 'preview reveals the match position');
+        await preview.show(second);
+        assert.equal(tabs().length, baseline.size + 1, 'subsequent previews reuse one extra tab');
+        assert.ok([...baseline].every(id => tabs().some(tab => key(tab) === id)), 'existing user tabs are preserved');
+        await Promise.all([preview.show(first), preview.show(second), preview.show(first)]);
+        assert.equal(tabs().length, baseline.size + 1, 'rapid previews still use one extra tab');
+        await preview.show(baselineUri);
+        assert.equal(tabs().length, baseline.size, 'existing files reuse their current tabs');
+        assert.equal(hidden, false, 'the search popup keeps focus during preview');
+        assert.equal(vscode.workspace.getConfiguration('workbench.editor').get('enablePreview'), enabled, 'preview does not change editor settings');
+      } finally {
+        preview.dispose(); hideListener.dispose(); picker.dispose();
+        await vscode.window.tabGroups.close(tabs().filter(tab => !baseline.has(key(tab))), true);
+      }
+    }
+  } finally { await config.update('enablePreview', previous, vscode.ConfigurationTarget.Workspace); }
 }

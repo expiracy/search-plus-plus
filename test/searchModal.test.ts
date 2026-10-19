@@ -258,3 +258,56 @@ test('clicking the active mode keeps its icon selected', () => {
   button.fire(active);
   expect((picker.buttons.find((item: any) => item.tooltip === 'Files') as any).toggle.checked).toBe(true);
 });
+
+test('Right Arrow previews the active result at its position without closing the popup', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  const hidden = vi.spyOn(picker, 'hide');
+  modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
+  const result = { label: 'needle', mode: SearchMode.Text, uri: vscode.Uri.file('/workspace/a.ts'), lineNumber: 7, column: 3 };
+  requests[0].publish([result]); picker.activeItems = [result] as any;
+  await modal.previewSelectedResult();
+  const position = new vscode.Position(7, 3);
+  expect(command).toHaveBeenCalledWith('vscode.open', result.uri, expect.objectContaining({ preserveFocus: true, preview: true, selection: new vscode.Selection(position, position) }));
+  expect(hidden).not.toHaveBeenCalled();
+});
+
+test('closing the popup cancels a queued preview before it can open', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.File); type('a.ts');
+  const result = { label: 'a.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/a.ts') };
+  requests[0].publish([result]); picker.activeItems = [result] as any;
+  const pending = modal.previewSelectedResult(); picker.hide(); await pending;
+  expect(command.mock.calls.some(args => args[0] === 'vscode.open')).toBe(false);
+});
+
+test('Enter waits for an in-flight preview so the accepted file remains the final editor', async () => {
+  let finish!: () => void;
+  const opened: string[] = [];
+  vi.spyOn(vscode.commands, 'executeCommand').mockImplementation(async (command: string, uri: any, options: any) => {
+    if (command !== 'vscode.open') return;
+    if (options?.preserveFocus) await new Promise<void>(resolve => { finish = resolve; });
+    opened.push(uri.path);
+  });
+  modal.show(SearchMode.File); type('file');
+  const first = { label: 'a.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/a.ts') };
+  const accepted = { label: 'b.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/b.ts') };
+  requests[0].publish([first, accepted]); picker.activeItems = [first] as any;
+  const pending = modal.previewSelectedResult(); await Promise.resolve();
+  picker.selectedItems = [accepted] as any; accept.fire(); await Promise.resolve();
+  expect(opened).toEqual([]);
+  finish(); await pending; await vi.runAllTimersAsync();
+  expect(opened).toEqual(['/workspace/a.ts', '/workspace/b.ts']);
+});
+
+test('preview skips folders, commands, and informational rows', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.Everywhere);
+  for (const result of [
+    { label: 'folder', mode: SearchMode.Folder, uri: vscode.Uri.file('/workspace/src'), isFolder: true },
+    { label: 'command', mode: SearchMode.Command, commandId: 'arbitrary.command' },
+    { label: 'more', mode: SearchMode.File, moreCount: 5 },
+  ]) {
+    picker.activeItems = [result] as any; await modal.previewSelectedResult();
+  }
+  expect(command.mock.calls.every(args => args[0] === 'setContext')).toBe(true);
+});

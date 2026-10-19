@@ -46,6 +46,7 @@ registry of providers that share the same search contract.
 | `FileIndex` | Store candidate paths, perform path matching, and reconcile filesystem events with the index. |
 | `GitIgnoreManager` | Load and evaluate workspace exclusion rules in their directory and workspace scope. |
 | `TextSearch` | Manage ripgrep processes, decode streamed matches, and search notebook cell source. |
+| `ResultPreview` | Serialize background previews and manage one replaceable editor tab. |
 | `SearchHistory` | Persist recent files and locations in workspace state. |
 
 ## Request lifecycle
@@ -71,6 +72,20 @@ delay. Section errors appear alongside results from the other providers.
 `searchPlusPlus.maxResults` limits results returned by each provider. The
 Everything tab applies its own section order and display limit to those results,
 with a link to the individual tab when more results are available.
+
+## Result previews
+
+Right Arrow previews the active resource through `ResultPreview`, preserving
+QuickPick focus and the match position. The controller tracks only tabs created
+by preview requests. It replaces its previous clean tab before opening another,
+so tab reuse works with VS Code preview editors enabled or disabled. Existing
+resource tabs are reused across editor groups; pre-existing preview tabs, edited
+documents, pinned tabs, and previews explicitly kept open are preserved.
+
+Preview requests run serially and skip queued work superseded by a newer request.
+Closing the popup cancels queued previews. Accepting a result waits for an
+in-flight preview to settle before opening the final selection, preventing an old
+preview from replacing the accepted file. Preview errors leave the popup open.
 
 ## Workspace discovery and exclusions
 
@@ -103,7 +118,7 @@ descendants. Directory creation and bulk changes mark the index stale so
 [IndexManager](src/index/indexManager.ts) can schedule a rescan. Rebuild requests
 are serialized, and the status bar reports building, ready, stale, or error state.
 
-The modal owns its search session, IndexManager owns the workspace services, and
+The modal owns its search session and preview controller, IndexManager owns the workspace services, and
 the provider factory owns the command provider's extension-change subscription.
 Disposal cancels requests and builds, clears timers, stops processes, and releases
 watchers and event subscriptions.
@@ -169,13 +184,16 @@ eligible indexed files; empty directories do not appear.
 The tests cover workspace discovery, exclusion scope, request cancellation, index
 updates, matching, process failures, Unicode handling, navigation, notebook source
 extraction, symbol selection for usages, and native popup reference filtering.
-Real ripgrep fixtures complement deterministic lifecycle tests.
+Preview tests cover tab reuse, existing and edited files, rapid requests, and
+accepting a final selection. Real ripgrep fixtures complement deterministic
+lifecycle tests.
 Text tests wait for completion, including the notebook stage. Test files run
 serially to keep filesystem and scalability checks from competing for resources.
 
 `npm run test:host` exercises activation, file and folder search, exclusion
 toggles, real text search, real TypeScript workspace-symbol and cross-file
-reference lookup, popup commands, and reindexing in an isolated VS Code
+reference lookup, popup commands, preview tab counts and focus with both preview
+settings, and reindexing in an isolated VS Code
 host. CI runs this smoke test on Linux against VS Code 1.96.0 and current stable,
 and runs the standard checks on Linux, macOS, and Windows before packaging the
 VSIX. See the [development and release procedures](README.md#development-and-validation)

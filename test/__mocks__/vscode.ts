@@ -28,6 +28,10 @@ export class Uri {
   }
 }
 
+export class TabInputText { constructor(public uri: Uri) {} }
+export class TabInputNotebook { constructor(public uri: Uri) {} }
+export class TabInputCustom { constructor(public uri: Uri) {} }
+
 // --- ThemeIcon ---
 export class ThemeIcon {
   static File = new ThemeIcon('file');
@@ -233,7 +237,9 @@ export const workspace = {
 };
 
 // --- window ---
+const defaultTabGroup = { viewColumn: 1, tabs: [] as any[] };
 export const window = {
+  tabGroups: { all: [defaultTabGroup], activeTabGroup: defaultTabGroup, onDidChangeTabs: (_listener: (event: any) => void) => ({ dispose() {} }), close: async (..._args: any[]) => true },
   activeTextEditor: undefined,
   showTextDocument: async () => ({}),
   createQuickPick: () => ({

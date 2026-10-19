@@ -4,6 +4,7 @@ import type { IndexManager } from '../index/indexManager';
 import type { SearchHistory } from '../history';
 import { isAbsolutePath } from '../utils';
 import { SearchSession } from '../searchSession';
+import { ResultPreview } from './resultPreview';
 import { buildTitle, parseLineCol } from './searchModel';
 
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
@@ -70,6 +71,7 @@ const removeFromHistoryButton: vscode.QuickInputButton = {
 
 export class SearchModal implements vscode.Disposable {
   private searchSession = new SearchSession<SearchResult[]>();
+  private preview = new ResultPreview();
   private modernButtons: boolean;
 
   // Search option toggles
@@ -436,6 +438,7 @@ export class SearchModal implements vscode.Disposable {
     // Cleanup on hide
     const hideDisposable = qp.onDidHide(() => {
       clearBusyTimer();
+      this.preview.cancel();
 
       vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', false);
       vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', false);
@@ -656,7 +659,8 @@ export class SearchModal implements vscode.Disposable {
 
       if (selected.commandId) {
         qp.hide();
-        vscode.commands.executeCommand(selected.commandId).then(undefined, () => {});
+        const command = selected.commandId;
+        this.preview.finish().then(() => vscode.commands.executeCommand(command)).then(undefined, () => {});
         return;
       }
 
@@ -677,7 +681,7 @@ export class SearchModal implements vscode.Disposable {
       qp.hide();
 
       if (selected.isFolder) {
-        vscode.commands.executeCommand('workbench.view.explorer').then(
+        this.preview.finish().then(() => vscode.commands.executeCommand('workbench.view.explorer')).then(
           () => { vscode.commands.executeCommand('revealInExplorer', uri); },
           () => {},
         );
@@ -686,7 +690,7 @@ export class SearchModal implements vscode.Disposable {
 
       this.history.addOpened(uri, line, col);
 
-      vscode.commands.executeCommand('vscode.open', uri).then(
+      this.preview.finish(uri).then(() => vscode.commands.executeCommand('vscode.open', uri)).then(
         () => {
           if (line !== undefined && !uri.fsPath.endsWith('.ipynb')) {
             const pos = new vscode.Position(line, col);
@@ -748,7 +752,7 @@ export class SearchModal implements vscode.Disposable {
       // Open to the side
       qp.hide();
 
-      vscode.commands.executeCommand('vscode.open', uri, vscode.ViewColumn.Beside).then(
+      this.preview.finish(uri).then(() => vscode.commands.executeCommand('vscode.open', uri, vscode.ViewColumn.Beside)).then(
         () => {
           if (item.lineNumber !== undefined && !uri.fsPath.endsWith('.ipynb')) {
             const pos = new vscode.Position(item.lineNumber, item.column ?? 0);
@@ -827,7 +831,23 @@ export class SearchModal implements vscode.Disposable {
     else this.switchTab(SearchMode.Usages);
   }
 
+  async previewSelectedResult(): Promise<void> {
+    const qp = this.activeQuickPick;
+    if (!qp || (qp.busy && this.fullResults.length === 0)) return;
+    const result = qp.activeItems[0];
+    if (!result?.uri || result.isFolder || result.commandId) return;
+    const line = result.lineNumber ?? (this.gotoLine === undefined ? undefined : this.gotoLine - 1);
+    const column = result.column ?? Math.max(0, (this.gotoColumn ?? 1) - 1);
+    const position = line === undefined ? undefined : new vscode.Position(line, column);
+    const selection = position && !result.uri.path.endsWith('.ipynb') ? new vscode.Selection(position, position) : undefined;
+    try { await this.preview.show(result.uri, selection); }
+    catch (error) {
+      if (this.activeQuickPick === qp) qp.title = `Preview failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
   dispose(): void {
+    this.preview.dispose();
     this.searchSession.cancel();
     this.activeQuickPick?.hide();
   }
