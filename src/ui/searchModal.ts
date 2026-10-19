@@ -58,11 +58,6 @@ const openToSideButton: vscode.QuickInputButton = {
   tooltip: 'Open to the Side',
 };
 
-const chooseUsageSymbolButton: vscode.QuickInputButton = {
-  iconPath: new vscode.ThemeIcon('arrow-left'),
-  tooltip: 'Choose Another Symbol',
-};
-
 const findUsagesButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('references'),
   tooltip: 'Find Usages (Shift+F12)',
@@ -491,7 +486,10 @@ export class SearchModal implements vscode.Disposable {
   // --- Tab switching ---
 
   private switchTab(mode: SearchMode): void {
-    if (this.activeTab === mode) return;
+    if (this.activeTab === mode) {
+      if (this.activeQuickPick) this.rebuildButtons(this.activeQuickPick);
+      return;
+    }
     const previousMode = this.activeTab;
     this.activeTab = mode;
     vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', mode === SearchMode.File || mode === SearchMode.Everywhere);
@@ -552,17 +550,18 @@ export class SearchModal implements vscode.Disposable {
     qp.buttons = [
       everywhereBtn, fileBtn, folderBtn, textBtn, symbolBtn, usagesBtn, commandBtn,
       gitIgnoreBtn, searchIgnoreBtn, caseSensitiveBtn, regexBtn, wholeWordBtn, fuzzyBtn,
-      ...(this.activeTab === SearchMode.Usages && this.usageTarget ? [chooseUsageSymbolButton] : []),
     ];
 
     this.buttonActions = new Map<vscode.QuickInputButton, () => void>([
-      [chooseUsageSymbolButton, () => this.chooseUsageSymbol()],
       [everywhereBtn, () => this.switchTab(SearchMode.Everywhere)],
       [fileBtn, () => this.switchTab(SearchMode.File)],
       [folderBtn, () => this.switchTab(SearchMode.Folder)],
       [textBtn, () => this.switchTab(SearchMode.Text)],
       [symbolBtn, () => this.switchTab(SearchMode.Symbol)],
-      [usagesBtn, () => this.switchTab(SearchMode.Usages)],
+      [usagesBtn, () => {
+        if (this.activeTab === SearchMode.Usages && this.usageTarget) this.chooseUsageSymbol();
+        else this.switchTab(SearchMode.Usages);
+      }],
       [commandBtn, () => this.switchTab(SearchMode.Command)],
       [gitIgnoreBtn, () => { this.excludeGitIgnored = !this.excludeGitIgnored; }],
       [searchIgnoreBtn, () => { this.excludeSearchIgnored = !this.excludeSearchIgnored; }],

@@ -174,13 +174,13 @@ test('a symbol result button finds usages without opening the declaration', asyn
   expect(open).not.toHaveBeenCalled();
 });
 
-test('Choose Another Symbol resets the reference filter and restores symbol candidates', async () => {
+test('the permanent Usages icon resets the reference filter and restores symbol candidates', async () => {
   modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
   const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
   requests[0].publish([symbol]); picker.activeItems = [symbol] as any;
   modal.findUsages(); await vi.runAllTimersAsync();
   type('consumer.ts'); await vi.runAllTimersAsync();
-  const choose = picker.buttons.find((button: any) => button.tooltip === 'Choose Another Symbol');
+  const choose = picker.buttons.find((button: any) => button.tooltip === 'Usages');
   expect(choose).toBeTruthy(); button.fire(choose); await vi.runAllTimersAsync();
   expect(picker.value).toBe('greet');
   expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'greet' });
@@ -233,4 +233,28 @@ test('closing the popup forgets its reference target before a new symbol search'
   modal.show(SearchMode.Usages); type('otherSymbol'); await vi.runAllTimersAsync();
   expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'otherSymbol' });
   expect(requests.at(-1)?.options.usageTarget).toBeUndefined();
+});
+
+test('all seven mode icons stay in place through loading, usages, and mode changes', async () => {
+  const modes = ['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Usages', 'Commands'];
+  const checkModes = () => {
+    expect(picker.buttons.slice(0, 7).map((item: any) => item.tooltip)).toEqual(modes);
+    expect(picker.buttons.slice(0, 7).map((item: any) => item.iconPath.id)).toEqual(['search', 'file', 'folder', 'book', 'symbol-method', 'references', 'terminal']);
+    expect(picker.buttons.some((item: any) => item.iconPath?.id.startsWith('arrow-'))).toBe(false);
+  };
+  modal.show(SearchMode.Symbol); type('greet'); checkModes();
+  await vi.runAllTimersAsync();
+  const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
+  requests[0].publish([symbol]); picker.activeItems = [symbol] as any;
+  modal.findUsages(); checkModes(); await vi.runAllTimersAsync(); checkModes();
+  modal.toggleCaseSensitive(); checkModes();
+  for (let i = 0; i < modes.length; i++) { modal.nextTab(); checkModes(); }
+});
+
+test('clicking the active mode keeps its icon selected', () => {
+  modal.show(SearchMode.File);
+  const active: any = picker.buttons.find((item: any) => item.tooltip === 'Files');
+  active.toggle.checked = false;
+  button.fire(active);
+  expect((picker.buttons.find((item: any) => item.tooltip === 'Files') as any).toggle.checked).toBe(true);
 });

@@ -9,7 +9,8 @@ search workspace files, folders, text, symbols, usages, and commands in one popu
 
 1. Install search++ from the VS Code Marketplace.
 2. Press **Shift+Shift** to open the search modal.
-3. Start typing to search. Use **Tab** to cycle between search modes.
+3. Start typing to search. All seven mode icons stay visible; click one or use
+   **Tab** to cycle between search modes.
 
 | Tab | What it searches |
 |-----|-----------------|
@@ -57,8 +58,8 @@ Open **Usages**, type a symbol name, select the matching symbol, and press
 
 The popup shows the selected symbol in its title. Type text or a filename to
 filter its reference previews and paths. Select a result to jump to that exact
-reference. **Choose Another Symbol** returns to the symbol search; returning to
-**Symbols** restores the original symbol query.
+reference. Click the **Usages** mode icon again to choose another symbol;
+returning to **Symbols** restores the original symbol query.
 
 From an editor, use **search++: Find Usages** in the command palette or context
 menu to find references to the symbol at the cursor. Without an editor symbol,
