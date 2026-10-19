@@ -85,7 +85,7 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup and mode commands, reusable preview tab with both preview settings, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup and mode commands, reusable preview tab and centered matches with both preview settings, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
 }
@@ -121,6 +121,8 @@ async function verifyResultPreview(root: vscode.Uri): Promise<void> {
   const config = vscode.workspace.getConfiguration('workbench.editor');
   const previous = config.inspect<boolean>('enablePreview')?.workspaceValue;
   const baselineUri = vscode.Uri.joinPath(root, 'src/index.ts');
+  const longFile = vscode.Uri.joinPath(root, 'preview-lines.ts');
+  await vscode.workspace.fs.writeFile(longFile, Buffer.from(Array.from({ length: 400 }, (_, line) => `// Preview line ${line}`).join('\n')));
   await vscode.window.showTextDocument(baselineUri, { preview: false });
   const tabs = () => vscode.window.tabGroups.all.flatMap(group => group.tabs);
   try {
@@ -146,6 +148,12 @@ async function verifyResultPreview(root: vscode.Uri): Promise<void> {
         assert.ok([...baseline].every(id => tabs().some(tab => key(tab) === id)), 'existing user tabs are preserved');
         await Promise.all([preview.show(first), preview.show(second), preview.show(first)]);
         assert.equal(tabs().length, baseline.size + 1, 'rapid previews still use one extra tab');
+        await verifyCenteredLine(preview, longFile, 200);
+        const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === longFile.toString())!;
+        const nearTop = editor.visibleRanges[0].start.line + 2;
+        assert.ok(Math.abs(nearTop - 200) > 2, 'second target is already visible but away from the center');
+        await verifyCenteredLine(preview, longFile, nearTop);
+        assert.equal(tabs().length, baseline.size + 1, 'centering also reuses the preview tab');
         await preview.show(baselineUri);
         assert.equal(tabs().length, baseline.size, 'existing files reuse their current tabs');
         assert.equal(hidden, false, 'the search popup keeps focus during preview');
@@ -156,4 +164,25 @@ async function verifyResultPreview(root: vscode.Uri): Promise<void> {
       }
     }
   } finally { await config.update('enablePreview', previous, vscode.ConfigurationTarget.Workspace); }
+}
+
+async function verifyCenteredLine(preview: ResultPreview, uri: vscode.Uri, line: number): Promise<void> {
+  let check!: () => void;
+  let timer: ReturnType<typeof setTimeout>;
+  const centered = new Promise<void>((resolve, reject) => {
+    check = () => {
+      const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === uri.toString());
+      const range = editor?.visibleRanges[0];
+      if (range && Math.abs((range.start.line + range.end.line) / 2 - line) <= 2) resolve();
+    };
+    timer = setTimeout(() => {
+      const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === uri.toString());
+      const range = editor?.visibleRanges[0];
+      reject(new Error(`Preview line ${line} was not centered; visible lines: ${range?.start.line}-${range?.end.line}`));
+    }, 5000);
+  });
+  const listener = vscode.window.onDidChangeTextEditorVisibleRanges(check);
+  const position = new vscode.Position(line, 3);
+  try { await Promise.all([centered, preview.show(uri, new vscode.Selection(position, position)).then(check)]); }
+  finally { clearTimeout(timer!); listener.dispose(); }
 }

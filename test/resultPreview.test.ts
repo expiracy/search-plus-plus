@@ -5,6 +5,7 @@ const { ResultPreview } = await import('../src/ui/resultPreview');
 let group: any;
 let close: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
+  vscode.window.visibleTextEditors = [];
   group = { viewColumn: 1, tabs: [] };
   vscode.window.tabGroups.all = [group]; vscode.window.tabGroups.activeTabGroup = group;
   vi.spyOn(vscode.commands, 'executeCommand').mockImplementation(async (command: string, uri: any, options: any) => {
@@ -17,7 +18,7 @@ beforeEach(() => {
     group.tabs = group.tabs.filter((item: any) => item !== tab); return true;
   });
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vscode.window.visibleTextEditors = []; vi.restoreAllMocks(); });
 
 test('preview opens a resource at its match without taking focus', async () => {
   const open = vi.spyOn(vscode.commands, 'executeCommand');
@@ -177,4 +178,13 @@ test('closing and reopening a file manually does not restore preview ownership',
   await preview.show(vscode.Uri.file('/workspace/b.ts') as any);
   expect(group.tabs).toContain(reopened);
   expect(close).not.toHaveBeenCalledWith(reopened, expect.anything());
+});
+
+test('a matched line is always centered in the preview editor', async () => {
+  const uri = vscode.Uri.file('/workspace/a.ts');
+  const selection = new vscode.Range(new vscode.Position(100, 3), new vscode.Position(100, 3));
+  const revealRange = vi.fn();
+  vscode.window.visibleTextEditors = [{ document: { uri }, viewColumn: 1, revealRange }];
+  await new ResultPreview().show(uri as any, selection as any);
+  expect(revealRange).toHaveBeenCalledWith(selection, vscode.TextEditorRevealType.InCenter);
 });

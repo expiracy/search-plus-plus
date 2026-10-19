@@ -67,6 +67,11 @@ export class ResultPreview implements vscode.Disposable {
     const tab = vscode.window.tabGroups.all.flatMap(group => group.tabs).find(tab =>
       tab.group.viewColumn === group.viewColumn && resource(tab)?.toString() === uri.toString() && !before.has(tabKey(tab)));
     if (tab) this.owned = { uri: uri.toString(), key: tabKey(tab), wasPreview: tab.isPreview };
+    if (selection && version === this.version) {
+      const editor = vscode.window.visibleTextEditors.find(editor =>
+        editor.document.uri.toString() === uri.toString() && editor.viewColumn === group.viewColumn);
+      editor?.revealRange(selection, vscode.TextEditorRevealType.InCenter);
+    }
   }
 
   private currentOwned(): vscode.Tab | undefined {

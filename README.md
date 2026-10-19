@@ -105,9 +105,10 @@ opens the notebook. Navigation to the exact matching cell is unsupported.
 ### Preview a Result
 
 Press **Right Arrow** on a file, text, symbol, or usage result to preview its file
-while the popup keeps focus. Text matches jump to their line and column. Use the
-arrow keys to select another result and **Right Arrow** to preview it in the same
-additional editor tab, including when VS Code's preview tabs are disabled.
+while the popup keeps focus. Text matches jump to their line and column, with the
+matched line centered in the editor where scrolling permits. Use the arrow keys
+to select another result and **Right Arrow** to preview it in the same additional
+editor tab, including when VS Code's preview tabs are disabled.
 Existing tabs are reused. Files you edit, pin, or keep open are preserved.
 Press **Enter** to open the selected result normally. Folders, commands, and
 informational rows have no file preview.

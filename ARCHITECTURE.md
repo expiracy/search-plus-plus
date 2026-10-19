@@ -76,7 +76,9 @@ with a link to the individual tab when more results are available.
 ## Result previews
 
 Right Arrow previews the active resource through `ResultPreview`, preserving
-QuickPick focus and the match position. The controller tracks only tabs created
+QuickPick focus and the match position. The matching text editor reveals the
+selected range with `TextEditorRevealType.InCenter`, including when that range
+is already visible. The controller tracks only tabs created
 by preview requests. It replaces its previous clean tab before opening another,
 so tab reuse works with VS Code preview editors enabled or disabled. Existing
 resource tabs are reused across editor groups; pre-existing preview tabs, edited
