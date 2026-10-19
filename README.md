@@ -56,10 +56,15 @@ Open **Usages**, type a symbol name, select the matching symbol, and press
 **Enter** to list its references. You can also select a symbol in **Symbols** or
 **Everything**, then press **Shift+F12** or click its **Find Usages** button.
 
-The popup shows the selected symbol in its title. Type text or a filename to
-filter its reference previews and paths. Select a result to jump to that exact
-reference. Click the **Usages** mode icon again to choose another symbol;
-returning to **Symbols** restores the original symbol query.
+The popup shows the selected symbol in its title and search box. This is one
+level deeper than choosing a symbol. **Clear the search box** to leave that lookup
+and search for another symbol. Clearing also removes a cached usage lookup when
+you switch modes.
+
+To filter the current references, replace the symbol name directly with text or
+a filename. Select a result to jump to that exact reference. Clicking the
+**Usages** mode icon again returns to the original symbol query; returning to
+**Symbols** also restores that query.
 
 From an editor, use **search++: Find Usages** in the command palette or context
 menu to find references to the symbol at the cursor. Without an editor symbol,
@@ -82,7 +87,9 @@ searchModal.ts:42:5
 ```
 
 Press **Ctrl+Enter** to autofill the selected file's path, then type the line and
-optional column after the inserted colon.
+optional column after the inserted colon. The file remains searchable while you
+type a column, such as `file.ts:42:`. Only numeric line and column suffixes are
+interpreted as navigation.
 
 ### Absolute Path Support
 

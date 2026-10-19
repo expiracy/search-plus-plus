@@ -59,8 +59,10 @@ search from a failed search.
 [SearchSession](src/searchSession.ts) cancels the previous request before starting
 or scheduling another one. Each request captures a version number; its callbacks
 can update the UI only while that version is current. The same guard covers
-asynchronous absolute-path lookups. Starting a query clears old actionable rows. Clearing the input or closing the modal
-cancels active work and any pending debounce timer.
+asynchronous absolute-path lookups. Starting a query clears old actionable rows. Selection, preview, usage lookup,
+and result-button actions are checked against the current displayed items.
+Informational rows cannot navigate like More Results rows. Clearing the input or
+closing the modal cancels active work and any pending debounce timer.
 
 File and folder searches use the same index matcher during startup and normal
 operation. They wait for the first usable snapshot when necessary. Text, symbol,
@@ -151,10 +153,13 @@ coverage depends on the installed language extensions and their indexing state.
 
 Usages is a two-step interaction within the native popup. Without a target,
 queries use the symbol provider and Enter chooses a symbol. The modal retains
-its URI and position as a `UsageTarget`, clears the symbol query, and dispatches
-to `UsagesProvider`. The original symbol query and reference filter have separate
-state so changing modes or choosing another symbol cannot reuse the wrong input.
-Closing the popup clears that context.
+its URI and position as a `UsageTarget`, shows the selected symbol name in the
+input, and dispatches to `UsagesProvider`. That unchanged name is lookup context;
+replacing it filters references. Clearing the input cancels the request and
+clears the target and cached filters, returning to the symbol chooser. The
+original symbol query and reference filter have separate state so changing modes
+or choosing another symbol cannot reuse the wrong input. Closing the popup
+clears that context.
 
 The usages provider calls `vscode.executeReferenceProvider`, deduplicates returned
 locations, applies exclusion rules, and reads previews from open documents. Reads
@@ -183,6 +188,8 @@ eligible indexed files; empty directories do not appear.
 ## Validation
 
 `npm run check` runs TypeScript checking, linting, tests, and the production build.
+The native popup factory is injectable so host tests can drive actual input
+changes through symbol selection, reference lookup, clearing, and a fresh query.
 The tests cover workspace discovery, exclusion scope, request cancellation, index
 updates, matching, process failures, Unicode handling, navigation, notebook source
 extraction, symbol selection for usages, and native popup reference filtering.

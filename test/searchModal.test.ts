@@ -311,3 +311,130 @@ test('preview skips folders, commands, and informational rows', async () => {
   }
   expect(command.mock.calls.every(args => args[0] === 'setContext')).toBe(true);
 });
+
+test('choosing a usage symbol keeps its name in the input so the nested lookup can be cleared', async () => {
+  modal.show(SearchMode.Usages); type('gre'); await vi.runAllTimersAsync();
+  const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts'), lineNumber: 0, column: 16 };
+  requests[0].publish([symbol]); picker.selectedItems = [symbol] as any;
+  accept.fire(); await vi.runAllTimersAsync();
+  expect(picker.value).toBe('greet');
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Usages, query: '' });
+  expect(requests.at(-1)?.options.usageTarget?.name).toBe('greet');
+});
+
+test('clearing a usage lookup returns to symbol search and ignores late reference results', async () => {
+  modal.show(SearchMode.Usages); type('greet'); await vi.runAllTimersAsync();
+  const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
+  requests[0].publish([symbol]); picker.selectedItems = [symbol] as any;
+  accept.fire(); await vi.runAllTimersAsync();
+  const references = requests.at(-1)!;
+  type('');
+  references.publish([{ label: 'stale reference', mode: SearchMode.Usages, uri: symbol.uri }]);
+  await vi.runAllTimersAsync();
+  expect(references.dispose).toHaveBeenCalled();
+  expect(picker.value).toBe('');
+  expect(picker.placeholder).toContain('Search symbols');
+  expect(picker.title).not.toContain('Usages of greet');
+  expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol to find usages' }]);
+  type('other'); await vi.runAllTimersAsync();
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'other' });
+  expect(requests.at(-1)?.options.usageTarget).toBeUndefined();
+});
+
+test('clearing another mode forgets the cached usage target before returning to Usages', async () => {
+  modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
+  const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
+  requests[0].publish([symbol]); picker.activeItems = [symbol] as any;
+  modal.findUsages(); await vi.runAllTimersAsync();
+  modal.prevTab(); type('');
+  modal.nextTab(); type('other'); await vi.runAllTimersAsync();
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'other' });
+  expect(requests.at(-1)?.options.usageTarget).toBeUndefined();
+});
+
+test('informational search failure rows do not switch modes when accepted', async () => {
+  modal.show(SearchMode.Everywhere); type('missing');
+  requests[0].publish([{ label: '$(warning) Text search failed', mode: SearchMode.Text, alwaysShow: true }]);
+  expect((picker.items[0] as any).buttons).toBeUndefined();
+  picker.selectedItems = [picker.items[0]] as any;
+  accept.fire(); await vi.runAllTimersAsync();
+  expect(requests).toHaveLength(1);
+});
+
+test('a More Results row still switches to its results mode', async () => {
+  modal.show(SearchMode.Everywhere); type('file');
+  requests[0].publish([{ label: 'See more files', mode: SearchMode.File, moreCount: 5 }]);
+  picker.selectedItems = [picker.items[0]] as any;
+  accept.fire(); await vi.runAllTimersAsync();
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.File, query: 'file' });
+});
+
+test('preview cannot open an old active row after a new result list has arrived', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.File); type('old');
+  const old = { label: 'old.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/old.ts') };
+  requests[0].publish([old]); picker.activeItems = [old] as any;
+  type('new'); requests.at(-1)!.publish([{ label: 'new.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/new.ts') }]);
+  await modal.previewSelectedResult();
+  expect(command.mock.calls.some(args => args[0] === 'vscode.open')).toBe(false);
+});
+
+test('accepting a stale selected row after replacement cannot open it', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.File); type('old');
+  const old = { label: 'old.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/old.ts') };
+  requests[0].publish([old]); picker.selectedItems = [old] as any;
+  type('new'); requests.at(-1)!.publish([{ label: 'new.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/new.ts') }]);
+  accept.fire(); await vi.runAllTimersAsync();
+  expect(command.mock.calls.some(args => args[0] === 'vscode.open')).toBe(false);
+});
+
+test('stale result buttons cannot reopen a file after clearing the query', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.File); type('old');
+  requests[0].publish([{ label: 'old.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/old.ts') }]);
+  const old: any = picker.items[0];
+  type(''); itemButton.fire({ item: old, button: old.buttons[0] });
+  await vi.runAllTimersAsync();
+  expect(command.mock.calls.some(args => args[0] === 'vscode.open')).toBe(false);
+});
+
+test('Find Usages ignores a symbol left active by a previous result list', async () => {
+  modal.show(SearchMode.Symbol); type('old'); await vi.runAllTimersAsync();
+  const old = { label: '$(symbol-function) old', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/old.ts') };
+  requests[0].publish([old]); picker.activeItems = [old] as any;
+  type('new'); await vi.runAllTimersAsync();
+  requests.at(-1)!.publish([{ label: '$(symbol-function) new', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/new.ts') }]);
+  modal.findUsages(); await vi.runAllTimersAsync();
+  expect(picker.title).not.toContain('Usages of old');
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'new' });
+});
+
+test('autofilling a result uses its URI path rather than a formatted path and line description', async () => {
+  vi.spyOn(vscode.workspace, 'asRelativePath').mockReturnValue('src/file.ts');
+  modal.show(SearchMode.Everywhere); type('needle');
+  const result = { label: 'needle', description: 'Container - src/file.ts:27', mode: SearchMode.Text, uri: vscode.Uri.file('/workspace/src/file.ts'), lineNumber: 26, column: 2 };
+  requests[0].publish([result]); picker.activeItems = [result] as any;
+  modal.autofillSelectedPath();
+  expect(picker.value).toBe('src/file.ts:');
+  expect(requests.at(-1)?.query).toBe('src/file.ts');
+});
+
+test('clearing a file query cancels a queued preview as well as search work', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.File); type('old');
+  const item = { label: 'old.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/old.ts') };
+  requests[0].publish([item]); picker.activeItems = [item] as any;
+  const pending = modal.previewSelectedResult(); type(''); await pending;
+  expect(command.mock.calls.some(args => args[0] === 'vscode.open')).toBe(false);
+});
+
+test('streaming Everything results preserve the selected symbol when text has the same location', () => {
+  modal.show(SearchMode.Everywhere); type('greet');
+  const uri = vscode.Uri.file('/workspace/greet.ts');
+  const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri, lineNumber: 0, column: 16 };
+  const text = { label: 'greet', mode: SearchMode.Text, uri, lineNumber: 0, column: 16 };
+  requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
+  requests[0].publish([text, symbol]);
+  expect((picker.activeItems[0] as any).mode).toBe(SearchMode.Symbol);
+});

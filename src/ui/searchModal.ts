@@ -17,7 +17,7 @@ function getItemKey(item: SearchResult): string | undefined {
   if (item.kind === vscode.QuickPickItemKind.Separator) return undefined;
   if (item.commandId) return `cmd:${item.commandId}`;
   if (item.uri) {
-    const base = item.uri.toString();
+    const base = `${item.mode}:${item.uri.toString()}`;
     if (item.lineNumber !== undefined) return `${base}:${item.lineNumber}:${item.column ?? 0}`;
     return base;
   }
@@ -92,10 +92,11 @@ export class SearchModal implements vscode.Disposable {
   // Stored so keyboard shortcut commands can trigger re-search
   private triggerSearch: (() => void) | undefined;
 
-  // file:line:col goto target from current input
+  // Parent query and selected symbol for the nested Usages view.
   private usageTarget?: UsageTarget;
   private symbolQuery = '';
   private usageQuery = '';
+  // file:line:col goto target from current input
   private gotoLine?: number;
   private gotoColumn?: number;
 
@@ -103,6 +104,7 @@ export class SearchModal implements vscode.Disposable {
     private indexManager: IndexManager,
     private history: SearchHistory,
     private providers: ReadonlyMap<SearchMode, SearchProvider>,
+    private createPicker: () => vscode.QuickPick<SearchResult> = () => vscode.window.createQuickPick<SearchResult>(),
   ) {
     // Location and toggle controls became stable in VS Code 1.109.
     const [major, minor] = (vscode.version ?? '').split('.').map(Number);
@@ -158,7 +160,7 @@ export class SearchModal implements vscode.Disposable {
         });
       }
 
-      if (!item.isFolder && !item.commandId) {
+      if (item.uri && !item.isFolder && !item.commandId) {
         filtered.push({ ...item, buttons: item.mode === SearchMode.Symbol && item.uri ? [findUsagesButton, openToSideButton] : [openToSideButton] });
       } else {
         filtered.push(item);
@@ -224,10 +226,11 @@ export class SearchModal implements vscode.Disposable {
       return;
     }
     this.fullResults = [];
-    const qp = vscode.window.createQuickPick<SearchResult>() as SortableQuickPick<SearchResult>;
+    const qp = this.createPicker() as SortableQuickPick<SearchResult>;
     this.activeQuickPick = qp;
     this.activeTab = initialMode ?? SearchMode.Everywhere;
     qp.placeholder = this.placeholder();
+    if (this.activeTab === SearchMode.Usages && this.usageTarget) qp.value = this.usageQuery;
     qp.matchOnDescription = false;
     qp.matchOnDetail = false;
     qp.sortByLabel = false;
@@ -337,6 +340,7 @@ export class SearchModal implements vscode.Disposable {
 
     const clearSearch = () => {
       this.searchSession.cancel();
+      this.preview.cancel();
       this.fullResults = [];
       this.gotoLine = undefined;
       this.gotoColumn = undefined;
@@ -381,7 +385,7 @@ export class SearchModal implements vscode.Disposable {
       if (this.activeTab === SearchMode.Usages && this.usageTarget) {
         this.gotoLine = undefined;
         this.gotoColumn = undefined;
-        executeSearch(rawValue, debounceMs);
+        executeSearch(rawValue === this.usageTarget.name ? '' : rawValue, debounceMs);
         return;
       }
       if (!rawValue.trim()) { clearSearch(); return; }
@@ -427,6 +431,11 @@ export class SearchModal implements vscode.Disposable {
 
     // Handle input changes
     const inputDisposable = qp.onDidChangeValue(() => {
+      if (!qp.value.trim() && this.usageTarget) {
+        this.clearUsageTarget();
+        qp.placeholder = this.placeholder();
+        this.rebuildButtons(qp);
+      }
       executeSearchForCurrentTab();
     });
 
@@ -446,9 +455,7 @@ export class SearchModal implements vscode.Disposable {
       this.searchSession.cancel();
       this.activeQuickPick = undefined;
       this.triggerSearch = undefined;
-      this.usageTarget = undefined;
-      this.symbolQuery = '';
-      this.usageQuery = '';
+      this.clearUsageTarget();
       this.gotoLine = undefined;
       this.gotoColumn = undefined;
       inputDisposable.dispose();
@@ -630,9 +637,10 @@ export class SearchModal implements vscode.Disposable {
     const qp = this.activeQuickPick;
     if (!qp || (this.activeTab !== SearchMode.File && this.activeTab !== SearchMode.Everywhere)) return;
     const selected = qp.activeItems[0];
-    if (!selected?.uri || selected.isFolder) return;
-    const relativePath = selected.description ?? vscode.workspace.asRelativePath(selected.uri);
+    if (!selected?.uri || selected.isFolder || !this.isCurrentItem(selected)) return;
+    const relativePath = vscode.workspace.asRelativePath(selected.uri);
     qp.value = relativePath + ':';
+    this.triggerSearch?.();
   }
 
   private applyOptionToggle(): void {
@@ -650,7 +658,7 @@ export class SearchModal implements vscode.Disposable {
     return qp.onDidAccept(() => {
       if (qp.busy && this.fullResults.length === 0) return;
       const selected = qp.selectedItems[0];
-      if (!selected) return;
+      if (!selected || !this.isCurrentItem(selected)) return;
 
       if (this.activeTab === SearchMode.Usages && !this.usageTarget && selected.mode === SearchMode.Symbol) {
         this.findUsages(selected);
@@ -665,7 +673,7 @@ export class SearchModal implements vscode.Disposable {
       }
 
       // "More results" truncation indicator -> switch to that tab
-      if (!selected.uri && selected.mode !== this.activeTab) {
+      if (selected.moreCount && selected.mode !== this.activeTab) {
         this.switchTab(selected.mode);
         return;
       }
@@ -738,7 +746,7 @@ export class SearchModal implements vscode.Disposable {
   ): vscode.Disposable {
     return qp.onDidTriggerItemButton((e) => {
       const item = e.item;
-      if (!item.uri) return;
+      if (!item.uri || !this.isCurrentItem(item)) return;
       const uri = item.uri;
 
       if (e.button === findUsagesButton) { this.findUsages(item); return; }
@@ -788,12 +796,18 @@ export class SearchModal implements vscode.Disposable {
       ? `Filter usages of ${this.usageTarget.name} by text or path...` : PLACEHOLDERS[this.activeTab];
   }
 
-  private chooseUsageSymbol(): void {
+  private clearUsageTarget(): void {
     this.usageTarget = undefined;
+    this.symbolQuery = '';
     this.usageQuery = '';
+  }
+
+  private chooseUsageSymbol(): void {
+    const query = this.symbolQuery;
+    this.clearUsageTarget();
     const qp = this.activeQuickPick;
     if (!qp) return;
-    qp.value = this.symbolQuery;
+    qp.value = query;
     qp.placeholder = this.placeholder();
     this.rebuildButtons(qp);
     this.triggerSearch?.();
@@ -804,8 +818,15 @@ export class SearchModal implements vscode.Disposable {
       ? `Usages of ${this.usageTarget.name}` : TAB_NAMES[this.activeTab];
   }
 
+  private isCurrentItem(item: SearchResult): boolean {
+    const key = getItemKey(item);
+    return this.activeQuickPick?.items.some(candidate => candidate === item
+      || (key !== undefined && candidate.mode === item.mode && getItemKey(candidate) === key)) ?? false;
+  }
+
   findUsages(item = this.activeQuickPick?.activeItems?.[0]): void {
     if (this.activeQuickPick?.busy && this.fullResults.length === 0) return;
+    if (this.activeQuickPick && item && !this.isCurrentItem(item)) return;
     let target: UsageTarget;
     if (item?.uri && item.mode === SearchMode.Symbol) {
       target = {
@@ -821,11 +842,11 @@ export class SearchModal implements vscode.Disposable {
       target = { uri: editor.document.uri, position, name: editor.document.getText(word) };
     }
     this.symbolQuery = this.activeQuickPick?.value ?? target.name;
-    this.usageQuery = '';
+    this.usageQuery = target.name;
     this.usageTarget = target;
     const qp = this.activeQuickPick;
     if (!qp) { this.show(SearchMode.Usages); this.triggerSearch?.(); return; }
-    qp.value = '';
+    qp.value = target.name;
     qp.placeholder = `Filter usages of ${target.name} by text or path...`;
     if (this.activeTab === SearchMode.Usages) { this.rebuildButtons(qp); this.triggerSearch?.(); }
     else this.switchTab(SearchMode.Usages);
@@ -835,7 +856,7 @@ export class SearchModal implements vscode.Disposable {
     const qp = this.activeQuickPick;
     if (!qp || (qp.busy && this.fullResults.length === 0)) return;
     const result = qp.activeItems[0];
-    if (!result?.uri || result.isFolder || result.commandId) return;
+    if (!result?.uri || result.isFolder || result.commandId || !this.isCurrentItem(result)) return;
     const line = result.lineNumber ?? (this.gotoLine === undefined ? undefined : this.gotoLine - 1);
     const column = result.column ?? Math.max(0, (this.gotoColumn ?? 1) - 1);
     const position = line === undefined ? undefined : new vscode.Position(line, column);

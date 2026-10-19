@@ -108,3 +108,12 @@ describe('isAbsolutePath', () => {
     expect(isAbsolutePath('CC:\\foo')).toBe(false);
   });
 });
+
+test('non-numeric characters in a line suffix stay in the literal search query', () => {
+  expect(parseLineCol('file.ts:12oops')).toEqual({ query: 'file.ts:12oops' });
+  expect(parseLineCol('file.ts:12:4oops')).toEqual({ query: 'file.ts:12:4oops' });
+});
+
+test('a partially typed column keeps the filename and valid line', () => {
+  expect(parseLineCol('file.ts:42:')).toEqual({ query: 'file.ts', gotoLine: 42 });
+});

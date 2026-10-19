@@ -6,10 +6,11 @@ import { FileIndex } from '../src/index/fileIndex';
 import { TextSearch, type TextMatch } from '../src/index/textSearch';
 import { FileProvider } from '../src/providers/fileProvider';
 import { UsagesProvider } from '../src/providers/usagesProvider';
+import { SearchModal } from '../src/ui/searchModal';
 import { ResultPreview } from '../src/ui/resultPreview';
 import { SymbolProvider } from '../src/providers/symbolProvider';
 import { FolderProvider } from '../src/providers/folderProvider';
-import { type SearchOptions, type SearchResult } from '../src/providers/types';
+import { SearchMode, type SearchOptions, type SearchResult, type SearchProvider } from '../src/providers/types';
 
 const options: SearchOptions = {
   fuzzySearch: false, caseSensitive: false, useRegex: false, matchWholeWord: false,
@@ -70,6 +71,7 @@ export async function run(): Promise<void> {
       assert.equal(usages[0].column, 2);
     } finally { registration.dispose(); }
     await verifyTypeScriptUsages(root, rules);
+    await verifyUsageNavigation(root);
     await verifyResultPreview(root);
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
@@ -85,7 +87,7 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup and mode commands, reusable preview tab and centered matches with both preview settings, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown and clear navigation, mode commands, reusable preview tab and centered matches with both preview settings, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
 }
@@ -185,4 +187,53 @@ async function verifyCenteredLine(preview: ResultPreview, uri: vscode.Uri, line:
   const position = new vscode.Position(line, 3);
   try { await Promise.all([centered, preview.show(uri, new vscode.Selection(position, position)).then(check)]); }
   finally { clearTimeout(timer!); listener.dispose(); }
+}
+
+function nextEvent<T>(event: vscode.Event<T>, matches: (value: T) => boolean): Promise<T> {
+  let subscription: vscode.Disposable;
+  let timer: ReturnType<typeof setTimeout>;
+  return new Promise<T>((resolve, reject) => {
+    subscription = event(value => { if (matches(value)) resolve(value); });
+    timer = setTimeout(() => reject(new Error('Expected popup state transition did not occur')), 5000);
+  }).finally(() => { clearTimeout(timer); subscription.dispose(); });
+}
+
+async function verifyUsageNavigation(root: vscode.Uri): Promise<void> {
+  type Request = { mode: SearchMode; query: string; options: SearchOptions; publish: (items: SearchResult[]) => void; disposed: boolean };
+  const requests = new vscode.EventEmitter<Request>();
+  const picker = vscode.window.createQuickPick<SearchResult>();
+  const makeProvider = (mode: SearchMode): SearchProvider => ({
+    mode,
+    search(query, options, publish) {
+      const request: Request = { mode, query, options, publish, disposed: false };
+      publish(mode === SearchMode.Symbol ? [{
+        label: `$(symbol-function) ${query === 'gre' ? 'greet' : query}`, mode: SearchMode.Symbol,
+        uri: vscode.Uri.joinPath(root, 'src/index.ts'), lineNumber: 0, column: 16,
+      }] : [{ label: 'greet();', mode: SearchMode.Usages, uri: vscode.Uri.joinPath(root, 'src/utils.ts'), lineNumber: 1, column: 2 }]);
+      requests.fire(request);
+      return { dispose: () => { request.disposed = true; } };
+    },
+  });
+  const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
+    { getRecentItems: () => [] } as any, new Map([SearchMode.Symbol, SearchMode.Usages].map(mode => [mode, makeProvider(mode)])), () => picker);
+  try {
+    modal.show(SearchMode.Usages);
+    const symbols = nextEvent(requests.event, request => request.mode === SearchMode.Symbol && request.query === 'gre');
+    picker.value = 'gre'; await symbols;
+    picker.activeItems = [picker.items[0]];
+    const usages = nextEvent(requests.event, request => request.mode === SearchMode.Usages);
+    modal.findUsages();
+    const selected = await usages;
+    assert.equal(picker.value, 'greet', 'nested usage lookup keeps its symbol visible in the input');
+    assert.equal(selected.query, '', 'selected symbol name is context rather than a reference filter');
+    const cleared = nextEvent(picker.onDidChangeValue, value => value === '');
+    picker.value = ''; await cleared;
+    assert.equal(selected.disposed, true, 'clearing cancels the reference lookup');
+    selected.publish([{ label: 'obsolete reference', mode: SearchMode.Usages }]);
+    assert.ok(!picker.title?.includes('Usages of greet'), 'clearing leaves the nested symbol context');
+    assert.ok(picker.items.some(item => item.label.includes('Search for a symbol')));
+    const fresh = nextEvent(requests.event, request => request.mode === SearchMode.Symbol && request.query === 'other');
+    picker.value = 'other';
+    assert.equal((await fresh).options.usageTarget, undefined, 'new queries search symbols without the old usage target');
+  } finally { modal.dispose(); picker.dispose(); requests.dispose(); }
 }
