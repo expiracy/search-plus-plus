@@ -1,33 +1,12 @@
-# Search architecture and reliability audit
+# Search architecture
 
-The native QuickPick UI is a good fit for search++. The reliability problems come
-from inconsistent discovery, filtering, and asynchronous request ownership. Keep
-the UI and provider split; make those shared contracts explicit before adding
-features or introducing another framework.
+search++ runs inside the VS Code extension host and presents results through the
+native QuickPick interface. It indexes workspace paths in memory and searches file
+contents on demand. The UI, request coordinator, providers, and workspace services
+have separate responsibilities so changes to the input or index can be handled
+without mixing results from different searches.
 
-## Corrected failure modes
-
-The implementation and regression tests address the following problems found in
-the original code.
-
-| Priority | Failure in the original implementation | Effect |
-| --- | --- | --- |
-| High | Discovery excludes directories collected from both ignore files, plus every `node_modules` directory. | Turning an exclusion off cannot recover files missing from the index. Negated rules cannot recover files removed during discovery either. |
-| High | Startup file search interpolates user input into a glob and caps discovery before matching. | Fuzzy queries, path queries, literal glob characters, and files beyond the cap behave differently before indexing finishes. |
-| High | Delayed provider callbacks, notebook reads, and absolute path lookups can outlive their query. Debounced work survives some tab and input changes. | Results for an old query can replace current results. |
-| High | Ignore rules from all workspace roots share one matcher; nested basename patterns are flattened into anchored paths. | One root can hide another root's files, and nested rules can miss deeper descendants. |
-| High | Ripgrep resolution checks only the older bundled package layout. The VSIX excludes the development dependency. Process errors and stderr are discarded. | Packaged text search can silently show no results when the executable is missing or a query fails. |
-| Medium | Folder search first selects at most 1,000 matching files, then applies a substring filter to folders. | Valid folders disappear behind file limits; fuzzy folder queries can return nothing. |
-| Medium | A rebuild clears the working index before discovery completes. Watcher updates use relative paths, append duplicates, and do not remove directory descendants. | Reindexing and file operations can produce missing, duplicate, or stale entries. |
-| Medium | Fzf and ripgrep use smart case even when Match Case is off. | An uppercase query unexpectedly hides lowercase matches. |
-| Medium | Ripgrep byte offsets are used as VS Code character columns. | Navigation lands at the wrong position after non-ASCII text. |
-| Medium | Accepting a result hides the picker before reading its line target; hiding resets that target. | `file:line:column` navigation can lose the requested position. |
-| Medium | Symbol and command provider rejections have no error handler; symbols are capped before exclusions. | Failures can remain unresolved, and ignored symbols consume the visible result budget. |
-| Medium | The modal assumes a button API absent from the declared minimum VS Code version. | Opening search can throw before displaying the picker. |
-| Medium | Text search omits hidden files, depends on a Git repository to apply ignore rules, and also searches notebook JSON. | Text results disagree with file results and notebook matches appear twice. |
-| Medium | Streaming output uses a debounce and decodes each chunk separately. | Continuous output delays visible progress, and split Unicode characters become corrupted. |
-
-## Implemented structure
+## Components
 
 ```mermaid
 flowchart TD
@@ -52,69 +31,133 @@ flowchart TD
     Lifecycle --> Rules
 ```
 
-Activation constructs providers through `createProviders`. The modal presents results and
-opens resources. A request coordinator owns cancellation and publication, including
-the delay before a provider starts. Providers implement one search mode; the
-Everywhere provider combines their results without changing their matching rules.
+[Activation](src/extension.ts) creates the workspace services, history, providers,
+and modal, then registers their disposables with VS Code. The
+[provider factory](src/providers/createProviders.ts) supplies the modal with a
+registry of providers that share the same search contract.
 
-Discovery keeps a complete candidate snapshot, excluding Git's internal metadata.
-Toggle-controlled exclusions apply after discovery, before the visible result limit.
-Resource identity is the full URI; a display path is never a cross-workspace key.
-Ignore rules apply relative to their own workspace root and containing directory,
-in parent-to-child order. Custom exclusions always apply.
+| Component | Responsibility |
+| --- | --- |
+| `SearchModal` | Read input and options, select a provider, render results, and navigate to the selected resource. |
+| `SearchSession` | Own the current request, its debounce timer, cancellation, and delivery of current results and errors. |
+| Search providers | Implement files, folders, text, symbols, or commands through the `SearchProvider` contract. |
+| `EverywhereProvider` | Combine enabled providers into the Everything tab's ordered sections. |
+| `IndexManager` | Coordinate rebuilds, own workspace services, and report index status. |
+| `FileIndex` | Store candidate paths, perform path matching, and reconcile filesystem events with the index. |
+| `GitIgnoreManager` | Load and evaluate workspace exclusion rules in their directory and workspace scope. |
+| `TextSearch` | Manage ripgrep processes, decode streamed matches, and search notebook cell source. |
+| `SearchHistory` | Persist recent files and locations in workspace state. |
 
-Builds publish complete snapshots atomically and retain the previous usable
-snapshot during discovery. Watcher changes are deduplicated and reconciled with
-the snapshot. IndexManager serializes rebuild requests and owns status changes.
-All timers, watchers, requests, and processes have an explicit disposable owner.
+## Request lifecycle
 
-Text content remains streamed from ripgrep rather than stored in a second content
-index. Notebook source requires a separate adapter because the file on disk is
-JSON. Errors must reach the current request so a failed process is distinguishable
-from a successful search with no matches.
+A provider receives a query and search options, delivers result snapshots through
+a callback, and returns a disposable that cancels its request. Providers can also
+report errors through a separate callback. This lets the UI distinguish an empty
+search from a failed search.
 
-## Scope and tradeoffs
+[SearchSession](src/searchSession.ts) cancels the previous request before starting
+or scheduling another one. Each request captures a version number; its callbacks
+can update the UI only while that version is current. The same guard covers
+asynchronous absolute-path lookups. Clearing the input or closing the modal
+cancels active work and any pending debounce timer.
 
-This design keeps the extension in one process with no database, server, or new
-runtime framework. File paths are inexpensive to index; content is searched on
-demand. The cost of making ignore toggles truthful is discovering ignored files as
-well. Very large dependency trees can therefore increase initial indexing time and
-memory. Any future candidate cap must be explicit in the UI rather than silently
-reported as a complete search.
+File and folder searches use the same index matcher during startup and normal
+operation. They wait for the first usable snapshot when necessary. Text, symbol,
+and command searches use the configured debounce delay on their individual tabs.
+The Everything tab combines providers incrementally: files and folders use the
+index, text results stream, and symbols and commands start after their debounce
+delay. Section errors appear alongside results from the other providers.
 
-Workspace symbols depend on installed language extensions and their indexing
-state. Regex and fuzzy controls apply where supported by each provider; text
-search uses ripgrep's regex engine. Files and folders use literal or fuzzy path
-matching. Empty directories are not represented in the file-derived folder index.
+`searchPlusPlus.maxResults` limits results returned by each provider. The
+Everything tab applies its own section order and display limit to those results,
+with a link to the individual tab when more results are available.
 
-Remote extension hosts with filesystem workspaces can run ripgrep on that host.
-Virtual workspace schemes need a separate text-search adapter before they can be
-advertised as supported. Notebook results open the notebook; navigating to the
-exact matching cell remains a separate enhancement. Empty directories, precise
-notebook cell navigation, and virtual-workspace text search are outside this change.
+## Workspace discovery and exclusions
 
-The modal falls back to title-bar buttons when the newer button location API is
-unavailable. That fallback is covered with mocks matching the absence of the API
-in [VS Code 1.96](https://raw.githubusercontent.com/microsoft/vscode/1.96.0/src/vscode-dts/vscode.d.ts).
-Full extension-host validation uses the installed VS Code version. Linux, Windows,
-and a complete VS Code 1.96 host run have not been executed locally.
+Discovery collects files across workspace roots and excludes Git's internal
+metadata. The index retains candidates controlled by the Git-ignore and
+search-ignore toggles so changing either toggle can reveal those paths. Custom
+`searchPlusPlus.excludePaths` rules always apply. Excluded matches do not consume
+the provider's result limit.
 
-## Verification
+Resources are identified by their full URI. Ignore matching uses paths relative
+to the URI's workspace root. Each `.gitignore` or `.searchignore` belongs to that
+root and its containing directory. Rules apply from parent directories to
+children, and a rule inside an ignored directory cannot re-include its files.
 
-Regression tests exercise discovery through the public build path as well as
-prepared in-memory entries. They cover exclusion toggles, nested and multiple-root
-rules, rapid query changes, directory deletion, rebuild races, fuzzy folders,
-process failures, Unicode columns and decoding, line navigation, and notebook
-source extraction. Real ripgrep tests complement deterministic lifecycle tests.
+[GitIgnoreManager](src/gitignore.ts) publishes complete rule sets after loading
+both kinds of ignore file. Concurrent callers share the load operation. Changes
+to ignore files or custom exclusion settings reload the policy and trigger an
+index rebuild.
 
-`npm run check` runs TypeScript checking, linting, all Vitest tests, and the
-production bundle. Branch pushes, pull requests, and version-tag releases run that
-command on Linux, macOS, and Windows.
-The final local run passed all 329 tests across 24 test files, type checking,
-linting, and the production build.
-`npm run test:host` checks activation, fuzzy files and folders, both exclusion
-toggles, real text search, modal commands, and reindexing in an isolated host.
-The host smoke test passed on VS Code 1.124.2 on macOS.
-CI also runs downloaded VS Code 1.96.0 and current stable builds on Linux before
-packaging the VSIX. Real text-search tests wait for the search completion signal
-rather than fixed delays, including the notebook stage.
+## Index updates and resource ownership
+
+[FileIndex](src/index/fileIndex.ts) publishes a complete snapshot after discovery
+and keeps the previous snapshot usable during a rebuild. Its watcher records
+changes while discovery is running, then reconciles those changes with the new
+snapshot before publication.
+
+Watcher updates are batched and deduplicated by URI. Creation events are checked
+to distinguish files from directories. Deleting a directory removes its indexed
+descendants. Directory creation and bulk changes mark the index stale so
+[IndexManager](src/index/indexManager.ts) can schedule a rescan. Rebuild requests
+are serialized, and the status bar reports building, ready, stale, or error state.
+
+The modal owns its search session, IndexManager owns the workspace services, and
+the provider factory owns the command provider's extension-change subscription.
+Disposal cancels requests and builds, clears timers, stops processes, and releases
+watchers and event subscriptions.
+
+## Search backends
+
+Files and folders support literal substring and fuzzy matching. Whole-word
+matching uses the literal path, and case-sensitive matching checks the query's
+case explicitly. Folder search derives and deduplicates ancestors of eligible
+files before matching and applying the result limit. Absolute-path navigation
+uses a filesystem lookup independently of the index.
+
+[TextSearch](src/index/textSearch.ts) starts ripgrep for each content query and
+streams its JSON output. It resolves the executable from the development package,
+VS Code's bundled ripgrep, or the system PATH. Queries support literal text,
+regular expressions, case sensitivity, and whole-word matching. Stream decoding
+preserves UTF-8 characters across chunks, and match byte offsets are converted to
+VS Code's UTF-16 editor columns.
+
+Notebook search reads `.ipynb` cell source separately from ripgrep's file search.
+Successful searches signal completion after the notebook stage finishes.
+Selecting a notebook match opens the notebook; navigation to a specific cell is
+unsupported.
+
+Symbol search requests candidates from VS Code's workspace symbol providers, then
+applies name-matching options and path exclusions before limiting results. Its
+coverage depends on the installed language extensions and their indexing state.
+Command search builds a catalog from registered commands and extension metadata;
+extension changes invalidate that catalog.
+
+## Support and performance
+
+The extension targets VS Code 1.96 and newer compatible releases. Hosts without
+the inline-button API display the controls in the title bar. Filesystem
+workspaces can be searched on a remote extension host when ripgrep is available
+there. Text search for virtual workspace schemes is unsupported.
+
+The path index includes ignored candidates, so large dependency trees increase
+initial indexing time and memory use. Content is searched on demand rather than
+stored in a second index. Folder search includes directories represented by
+eligible indexed files; empty directories do not appear.
+
+## Validation
+
+`npm run check` runs TypeScript checking, linting, tests, and the production build.
+The tests cover workspace discovery, exclusion scope, request cancellation, index
+updates, matching, process failures, Unicode handling, navigation, and notebook
+source extraction. Real ripgrep fixtures complement deterministic lifecycle tests.
+Text tests wait for completion, including the notebook stage. Test files run
+serially to keep filesystem and scalability checks from competing for resources.
+
+`npm run test:host` exercises activation, file and folder search, exclusion
+toggles, real text search, modal commands, and reindexing in an isolated VS Code
+host. CI runs this smoke test on Linux against VS Code 1.96.0 and current stable,
+and runs the standard checks on Linux, macOS, and Windows before packaging the
+VSIX. See the [development and release procedures](README.md#development-and-validation)
+for setup, commands, and publishing requirements.
