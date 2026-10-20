@@ -204,9 +204,9 @@ export class SearchModal implements vscode.Disposable {
       if (counts[ResultSection.Commands] > 0) parts.push(`${counts[ResultSection.Commands]} commands`);
       qp.title = buildTitle(`${tabName}: ${parts.join(', ')}`, state);
     } else {
-      const count = this.fullResults.length;
+      const count = this.fullResults.filter(item => item.uri || item.commandId).length;
       if (count === 0) {
-        qp.title = buildTitle(tabName, state);
+        qp.title = buildTitle(this.fullResults.length > 0 ? `${tabName}: 0 results` : tabName, state);
       } else {
         const unit =
           this.activeTab === SearchMode.File ? 'files' :
@@ -280,9 +280,14 @@ export class SearchModal implements vscode.Disposable {
 
     const showNoResults = () => {
       if (this.activeTab === SearchMode.Usages) {
+        const targetName = this.usageTarget?.name;
+        const filteringUsages = targetName !== undefined && qp.value.trim() !== targetName;
         qp.items = [{
-          label: this.usageTarget ? '$(references) No references reported' : '$(symbol-method) No symbols found',
-          description: 'Check language support and indexing, try another query, or include ignored files',
+          label: filteringUsages ? '$(references) No usages match this filter'
+            : this.usageTarget ? '$(references) No references reported' : '$(symbol-method) No symbols found',
+          description: filteringUsages
+            ? `Try another filter, restore ${targetName} to show all references, or clear the box to choose another symbol`
+            : 'Check language support and indexing, try another query, or include ignored files',
           mode: SearchMode.Usages,
           alwaysShow: true,
         }];

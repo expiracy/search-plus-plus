@@ -112,6 +112,17 @@ test('a late absolute path lookup cannot replace a newer query', async () => {
   expect(picker.items.map((item: any) => item.label)).toEqual(['new.ts']);
 });
 
+test('a missing absolute path shows its warning without counting it as a file', async () => {
+  vi.spyOn(vscode.workspace.fs, 'stat').mockRejectedValue(new Error('File not found'));
+  modal.show(SearchMode.File);
+  type('/workspace/missing.ts');
+  await vi.runAllTimersAsync();
+  expect(picker.items).toMatchObject([{ label: '$(warning) Path not found', description: '/workspace/missing.ts' }]);
+  expect(picker.items[0].buttons).toBeUndefined();
+  expect(picker.title).toBe('Files: 0 results');
+  expect(picker.busy).toBe(false);
+});
+
 test('Shift+F12 on a selected symbol opens its semantic usages in the popup', async () => {
   modal.show(SearchMode.Symbol); type('greet');
   await vi.runAllTimersAsync();
@@ -242,6 +253,22 @@ test('empty reference results distinguish semantic coverage from an ordinary sea
   requests.at(-1)!.publish([]);
   expect(picker.items).toMatchObject([{ label: '$(references) No references reported', description: expect.stringContaining('language') }]);
   expect(picker.title).toContain('greet');
+});
+
+test('a nonmatching usages filter explains how to recover without blaming language support', async () => {
+  modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
+  const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
+  requests[0].publish([symbol]); picker.activeItems = [symbol] as any;
+  modal.findUsages(); await vi.runAllTimersAsync();
+  type('missing-consumer.ts'); await vi.runAllTimersAsync();
+  requests.at(-1)!.publish([]);
+  expect(picker.items).toMatchObject([{
+    label: '$(references) No usages match this filter',
+    description: expect.stringContaining('clear the box to choose another symbol'),
+  }]);
+  expect(picker.placeholder).toContain('greet');
+  type('greet'); await vi.runAllTimersAsync();
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Usages, query: '', options: { usageTarget: { name: 'greet' } } });
 });
 
 test('accepting a usage opens its reference position and cancels pending callbacks', async () => {

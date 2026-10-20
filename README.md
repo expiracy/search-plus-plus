@@ -71,9 +71,10 @@ menu to find references to the symbol at the cursor. Without an editor symbol,
 the command opens the symbol chooser.
 
 References come from VS Code's language providers. Coverage depends on installed
-language extensions and their indexing state; declarations appear when the
-provider includes them. Empty reference lists and language-provider failures are
-shown separately. Git-ignore, search-ignore, and custom exclusions also apply to
+language extensions and their indexing state; some language services start when
+you open a source file. Declarations appear when the provider includes them.
+Empty reference lists, unmatched filters, and language-provider failures have
+separate messages. Git-ignore, search-ignore, and custom exclusions also apply to
 references.
 
 ### Go to Line and Column
@@ -153,6 +154,21 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 | **Alt+G** | Toggle exclude git ignored | Modal open |
 | **Alt+S** | Toggle exclude search ignored | Modal open |
 | **Ctrl+Enter** | Autofill file path | Files or Everything tab |
+
+Keymap extensions can claim the same shortcuts. If **Shift+F12** performs another
+action, add this override to **Preferences: Open Keyboard Shortcuts (JSON)**:
+
+```json
+{
+  "key": "shift+f12",
+  "command": "searchPlusPlus.findUsages",
+  "when": "searchPlusPlusModalOpen"
+}
+```
+
+The rule applies while the popup is open. See VS Code's
+[keyboard shortcut rules](https://code.visualstudio.com/docs/configure/keybindings#_keyboard-rules)
+for how user overrides take precedence.
 
 ## Commands
 
