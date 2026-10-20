@@ -194,15 +194,17 @@ The tests cover workspace discovery, exclusion scope, request cancellation, inde
 updates, matching, process failures, Unicode handling, navigation, notebook source
 extraction, symbol selection for usages, and native popup reference filtering.
 Preview tests cover tab reuse, existing and edited files, rapid requests, and
-accepting a final selection. Real ripgrep fixtures complement deterministic
-lifecycle tests.
+accepting a final selection. Row navigation tests check the Go to File action,
+line and column preservation, and history recording. History cleanup tests
+protect newer opens and removals from stale asynchronous snapshots. Real ripgrep
+fixtures complement deterministic lifecycle tests.
 Text tests wait for completion, including the notebook stage. Test files run
 serially to keep filesystem and scalability checks from competing for resources.
 
 `npm run test:host` exercises activation, file and folder search, exclusion
 toggles, real text search, real TypeScript workspace-symbol and cross-file
 reference lookup, popup commands, preview tab counts and focus with both preview
-settings, and reindexing in an isolated VS Code
+settings, Go to File navigation without splitting the editor, and reindexing in an isolated VS Code
 host. CI runs this smoke test on Linux against VS Code 1.96.0 and current stable,
 and runs the standard checks on Linux, macOS, and Windows before packaging the
 VSIX. See the [development and release procedures](README.md#development-and-validation)

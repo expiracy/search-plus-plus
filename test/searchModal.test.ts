@@ -13,6 +13,7 @@ let state: InstanceType<typeof vscode.EventEmitter<string>>;
 let itemButton: InstanceType<typeof vscode.EventEmitter<any>>;
 let button: InstanceType<typeof vscode.EventEmitter<any>>;
 let hide: InstanceType<typeof vscode.EventEmitter<void>>;
+let history: { getRecentItems: () => any[]; addOpened: ReturnType<typeof vi.fn> };
 let requests: Array<{ mode: string; query: string; options: any; publish: (results: any[]) => void; dispose: ReturnType<typeof vi.fn> }>;
 
 beforeEach(() => {
@@ -44,7 +45,8 @@ beforeEach(() => {
       return { dispose };
     },
   });
-  modal = new SearchModal(manager as any, { getRecentItems: () => [], addOpened: vi.fn() } as any,
+  history = { getRecentItems: () => [], addOpened: vi.fn() };
+  modal = new SearchModal(manager as any, history as any,
     new Map(Object.values(SearchMode).map(mode => [mode, provider(mode)])) as any);
 });
 
@@ -172,6 +174,46 @@ test('a symbol result button finds usages without opening the declaration', asyn
   itemButton.fire({ item, button: action }); await vi.runAllTimersAsync();
   expect(requests.at(-1)?.options.usageTarget?.name).toBe('greet');
   expect(open).not.toHaveBeenCalled();
+});
+
+test('Go to File opens a positioned result in the current group with one operation', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  const open = vi.spyOn(vscode.window, 'showTextDocument');
+  modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
+  const uri = vscode.Uri.file('/workspace/greet.ts');
+  requests[0].publish([{ label: 'greet', mode: SearchMode.Symbol, uri, lineNumber: 12, column: 9 }]);
+  const item: any = picker.items[0];
+  const action = item.buttons.find((button: any) => button.tooltip === 'Go to File');
+  expect(action?.iconPath.id).toBe('go-to-file');
+  itemButton.fire({ item, button: action });
+  await vi.runAllTimersAsync();
+  const position = new vscode.Position(12, 9);
+  expect(command.mock.calls.filter(call => call[0] === 'vscode.open')).toEqual([
+    ['vscode.open', uri, { selection: new vscode.Selection(position, position) }],
+  ]);
+  expect(open).not.toHaveBeenCalled();
+});
+
+test('Go to File retains the typed line and column after hiding', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.File); type('greet.ts:42:5');
+  const uri = vscode.Uri.file('/workspace/greet.ts');
+  requests[0].publish([{ label: 'greet.ts', mode: SearchMode.File, uri }]);
+  const item: any = picker.items[0];
+  itemButton.fire({ item, button: item.buttons[0] });
+  await vi.runAllTimersAsync();
+  const position = new vscode.Position(41, 4);
+  expect(command).toHaveBeenCalledWith('vscode.open', uri, expect.objectContaining({ selection: new vscode.Selection(position, position) }));
+});
+
+test('Go to File records the confirmed file and location in history', async () => {
+  modal.show(SearchMode.File); type('greet.ts:42:5');
+  const uri = vscode.Uri.file('/workspace/greet.ts');
+  requests[0].publish([{ label: 'greet.ts', mode: SearchMode.File, uri }]);
+  const item: any = picker.items[0];
+  itemButton.fire({ item, button: item.buttons[0] });
+  await vi.runAllTimersAsync();
+  expect(history.addOpened).toHaveBeenCalledExactlyOnceWith(uri, 41, 4);
 });
 
 test('the permanent Usages icon resets the reference filter and restores symbol candidates', async () => {

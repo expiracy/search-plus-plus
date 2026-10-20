@@ -73,6 +73,7 @@ export async function run(): Promise<void> {
     await verifyTypeScriptUsages(root, rules);
     await verifyUsageNavigation(root);
     await verifyResultPreview(root);
+    await verifyRowNavigation(root);
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
     assert.ok(commands.includes('searchPlusPlus.preview'));
@@ -87,7 +88,7 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown and clear navigation, mode commands, reusable preview tab and centered matches with both preview settings, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown and clear navigation, mode commands, reusable preview tab and centered matches with both preview settings, Go to File opens positioned results without splitting the editor, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
 }
@@ -187,6 +188,48 @@ async function verifyCenteredLine(preview: ResultPreview, uri: vscode.Uri, line:
   const position = new vscode.Position(line, 3);
   try { await Promise.all([centered, preview.show(uri, new vscode.Selection(position, position)).then(check)]); }
   finally { clearTimeout(timer!); listener.dispose(); }
+}
+
+async function verifyRowNavigation(root: vscode.Uri): Promise<void> {
+  const target = vscode.Uri.joinPath(root, 'row-navigation.txt');
+  await vscode.workspace.fs.writeFile(target, Buffer.from(Array.from({ length: 100 }, (_, index) => `Line ${index + 1}`).join('\n')));
+  const picker = vscode.window.createQuickPick<SearchResult>();
+  const actions = new vscode.EventEmitter<vscode.QuickPickItemButtonEvent<SearchResult>>();
+  // Inject the action event while retaining the real native picker and editor APIs.
+  const controlledPicker = new Proxy(picker, {
+    get(target, property) {
+      if (property === 'onDidTriggerItemButton') return actions.event;
+      const value = Reflect.get(target, property, target);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+    set: (target, property, value) => Reflect.set(target, property, value, target),
+  });
+  const result: SearchResult = { label: 'row-navigation.txt', mode: SearchMode.File, uri: target };
+  const searched = new vscode.EventEmitter<void>();
+  const provider: SearchProvider = { mode: SearchMode.File, search(_query, _options, publish) {
+    publish([result]); searched.fire(); return { dispose() {} };
+  } };
+  const baselineGroups = new Set(vscode.window.tabGroups.all.map(group => group.viewColumn));
+  const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
+    { getRecentItems: () => [], addOpened: async () => {} } as any, new Map([[SearchMode.File, provider]]), () => controlledPicker);
+  try {
+    modal.show(SearchMode.File);
+    const ready = nextEvent(searched.event, () => true);
+    picker.value = 'row-navigation.txt:42:5';
+    await ready;
+    const opened = nextEvent(vscode.window.onDidChangeTextEditorSelection, event =>
+      event.textEditor.document.uri.toString() === target.toString()
+      && event.selections[0].active.isEqual(new vscode.Position(41, 4)));
+    const item = picker.items[0];
+    actions.fire({ item, button: item.buttons!.find(button => button.tooltip === 'Go to File')! });
+    await opened;
+    assert.equal(vscode.window.tabGroups.all.length, baselineGroups.size, 'Go to File does not split the editor');
+    assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), target.toString());
+    assert.ok(vscode.window.activeTextEditor?.selection.active.isEqual(new vscode.Position(41, 4)), 'Go to File preserves typed line and column');
+  } finally {
+    modal.dispose(); actions.dispose(); searched.dispose();
+    await vscode.window.tabGroups.close(vscode.window.tabGroups.all.filter(group => !baselineGroups.has(group.viewColumn)), true);
+  }
 }
 
 function nextEvent<T>(event: vscode.Event<T>, matches: (value: T) => boolean): Promise<T> {

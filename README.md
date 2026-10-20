@@ -120,9 +120,12 @@ Existing tabs are reused. Files you edit, pin, or keep open are preserved.
 Press **Enter** to open the selected result normally. Folders, commands, and
 informational rows have no file preview.
 
-### Open to Side
+### Go to File
 
-Click the split-editor button on any file or text result to open it in a side editor group.
+Click the **Go to File** button on a file, text, symbol, usage, or recent-history
+row to open its file in the current editor group. Matches retain their line and
+column, including a location typed as `file:line:column`. Confirmed opens are
+added to recent history.
 
 ## Search Coverage
 

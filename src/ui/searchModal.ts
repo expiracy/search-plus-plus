@@ -54,9 +54,9 @@ const TAB_NAMES: Record<SearchMode, string> = {
   [SearchMode.Usages]: 'Usages',
 };
 
-const openToSideButton: vscode.QuickInputButton = {
-  iconPath: new vscode.ThemeIcon('split-horizontal'),
-  tooltip: 'Open to the Side',
+const goToFileButton: vscode.QuickInputButton = {
+  iconPath: new vscode.ThemeIcon('go-to-file'),
+  tooltip: 'Go to File',
 };
 
 const findUsagesButton: vscode.QuickInputButton = {
@@ -161,7 +161,7 @@ export class SearchModal implements vscode.Disposable {
       }
 
       if (item.uri && !item.isFolder && !item.commandId) {
-        filtered.push({ ...item, buttons: item.mode === SearchMode.Symbol && item.uri ? [findUsagesButton, openToSideButton] : [openToSideButton] });
+        filtered.push({ ...item, buttons: item.mode === SearchMode.Symbol && item.uri ? [findUsagesButton, goToFileButton] : [goToFileButton] });
       } else {
         filtered.push(item);
       }
@@ -270,7 +270,7 @@ export class SearchModal implements vscode.Disposable {
         });
         items.push(...recentItems.map(item => ({
           ...item,
-          buttons: [openToSideButton, removeFromHistoryButton],
+          buttons: [goToFileButton, removeFromHistoryButton],
         })));
       }
       return items;
@@ -757,21 +757,16 @@ export class SearchModal implements vscode.Disposable {
         return;
       }
 
-      // Open to the side
+      // Go to the selected file in the current editor group
+      const line = item.lineNumber ?? (this.gotoLine === undefined ? undefined : this.gotoLine - 1);
+      const column = item.column ?? Math.max(0, (this.gotoColumn ?? 1) - 1);
+      const position = line !== undefined && !uri.fsPath.endsWith('.ipynb')
+        ? new vscode.Position(line, column) : undefined;
       qp.hide();
 
-      this.preview.finish(uri).then(() => vscode.commands.executeCommand('vscode.open', uri, vscode.ViewColumn.Beside)).then(
-        () => {
-          if (item.lineNumber !== undefined && !uri.fsPath.endsWith('.ipynb')) {
-            const pos = new vscode.Position(item.lineNumber, item.column ?? 0);
-            vscode.window.showTextDocument(uri, {
-              viewColumn: vscode.ViewColumn.Beside,
-              selection: new vscode.Selection(pos, pos),
-            });
-          }
-        },
-        () => {},
-      );
+      this.preview.finish(uri).then(() => vscode.commands.executeCommand('vscode.open', uri, {
+        ...(position ? { selection: new vscode.Selection(position, position) } : {}),
+      })).then(() => this.history.addOpened(uri, line, column)).then(undefined, () => {});
     });
   }
 
