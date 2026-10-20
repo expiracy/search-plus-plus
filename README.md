@@ -3,6 +3,8 @@
 A unified search for VS Code inspired by JetBrains IDEs. Press **Shift+Shift** to
 search workspace files, folders, text, symbols, usages, and commands in one popup.
 
+See the [changelog](CHANGELOG.md) for release notes and upgrade changes.
+
 ![Everything tab](media/everywhere.png)
 
 ## Getting Started
