@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="1024" height="1024">
+  <g transform="translate(0 0) scale(1.0)">
+    <defs>
+      <linearGradient id="tilem" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#4FC3F7"/><stop offset="0.55" stop-color="#1E88E5"/><stop offset="1" stop-color="#1A3FA8"/>
+      </linearGradient>
+      <linearGradient id="glossm" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect width="512" height="512" rx="112" fill="url(#tilem)"/>
+    <rect width="512" height="512" rx="112" fill="url(#glossm)"/>
+    <g fill="none" stroke="#0B2A6B" stroke-opacity="0.25" stroke-linecap="round" transform="translate(6 10)">
+      <circle cx="222" cy="222" r="122" stroke-width="40"/><path d="M312 312L404 404" stroke-width="52"/>
+    </g>
+    <g fill="none" stroke="#FFFFFF" stroke-linecap="round">
+      <circle cx="222" cy="222" r="122" stroke-width="40"/>
+      <path d="M312 312L404 404" stroke-width="52"/>
+      <path d="M144 222H200M172 194V250M244 222H300M272 194V250" stroke-width="22"/>
+    </g>
+  </g>
+</svg>
