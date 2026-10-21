@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.0.1 — 2026-10-21
+
+### Documentation
+
+- A new Marketplace page with a search++ logo, a demo GIF, and current
+  screenshots of every search mode, usages, previews, and go to line.
+- Development, validation, and release instructions moved to `CONTRIBUTING.md`.
+
+### Packaging
+
+- The extension package no longer bundles README images; the Marketplace page
+  loads them from GitHub. The package shrinks from about 6 MB to 40 KB.
+
 ## 3.0.0 — 2026-10-20
 
 ### Upgrade changes
