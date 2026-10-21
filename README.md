@@ -1,21 +1,62 @@
-# search++
+<p align="center">
+  <img src="media/banner.png" alt="search++" width="760">
+</p>
 
-A unified search for VS Code inspired by JetBrains IDEs. Press **Shift+Shift** to
-search workspace files, folders, text, symbols, usages, and commands in one popup.
+<p align="center">
+  <b>Search everything in VS Code from one popup.</b><br>
+  Press <kbd>Shift</kbd> <kbd>Shift</kbd> to find files, folders, text, symbols, usages, and commands.<br>
+  Inspired by Search Everywhere in JetBrains IDEs.
+</p>
 
-See the [changelog](CHANGELOG.md) for release notes and upgrade changes.
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus"><img src="https://vsmarketplacebadges.dev/version-short/expiracy.search-plus-plus.svg" alt="Marketplace version"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus"><img src="https://vsmarketplacebadges.dev/installs-short/expiracy.search-plus-plus.svg" alt="Marketplace installs"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus&ssr=false#review-details"><img src="https://vsmarketplacebadges.dev/rating-short/expiracy.search-plus-plus.svg" alt="Marketplace rating"></a>
+</p>
 
-![Everything tab](media/everywhere.png)
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Install</a> ·
+  <a href="#seven-search-modes">Search modes</a> ·
+  <a href="#keyboard-shortcuts">Shortcuts</a> ·
+  <a href="#settings">Settings</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <img src="media/demo.gif" alt="search++ demo: searching everything, files with a line number, text with previews, symbols, usages, and commands" width="900">
+</p>
+
+## Why search++
+
+- **One shortcut for every search.** Files, folders, text, symbols, usages, and
+  commands share one popup. Press **Tab** to change mode without losing your query.
+- **Everything at a glance.** The Everything tab groups the best matches from each
+  source, so you can find a file, a line of text, or a command from one place.
+- **Browse results without leaving the popup.** Press **Right Arrow** to preview a
+  result in a reusable editor tab. The matched line is centered, and the popup keeps focus.
+- **Find usages in the same popup.** Pick a symbol and press **Shift+F12** to list
+  its references. Type over the name to filter them by text or path.
+- **Fast on large workspaces.** File search uses an in-memory index with fzf
+  matching, and text search streams results from ripgrep.
+- **Respects your ignore files.** `.gitignore`, `.searchignore`, and custom
+  exclusion globs keep generated and vendored files out of your results.
 
 ## Getting Started
 
-1. Install search++ from the VS Code Marketplace.
-2. Press **Shift+Shift** to open the search modal.
-3. Start typing to search. All seven mode icons stay visible; click one or use
-   **Tab** to cycle between search modes.
+1. Install **search++** from the
+   [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus),
+   or run `code --install-extension expiracy.search-plus-plus`.
+2. Press **Shift+Shift** to open the search popup.
+3. Start typing. All seven mode icons stay visible; click one or press **Tab** to
+   cycle between search modes.
 
-| Tab | What it searches |
-|-----|-----------------|
+search++ requires VS Code 1.96 or a newer compatible release. See the
+[changelog](CHANGELOG.md) for release notes and upgrade changes.
+
+## Seven Search Modes
+
+| Mode | What it searches |
+|------|------------------|
 | **Everything** | Files, folders, text, symbols, and commands in grouped sections |
 | **Files** | File names and paths across your workspace |
 | **Folders** | Folders containing searchable files |
@@ -24,39 +65,31 @@ See the [changelog](CHANGELOG.md) for release notes and upgrade changes.
 | **Usages** | Find a symbol, then list its semantic references |
 | **Commands** | All VS Code commands (built-in and from extensions) |
 
-| ![Files](media/files.png) | ![Folders](media/folders.png) | ![Text](media/text.png) |
-|:---:|:---:|:---:|
-| Files | Folders | Text |
+<p align="center">
+  <img src="media/everywhere.png" alt="Everything mode showing grouped file, text, and symbol results for 'preview'" width="720">
+  <br><em>Everything: grouped results from every source</em>
+</p>
 
-| ![Symbols](media/symbols.png) | ![Commands](media/commands.png) |
+| ![Files mode](media/files.png) | ![Folders mode](media/folders.png) |
 |:---:|:---:|
-| Symbols | Commands |
+| **Files**: fuzzy path matching | **Folders**: reveal a folder in the Explorer |
+| ![Text mode](media/text.png) | ![Symbols mode](media/symbols.png) |
+| **Text**: ripgrep matches with line previews | **Symbols**: from your language servers |
+| ![Usages mode](media/usages.png) | ![Commands mode](media/commands.png) |
+| **Usages**: semantic references to a symbol | **Commands**: every VS Code command |
 
 ## Features
-
-### Search Options
-
-Toggle these while the search modal is open:
-
-| Toggle | Shortcut | Description |
-|--------|----------|-------------|
-| Case Sensitive | **Alt+C** | Match exact case |
-| Regex | **Alt+R** | Use regular expressions for text search |
-| Match Whole Word | **Alt+W** | Only match complete words |
-| Fuzzy Search | **Alt+F** | Use fuzzy matching for paths, commands, and symbol candidates |
-| Exclude Git Ignored | **Alt+G** | Hide files excluded by `.gitignore` |
-| Exclude Search Ignored | **Alt+S** | Hide files excluded by `.searchignore` |
-
-Regex applies to text search. Fuzzy matching applies to files, folders, commands,
-symbols, and usage previews; text search uses literal text or a regular
-expression. Match Whole Word uses literal matching for files, folders, commands,
-and usage previews, and filters symbol names returned by the language provider.
 
 ### Find Usages
 
 Open **Usages**, type a symbol name, select the matching symbol, and press
 **Enter** to list its references. You can also select a symbol in **Symbols** or
 **Everything**, then press **Shift+F12** or click its **Find Usages** button.
+
+<p align="center">
+  <img src="media/usages-filter.png" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'" width="720">
+  <br><em>Type over the symbol name to filter its references</em>
+</p>
 
 The popup shows the selected symbol in its title and search box. This is one
 level deeper than choosing a symbol. **Clear the search box** to leave that lookup
@@ -79,6 +112,19 @@ Empty reference lists, unmatched filters, and language-provider failures have
 separate messages. Git-ignore, search-ignore, and custom exclusions also apply to
 references.
 
+### Preview a Result
+
+Press **Right Arrow** on a file, text, symbol, or usage result to preview its file
+while the popup keeps focus. Text matches jump to their line and column, with the
+matched line centered in the editor where scrolling permits. Use the arrow keys
+to select another result and **Right Arrow** to preview it in the same additional
+editor tab, including when VS Code's preview tabs are disabled.
+Existing tabs are reused. Files you edit, pin, or keep open are preserved.
+Press **Enter** to open the selected result normally. Folders, commands, and
+informational rows have no file preview.
+
+![Previewing a text match: the editor shows the matched line while the popup stays open](media/preview.png)
+
 ### Go to Line and Column
 
 On the **Files** or **Everything** tab, append `:line` or `:line:column` to jump to
@@ -93,6 +139,33 @@ Press **Ctrl+Enter** to autofill the selected file's path, then type the line an
 optional column after the inserted colon. The file remains searchable while you
 type a column, such as `file.ts:42:`. Only numeric line and column suffixes are
 interpreted as navigation.
+
+![Typing modal:222 in Files mode and previewing line 222 of searchModal.ts](media/go-to-line.png)
+
+### Go to File
+
+Click the **Go to File** button on a file, text, symbol, usage, or recent-history
+row to open its file in the current editor group. Matches retain their line and
+column, including a location typed as `file:line:column`. Confirmed opens are
+added to recent history.
+
+### Search Options
+
+Toggle these while the search popup is open:
+
+| Toggle | Shortcut | Description |
+|--------|----------|-------------|
+| Case Sensitive | **Alt+C** | Match exact case |
+| Regex | **Alt+R** | Use regular expressions for text search |
+| Match Whole Word | **Alt+W** | Only match complete words |
+| Fuzzy Search | **Alt+F** | Use fuzzy matching for paths, commands, and symbol candidates |
+| Exclude Git Ignored | **Alt+G** | Hide files excluded by `.gitignore` |
+| Exclude Search Ignored | **Alt+S** | Hide files excluded by `.searchignore` |
+
+Regex applies to text search. Fuzzy matching applies to files, folders, commands,
+symbols, and usage previews; text search uses literal text or a regular
+expression. Match Whole Word uses literal matching for files, folders, commands,
+and usage previews, and filters symbol names returned by the language provider.
 
 ### Absolute Path Support
 
@@ -112,24 +185,6 @@ history.
 Text search includes cell source in Jupyter `.ipynb` notebooks. Selecting a match
 opens the notebook. Navigation to the exact matching cell is unsupported.
 
-### Preview a Result
-
-Press **Right Arrow** on a file, text, symbol, or usage result to preview its file
-while the popup keeps focus. Text matches jump to their line and column, with the
-matched line centered in the editor where scrolling permits. Use the arrow keys
-to select another result and **Right Arrow** to preview it in the same additional
-editor tab, including when VS Code's preview tabs are disabled.
-Existing tabs are reused. Files you edit, pin, or keep open are preserved.
-Press **Enter** to open the selected result normally. Folders, commands, and
-informational rows have no file preview.
-
-### Go to File
-
-Click the **Go to File** button on a file, text, symbol, usage, or recent-history
-row to open its file in the current editor group. Matches retain their line and
-column, including a location typed as `file:line:column`. Confirmed opens are
-added to recent history.
-
 ## Search Coverage
 
 search++ requires VS Code 1.96 or a newer compatible release. Folder search shows
@@ -146,15 +201,15 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 | Shortcut | Action | Context |
 |----------|--------|---------|
 | **Shift+Shift** | Open search (Everything tab) | Global |
-| **Tab** | Next search mode | Modal open |
-| **Right Arrow** | Preview the selected file in one reusable tab | Modal open |
-| **Shift+F12** | Find usages of the selected symbol | Modal open |
-| **Alt+C** | Toggle case sensitive | Modal open |
-| **Alt+R** | Toggle regex | Modal open |
-| **Alt+W** | Toggle match whole word | Modal open |
-| **Alt+F** | Toggle fuzzy search | Modal open |
-| **Alt+G** | Toggle exclude git ignored | Modal open |
-| **Alt+S** | Toggle exclude search ignored | Modal open |
+| **Tab** | Next search mode | Popup open |
+| **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
+| **Shift+F12** | Find usages of the selected symbol | Popup open |
+| **Alt+C** | Toggle case sensitive | Popup open |
+| **Alt+R** | Toggle regex | Popup open |
+| **Alt+W** | Toggle match whole word | Popup open |
+| **Alt+F** | Toggle fuzzy search | Popup open |
+| **Alt+G** | Toggle exclude git ignored | Popup open |
+| **Alt+S** | Toggle exclude search ignored | Popup open |
 | **Ctrl+Enter** | Autofill file path | Files or Everything tab |
 
 Keymap extensions can claim the same shortcuts. If **Shift+F12** performs another
@@ -180,7 +235,7 @@ These commands are available from the command palette (`Ctrl+Shift+P` / `Cmd+Shi
 
 | Command | Description |
 |---------|-------------|
-| `search++: Open Search` | Open the search modal (Everything tab) |
+| `search++: Open Search` | Open the search popup (Everything tab) |
 | `search++: Search Files` | Open directly to the Files tab |
 | `search++: Search Text` | Open directly to the Text tab |
 | `search++: Search Symbols` | Open directly to the Symbols tab |
@@ -237,7 +292,7 @@ Nested `.searchignore` files are supported. Patterns are scoped to the directory
 containing the file, just like `.gitignore`. Changes reload the rules and rebuild
 the index automatically; a manual reindex is unnecessary.
 
-Toggle this filter on or off with **Alt+S** while the search modal is open.
+Toggle this filter on or off with **Alt+S** while the search popup is open.
 
 ### How Exclusions Layer
 
@@ -267,7 +322,7 @@ The extension sets context keys you can use in custom `keybindings.json` `when` 
 
 | Context Key | When it is `true` |
 |-------------|-------------------|
-| `searchPlusPlusModalOpen` | The search modal is open |
+| `searchPlusPlusModalOpen` | The search popup is open |
 | `searchPlusPlusFileTab` | The Files tab or Everything tab is active |
 | `searchPlusPlusEverythingTab` | The Everything tab is active |
 
@@ -289,66 +344,12 @@ Example:
 - **Usages** resolve semantic references for a selected symbol through VS Code’s language providers.
 - **Command search** indexes all registered VS Code commands (built-in and from extensions).
 
-## Development and Validation
-
-Use Node.js 22 (`nvm use`), run `npm ci`, then `npm run check` to type-check, lint,
-test, and build the extension. Tests in `test/` include real ripgrep fixtures and
-deterministic checks for indexing and request cancellation.
-
-Run `npm run test:host` for a smoke test in an isolated VS Code window. On macOS it
-uses `/Applications/Visual Studio Code.app`; elsewhere it uses `code` on PATH. Set
-`VSCODE_EXECUTABLE_PATH` to test another installation. The runner copies its fixture
-workspace into a temporary directory and checks activation, search providers,
-exclusions, real TypeScript symbol-to-reference navigation, popup commands, and
-reindexing.
-
-Set `VSCODE_VERSION=1.96.0` or `VSCODE_VERSION=stable` to download and test a specific
-VS Code release through the official extension test runner. Linux CI runs these
-tests under `xvfb-run`.
-
 See the [architecture documentation](ARCHITECTURE.md) for component responsibilities,
 request flow, indexing, and backend behavior.
 
-## Packaging and Marketplace Releases
+## Contributing
 
-This project ships as a VS Code extension. `private: true` prevents accidental npm
-registry publication; npm manages the development tools and scripts.
-
-`npm run package` builds `search-plus-plus.vsix` using the locked `@vscode/vsce`
-version. The package includes the production bundle, third-party notices, manifest, documentation, icon,
-and screenshots. Development files and dependency trees are excluded. The command
-uses `--skip-license` because this repository currently has no license file.
-
-Every branch push and pull request runs checks on Linux, macOS, and Windows, plus
-extension-host smoke tests against VS Code 1.96.0 and current stable. Once those
-checks pass, CI builds and retains the VSIX as the `search-plus-plus-vsix` artifact
-for 14 days.
-
-Marketplace publication runs only when a stable version tag in the form `vX.Y.Z`
-is pushed. The workflow repeats validation, requires the tag to match `package.json`
-and both versions in `package-lock.json`, and requires the tagged commit to be in
-`master`. It publishes the validated VSIX artifact using the `VSCE_PAT`
-repository secret. The token is available only to the publishing step.
-
-To publish a release:
-
-1. Merge the release changes into `master` and update your local checkout.
-2. Run `npm ci` and `npm run check`.
-3. Choose the version increment with `npm version major`, `npm version minor`,
-   or `npm version patch`. This updates both package manifests and creates a
-   version commit and tag.
-4. Push `master` and the specific tag created by the version command with
-   `git push origin master <tag>`, replacing `<tag>` with that version tag.
-5. Check the **Publish to VS Code Marketplace** workflow for validation and
-   publication results.
-
-Each release needs a new version. Reusing a published version causes the publish
-step to fail.
-
-The workflows pin action commits and use a cached, locked npm install. The install
-step receives the read-only GitHub job token so ripgrep binary downloads avoid
-anonymous API rate limits. Publishing credentials must retain Marketplace
-publishing access. Microsoft recommends
-[identity-based publishing](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#secure-automated-publishing-to-visual-studio-marketplace)
-and is retiring global Azure DevOps PATs on December 1, 2026; migrate the existing
-credential setup before that deadline if it uses a global PAT.
+Bug reports and pull requests are welcome on
+[GitHub](https://github.com/expiracy/search-plus-plus). See the
+[contributing guide](CONTRIBUTING.md) for local development, validation, and
+Marketplace releases.
