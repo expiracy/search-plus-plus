@@ -30,7 +30,8 @@ registry publication; npm manages the development tools and scripts.
 
 `npm run package` builds `search-plus-plus.vsix` using the locked `@vscode/vsce`
 version. The package includes the production bundle, third-party notices, manifest, documentation,
-and icon. Development files, dependency trees, and `media/` are excluded. The
+and `media/logo.png` as the icon. Development files, dependency trees, and all
+other files in `media/` are excluded. The
 `--githubBranch master` option rewrites README image links to files on GitHub's
 `master` branch, so new or changed images appear on the Marketplace only after
 they are merged into `master`. The command uses `--skip-license` because this

@@ -100,6 +100,10 @@ export class SearchModal implements vscode.Disposable {
   private gotoLine?: number;
   private gotoColumn?: number;
 
+  private get altKey(): string {
+    return process.platform === 'darwin' ? 'Option' : 'Alt';
+  }
+
   constructor(
     private indexManager: IndexManager,
     private history: SearchHistory,
@@ -308,8 +312,8 @@ export class SearchModal implements vscode.Disposable {
       const hints = ['Try a different search term'];
       if (this.excludeGitIgnored || this.excludeSearchIgnored) {
         const toggles: string[] = [];
-        if (this.excludeGitIgnored) toggles.push('gitignore (Alt+G)');
-        if (this.excludeSearchIgnored) toggles.push('search-ignore (Alt+S)');
+        if (this.excludeGitIgnored) toggles.push(`gitignore (${this.altKey}+G)`);
+        if (this.excludeSearchIgnored) toggles.push(`search-ignore (${this.altKey}+S)`);
         hints.push(`or toggle ${toggles.join(', ')} to include excluded files`);
       }
       qp.items = [{
@@ -549,17 +553,17 @@ export class SearchModal implements vscode.Disposable {
     const commandBtn = this.tabButton('terminal', TAB_NAMES[SearchMode.Command], SearchMode.Command);
 
     // Option toggle buttons (inline)
-    const gitIgnoreBtn = this.toggle('source-control', 'Exclude Git Ignored (Alt+G)', this.excludeGitIgnored,
+    const gitIgnoreBtn = this.toggle('source-control', `Exclude Git Ignored (${this.altKey}+G)`, this.excludeGitIgnored,
       vscode.QuickInputButtonLocation?.Inline);
-    const searchIgnoreBtn = this.toggle('eye-closed', 'Exclude Search Ignored (Alt+S)', this.excludeSearchIgnored,
+    const searchIgnoreBtn = this.toggle('eye-closed', `Exclude Search Ignored (${this.altKey}+S)`, this.excludeSearchIgnored,
       vscode.QuickInputButtonLocation?.Inline);
-    const caseSensitiveBtn = this.toggle('case-sensitive', 'Case Sensitive (Alt+C)', this.caseSensitive,
+    const caseSensitiveBtn = this.toggle('case-sensitive', `Case Sensitive (${this.altKey}+C)`, this.caseSensitive,
       vscode.QuickInputButtonLocation?.Inline);
-    const regexBtn = this.toggle('regex', 'Regex (Alt+R)', this.useRegex,
+    const regexBtn = this.toggle('regex', `Regex (${this.altKey}+R)`, this.useRegex,
       vscode.QuickInputButtonLocation?.Inline);
-    const wholeWordBtn = this.toggle('whole-word', 'Match Whole Word (Alt+W)', this.matchWholeWord,
+    const wholeWordBtn = this.toggle('whole-word', `Match Whole Word (${this.altKey}+W)`, this.matchWholeWord,
       vscode.QuickInputButtonLocation?.Inline);
-    const fuzzyBtn = this.toggle('sparkle', 'Fuzzy Search (Alt+F)', this.fuzzySearch,
+    const fuzzyBtn = this.toggle('sparkle', `Fuzzy Search (${this.altKey}+F)`, this.fuzzySearch,
       vscode.QuickInputButtonLocation?.Inline);
 
     qp.buttons = [

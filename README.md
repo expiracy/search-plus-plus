@@ -135,7 +135,8 @@ searchModal.ts:42
 searchModal.ts:42:5
 ```
 
-Press **Ctrl+Enter** to autofill the selected file's path, then type the line and
+Press **Control+Return** on macOS or **Ctrl+Enter** on Windows/Linux to autofill
+the selected file's path, then type the line and
 optional column after the inserted colon. The file remains searchable while you
 type a column, such as `file.ts:42:`. Only numeric line and column suffixes are
 interpreted as navigation.
@@ -153,14 +154,14 @@ added to recent history.
 
 Toggle these while the search popup is open:
 
-| Toggle | Shortcut | Description |
-|--------|----------|-------------|
-| Case Sensitive | **Alt+C** | Match exact case |
-| Regex | **Alt+R** | Use regular expressions for text search |
-| Match Whole Word | **Alt+W** | Only match complete words |
-| Fuzzy Search | **Alt+F** | Use fuzzy matching for paths, commands, and symbol candidates |
-| Exclude Git Ignored | **Alt+G** | Hide files excluded by `.gitignore` |
-| Exclude Search Ignored | **Alt+S** | Hide files excluded by `.searchignore` |
+| Toggle | macOS | Windows / Linux | Description |
+|--------|-------|-----------------|-------------|
+| Case Sensitive | **Option+C** | **Alt+C** | Match exact case |
+| Regex | **Option+R** | **Alt+R** | Use regular expressions for text search |
+| Match Whole Word | **Option+W** | **Alt+W** | Only match complete words |
+| Fuzzy Search | **Option+F** | **Alt+F** | Use fuzzy matching for paths, commands, and symbol candidates |
+| Exclude Git Ignored | **Option+G** | **Alt+G** | Hide files excluded by `.gitignore` |
+| Exclude Search Ignored | **Option+S** | **Alt+S** | Hide files excluded by `.searchignore` |
 
 Regex applies to text search. Fuzzy matching applies to files, folders, commands,
 symbols, and usage previews; text search uses literal text or a regular
@@ -198,19 +199,22 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action | Context |
-|----------|--------|---------|
-| **Shift+Shift** | Open search (Everything tab) | Global |
-| **Tab** | Next search mode | Popup open |
-| **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
-| **Shift+F12** | Find usages of the selected symbol | Popup open |
-| **Alt+C** | Toggle case sensitive | Popup open |
-| **Alt+R** | Toggle regex | Popup open |
-| **Alt+W** | Toggle match whole word | Popup open |
-| **Alt+F** | Toggle fuzzy search | Popup open |
-| **Alt+G** | Toggle exclude git ignored | Popup open |
-| **Alt+S** | Toggle exclude search ignored | Popup open |
-| **Ctrl+Enter** | Autofill file path | Files or Everything tab |
+| macOS | Windows / Linux | Action | Context |
+|-------|-----------------|--------|---------|
+| **Shift+Shift** | **Shift+Shift** | Open search (Everything tab) | Global |
+| **Tab** | **Tab** | Next search mode | Popup open |
+| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
+| **Shift+F12** | **Shift+F12** | Find usages of the selected symbol | Popup open |
+| **Option+C** | **Alt+C** | Toggle case sensitive | Popup open |
+| **Option+R** | **Alt+R** | Toggle regex | Popup open |
+| **Option+W** | **Alt+W** | Toggle match whole word | Popup open |
+| **Option+F** | **Alt+F** | Toggle fuzzy search | Popup open |
+| **Option+G** | **Alt+G** | Toggle exclude git ignored | Popup open |
+| **Option+S** | **Alt+S** | Toggle exclude search ignored | Popup open |
+| **Control+Return** | **Ctrl+Enter** | Autofill file path | Files or Everything tab |
+
+On macOS, **Option** is **⌥** and **Control** is **⌃**. The popup's shortcut hints
+use the platform's modifier names.
 
 Keymap extensions can claim the same shortcuts. If **Shift+F12** performs another
 action, add this override to **Preferences: Open Keyboard Shortcuts (JSON)**:
@@ -229,7 +233,8 @@ for how user overrides take precedence.
 
 ## Commands
 
-These commands are available from the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+These commands are available from the command palette: **Cmd+Shift+P** on macOS
+or **Ctrl+Shift+P** on Windows/Linux.
 
 **Search**
 
@@ -292,14 +297,15 @@ Nested `.searchignore` files are supported. Patterns are scoped to the directory
 containing the file, just like `.gitignore`. Changes reload the rules and rebuild
 the index automatically; a manual reindex is unnecessary.
 
-Toggle this filter on or off with **Alt+S** while the search popup is open.
+Toggle this filter on or off with **Option+S** on macOS or **Alt+S** on
+Windows/Linux while the search popup is open.
 
 ### How Exclusions Layer
 
 Exclusions are applied additively from three sources:
 
-1. **Git ignored** -- `.gitignore` rules (toggled with **Alt+G**)
-2. **Search ignored** -- `.searchignore` rules (toggled with **Alt+S**)
+1. **Git ignored** -- `.gitignore` rules (**Option+G** on macOS, **Alt+G** on Windows/Linux)
+2. **Search ignored** -- `.searchignore` rules (**Option+S** on macOS, **Alt+S** on Windows/Linux)
 3. **Custom patterns** -- `searchPlusPlus.excludePaths` (always applied)
 
 Rules apply within each workspace root. Git's internal metadata is excluded from

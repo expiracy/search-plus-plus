@@ -56,12 +56,45 @@ afterEach(() => {
   modal.dispose();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 function type(value: string) {
   picker.value = value;
   input.fire(value);
 }
+
+test('macOS search controls and empty-result hints show Option shortcuts', () => {
+  vi.stubGlobal('process', { ...process, platform: 'darwin' });
+  modal.show(SearchMode.File);
+  expect(picker.buttons.slice(7).map((item: any) => item.tooltip)).toEqual([
+    'Exclude Git Ignored (Option+G)',
+    'Exclude Search Ignored (Option+S)',
+    'Case Sensitive (Option+C)',
+    'Regex (Option+R)',
+    'Match Whole Word (Option+W)',
+    'Fuzzy Search (Option+F)',
+  ]);
+  type('missing');
+  requests[0].publish([]);
+  expect(picker.items[0].description).toContain('gitignore (Option+G), search-ignore (Option+S)');
+});
+
+test('Windows search controls and empty-result hints show Alt shortcuts', () => {
+  vi.stubGlobal('process', { ...process, platform: 'win32' });
+  modal.show(SearchMode.File);
+  expect(picker.buttons.slice(7).map((item: any) => item.tooltip)).toEqual([
+    'Exclude Git Ignored (Alt+G)',
+    'Exclude Search Ignored (Alt+S)',
+    'Case Sensitive (Alt+C)',
+    'Regex (Alt+R)',
+    'Match Whole Word (Alt+W)',
+    'Fuzzy Search (Alt+F)',
+  ]);
+  type('missing');
+  requests[0].publish([]);
+  expect(picker.items[0].description).toContain('gitignore (Alt+G), search-ignore (Alt+S)');
+});
 
 test('the modal dispatches through the supplied search providers', () => {
   modal.show(SearchMode.File);

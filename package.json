@@ -2,10 +2,10 @@
   "name": "search-plus-plus",
   "displayName": "search++",
   "description": "Unified popup search for files, folders, text, symbols, usages and commands. Inspired by JetBrains IDEs.",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "private": true,
   "publisher": "expiracy",
-  "icon": "icon.png",
+  "icon": "media/logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/expiracy/search-plus-plus"

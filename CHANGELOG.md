@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.2 — 2026-10-22
+
+### Fixed
+
+- The Marketplace listing and extension now use the new search++ logo.
+- Shortcut hints show Option on macOS and Alt on Windows/Linux. The Marketplace
+  documentation lists each platform's shortcuts separately.
+
 ## 3.0.1 — 2026-10-21
 
 ### Documentation
