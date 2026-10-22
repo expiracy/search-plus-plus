@@ -1,0 +1,125 @@
+:root {
+  --bg: #0d1117;
+  --text: #e6e9ef;
+  --muted: #9aa4b2;
+  --line: #222a36;
+  --blue: #4fc3f7;
+  --button: #1e88e5;
+  --sans: "Roboto", system-ui, sans-serif;
+  --mono: "Roboto Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.65 var(--sans);
+}
+
+img { display: block; max-width: 100%; height: auto; }
+a { color: var(--blue); }
+a:hover { text-decoration: none; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+h1, h2 { letter-spacing: -0.01em; margin: 0 0 1rem; }
+h1 { font-size: clamp(1.9rem, 7vw, 3.5rem); font-weight: 700; line-height: 1.15; max-width: 15em; }
+h2 { font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; line-height: 1.2; }
+p { margin: 0 0 1rem; }
+em { font-style: normal; color: #fff; }
+
+code, kbd { font-family: var(--mono); font-size: 0.85em; }
+kbd {
+  padding: 0.05em 0.4em;
+  border: 1px solid #3a4454;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.wrap { width: min(1080px, 100% - 32px); margin-inline: auto; }
+.narrow { max-width: 680px; }
+
+.top { border-bottom: 1px solid var(--line); }
+.top-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+.brand { display: flex; align-items: center; gap: 0.55rem; font-weight: 700; font-size: 1.1rem; color: var(--text); text-decoration: none; }
+.top nav { display: flex; gap: 1.5rem; font-size: 0.95rem; }
+.top nav a { color: var(--muted); text-decoration: none; }
+.top nav a:hover { color: var(--text); }
+
+section { padding: clamp(3.5rem, 8vw, 5.5rem) 0; }
+section + section { border-top: 1px solid var(--line); }
+
+.hero { padding-top: clamp(3rem, 9vw, 6rem); }
+.lede { font-size: clamp(1.1rem, 2.2vw, 1.3rem); color: var(--muted); max-width: 36em; margin-bottom: 2rem; }
+.install { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.75rem; margin-bottom: 1rem; }
+.button {
+  display: inline-block;
+  padding: 0.7rem 1.2rem;
+  font-weight: 500;
+  color: #fff;
+  background: var(--button);
+  border-radius: 6px;
+  text-decoration: none;
+}
+.button:hover { background: #1976d2; }
+.cmd { display: flex; min-width: 0; max-width: 100%; border: 1px solid #2f3846; border-radius: 6px; overflow: hidden; }
+.cmd code { flex: 1; min-width: 0; padding: 0.7rem 1rem; color: var(--text); }
+.cmd code span { white-space: nowrap; }
+.copy-button { padding: 0 1rem; min-width: 5.5rem; font: 500 0.875rem var(--sans); color: var(--text); background: #161c26; border: 0; border-left: 1px solid #2f3846; cursor: pointer; }
+.copy-button:hover { background: #1d2532; }
+.small { font-size: 0.9rem; color: var(--muted); }
+
+.shot { width: 100%; border: 1px solid var(--line); border-radius: 10px; }
+.zoom { display: block; cursor: zoom-in; }
+.demo { margin-top: 3rem; }
+
+.narrow p { color: var(--muted); }
+
+/* One scrollable row on narrow screens instead of wrapping. */
+.tabs {
+  position: relative;
+  display: flex;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  box-shadow: inset 0 -1px var(--line);
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button {
+  flex: none;
+  padding: 0.6rem 0;
+  font: 500 0.95rem var(--sans);
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.tabs button:hover { color: var(--text); }
+.tabs button[aria-selected="true"] { color: #fff; border-bottom-color: var(--blue); }
+.intro, .panel p { color: var(--muted); max-width: 40em; }
+.panel[hidden] { display: none; }
+
+
+.foot { display: flex; justify-content: space-between; padding: 2rem 0 2.5rem; border-top: 1px solid var(--line); font-size: 0.875rem; color: var(--muted); }
+.foot a { color: var(--muted); }
+
+@media (max-width: 520px) {
+  body { font-size: 16px; }
+  .install { flex-direction: column; }
+  .button { text-align: center; }
+  .tabs { gap: 1.25rem; margin-inline: -16px; padding-inline: 16px; }
+  .demo { margin-top: 2rem; }
+}
+
+@media (max-width: 360px) {
+  .top nav { gap: 1rem; font-size: 0.875rem; }
+  .cmd code { padding-inline: 0.75rem; overflow-wrap: anywhere; }
+  .cmd code span { white-space: normal; }
+  .copy-button { min-width: 4.5rem; padding: 0 0.75rem; }
+}

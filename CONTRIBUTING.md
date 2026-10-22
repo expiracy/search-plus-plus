@@ -63,6 +63,16 @@ To publish a release:
 Each release needs a new version. Reusing a published version causes the publish
 step to fail.
 
+## Project Website
+
+The GitHub Pages site lives in `site/`. `npm run build:site` assembles it in
+`_site/` with the images from `media/` and the version from `package.json`;
+serve that folder locally to preview it. The **Deploy GitHub Pages** workflow
+rebuilds and publishes the site when `master` changes the site, its images, or the
+package version. To deploy at any other time, open the workflow on the **Actions**
+page and choose **Run workflow**. The repository's Pages source must be set to
+**GitHub Actions**.
+
 The workflows pin action commits and use a cached, locked npm install. The install
 step receives the read-only GitHub job token so ripgrep binary downloads avoid
 anonymous API rate limits. Publishing credentials must retain Marketplace
