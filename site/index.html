@@ -43,6 +43,10 @@
           search++ brings it to VS Code. Press <kbd>Shift</kbd> <kbd>Shift</kbd>
           and type to find files, folders, text, symbols, usages, and commands.
         </p>
+        <p class="stats" hidden>
+          <a class="rating" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus&amp;ssr=false#review-details"></a>
+          <span class="installs"></span>
+        </p>
         <div class="install">
           <a class="button" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Install from the Marketplace</a>
           <div class="cmd">
@@ -194,6 +198,37 @@
       }
       setTimeout(() => { copy.textContent = 'Copy'; }, 1600);
     });
+
+    // Live install count and rating from the Marketplace. The line stays hidden if the request fails.
+    (async () => {
+      try {
+        const response = await fetch('https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json;api-version=7.2-preview.1' },
+          body: JSON.stringify({ filters: [{ criteria: [{ filterType: 7, value: 'expiracy.search-plus-plus' }] }], flags: 256 }),
+        });
+        const extension = (await response.json()).results[0].extensions[0];
+        const stat = (name) => extension.statistics.find((s) => s.statisticName === name)?.value ?? 0;
+        const stats = document.querySelector('.stats');
+        const installs = stat('install');
+        const ratings = stat('ratingcount');
+        stats.querySelector('.installs').textContent =
+          `${new Intl.NumberFormat('en', { notation: 'compact' }).format(installs)} ${installs === 1 ? 'install' : 'installs'}`;
+        const rating = stats.querySelector('.rating');
+        if (ratings > 0) {
+          const star = document.createElement('span');
+          star.className = 'star';
+          star.ariaHidden = 'true';
+          star.textContent = '★';
+          rating.replaceChildren(star, ` ${stat('averagerating').toFixed(1)} from ${ratings} ${ratings === 1 ? 'rating' : 'ratings'}`);
+        } else {
+          rating.remove();
+        }
+        stats.hidden = false;
+      } catch {
+        // Leave the stats hidden; the rest of the page does not depend on them.
+      }
+    })();
 
     for (const tablist of document.querySelectorAll('[role="tablist"]')) {
       const tabs = [...tablist.querySelectorAll('[role="tab"]')];
