@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>search++ for VS Code</title>
+  <meta name="description" content="Search Everywhere for VS Code. Press Shift twice to search files, folders, text, symbols, usages, and commands from one popup.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0d1117">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="search++ for VS Code">
+  <meta property="og:description" content="Search everything in VS Code from one popup. Press Shift twice.">
+  <meta property="og:url" content="https://expiracy.github.io/search-plus-plus/">
+  <meta property="og:image" content="https://expiracy.github.io/search-plus-plus/media/banner.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="media/logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="media/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="./">
+        <img src="media/logo.svg" alt="" width="26" height="26">
+        search++
+      </a>
+      <nav aria-label="Project links">
+        <a href="https://github.com/expiracy/search-plus-plus">GitHub</a>
+        <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Marketplace</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <h1>Search everything in VS&nbsp;Code from one popup.</h1>
+        <p class="lede">
+          Miss <em>Search Everywhere</em> from IntelliJ, WebStorm, or PyCharm?
+          search++ brings it to VS Code. Press <kbd>Shift</kbd> <kbd>Shift</kbd>
+          and type to find files, folders, text, symbols, usages, and commands.
+        </p>
+        <div class="install">
+          <a class="button" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Install from the Marketplace</a>
+          <div class="cmd">
+            <code id="install-cmd"><span>code --install-extension</span> <span>expiracy.search-plus-plus</span></code>
+            <button type="button" class="copy-button" aria-label="Copy install command">Copy</button>
+          </div>
+        </div>
+        <p class="small">
+          Version {{version}}. Works on macOS, Windows, and Linux with VS Code 1.96 or later.
+          <a href="https://github.com/expiracy/search-plus-plus">Source on GitHub</a>
+        </p>
+        <a class="zoom" href="media/demo.gif"><img class="shot demo" src="media/demo.gif" width="1200" height="808"
+             alt="search++ demo: searching everything, files with a line number, text with previews, symbols, usages, and commands"></a>
+      </div>
+    </section>
+
+    <section class="modes">
+      <div class="wrap">
+        <h2>Search modes</h2>
+        <p class="intro">Click a mode or press <kbd>Tab</kbd> to switch. Your query stays in the search box.</p>
+        <div class="tabs" role="tablist" aria-label="Search modes">
+          <button role="tab" id="tab-everything" aria-controls="panel-everything" aria-selected="true">Everything</button>
+          <button role="tab" id="tab-files" aria-controls="panel-files" aria-selected="false" tabindex="-1">Files</button>
+          <button role="tab" id="tab-folders" aria-controls="panel-folders" aria-selected="false" tabindex="-1">Folders</button>
+          <button role="tab" id="tab-text" aria-controls="panel-text" aria-selected="false" tabindex="-1">Text</button>
+          <button role="tab" id="tab-symbols" aria-controls="panel-symbols" aria-selected="false" tabindex="-1">Symbols</button>
+          <button role="tab" id="tab-usages" aria-controls="panel-usages" aria-selected="false" tabindex="-1">Usages</button>
+          <button role="tab" id="tab-commands" aria-controls="panel-commands" aria-selected="false" tabindex="-1">Commands</button>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-everything" aria-labelledby="tab-everything">
+          <p>Files, folders, text, symbols, and commands, shown in grouped sections.</p>
+          <a class="zoom" href="media/everywhere.png"><img class="shot" src="media/everywhere.png" width="1445" height="818" alt="Everything tab showing grouped file, text, and symbol results for 'preview'"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-files" aria-labelledby="tab-files" hidden>
+          <p>File names and paths across your workspace. Add <code>:42</code> or <code>:42:5</code> to open a file at a line and column.</p>
+          <a class="zoom" href="media/files.png"><img class="shot" src="media/files.png" width="1445" height="280" loading="lazy" alt="Files tab matching searchModal.ts for the query 'modal'"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-folders" aria-labelledby="tab-folders" hidden>
+          <p>Folders in your workspace. Pick one to reveal it in the Explorer.</p>
+          <a class="zoom" href="media/folders.png"><img class="shot" src="media/folders.png" width="1445" height="698" loading="lazy" alt="Folders tab listing matching workspace folders"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-text" aria-labelledby="tab-text" hidden>
+          <p>Text across every file, with the matching line shown under each result. Supports regex, case, and whole-word matching.</p>
+          <a class="zoom" href="media/text.png"><img class="shot" src="media/text.png" width="1445" height="818" loading="lazy" alt="Text tab showing matches with line previews"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-symbols" aria-labelledby="tab-symbols" hidden>
+          <p>Classes, functions, and variables from your installed language extensions.</p>
+          <a class="zoom" href="media/symbols.png"><img class="shot" src="media/symbols.png" width="1445" height="818" loading="lazy" alt="Symbols tab listing classes, methods, and variables"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-usages" aria-labelledby="tab-usages" hidden>
+          <p>Select a symbol to list its references. Type over the name to filter by text or file.</p>
+          <a class="zoom" href="media/usages.png"><img class="shot" src="media/usages.png" width="1445" height="818" loading="lazy" alt="Usages tab listing references to a selected symbol"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-commands" aria-labelledby="tab-commands" hidden>
+          <p>All VS Code commands, built in and from extensions.</p>
+          <a class="zoom" href="media/commands.png"><img class="shot" src="media/commands.png" width="1445" height="818" loading="lazy" alt="Commands tab listing VS Code commands"></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="more">
+      <div class="wrap">
+        <h2>Key features</h2>
+        <div class="tabs" role="tablist" aria-label="Key features">
+          <button role="tab" id="tab-preview" aria-controls="panel-preview" aria-selected="true">Preview results</button>
+          <button role="tab" id="tab-find-usages" aria-controls="panel-find-usages" aria-selected="false" tabindex="-1">Find usages</button>
+          <button role="tab" id="tab-go-to-line" aria-controls="panel-go-to-line" aria-selected="false" tabindex="-1">Go to line</button>
+          <button role="tab" id="tab-fuzzy" aria-controls="panel-fuzzy" aria-selected="false" tabindex="-1">Fuzzy search</button>
+          <button role="tab" id="tab-ignored" aria-controls="panel-ignored" aria-selected="false" tabindex="-1">Ignored files</button>
+        </div>
+
+        <div class="panel" role="tabpanel" id="panel-preview" aria-labelledby="tab-preview">
+          <p>
+            Press <kbd>→</kbd> on a result to show it in the editor while the popup
+            stays open. The editor scrolls to the matching line. Previews reuse one
+            editor tab, and <kbd>Enter</kbd> opens the result normally.
+          </p>
+          <a class="zoom" href="media/preview.png"><img class="shot" src="media/preview.png" width="1600" height="1000" loading="lazy" alt="Previewing a text match: the editor shows the matched line while the popup stays open"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-find-usages" aria-labelledby="tab-find-usages" hidden>
+          <p>
+            References come from VS Code's language providers, so they are semantic
+            references rather than text matches. Type over the symbol name to filter
+            the list by text or file name.
+          </p>
+          <a class="zoom" href="media/usages-filter.png"><img class="shot" src="media/usages-filter.png" width="1445" height="818" loading="lazy" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-go-to-line" aria-labelledby="tab-go-to-line" hidden>
+          <p>
+            Add <code>:line</code> or <code>:line:column</code> after a file name to
+            open the file at that position. Absolute paths to files outside the
+            workspace also work.
+          </p>
+          <a class="zoom" href="media/go-to-line.png"><img class="shot" src="media/go-to-line.png" width="1600" height="1000" loading="lazy" alt="Typing modal:222 in Files mode and previewing line 222 of searchModal.ts"></a>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-fuzzy" aria-labelledby="tab-fuzzy" hidden>
+          <p>
+            Press <kbd>Alt</kbd>+<kbd>F</kbd> (<kbd>⌥</kbd>+<kbd>F</kbd> on Mac) or click
+            the sparkle button to turn on fuzzy matching for files, folders, symbols,
+            usages, and commands. A result matches when the letters you type appear in
+            its name or path in order, so a few characters are enough to find a long
+            path. Case-sensitive and whole-word toggles sit next to it, plus regex for
+            text search.
+          </p>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-ignored" aria-labelledby="tab-ignored" hidden>
+          <p>
+            Files matched by <code>.gitignore</code> are excluded by default, and a
+            <code>.searchignore</code> file can exclude more. File search uses an
+            in-memory index with <a href="https://github.com/junegunn/fzf">fzf</a>
+            matching. Text search uses <a href="https://github.com/BurntSushi/ripgrep">ripgrep</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="end">
+      <div class="wrap"><div class="narrow">
+        <h2>Documentation and feedback</h2>
+        <p>
+          The <a href="https://github.com/expiracy/search-plus-plus#readme">README on GitHub</a>
+          lists every shortcut, command, and setting.
+        </p>
+        <p>
+          Report bugs and request features in
+          <a href="https://github.com/expiracy/search-plus-plus/issues">GitHub issues</a>.
+          Pull requests are welcome.
+        </p>
+      </div></div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <span>search++ {{version}}</span>
+    <a href="https://github.com/expiracy/search-plus-plus/blob/master/CHANGELOG.md">Changelog</a>
+  </footer>
+
+  <script>
+    const copy = document.querySelector('.copy-button');
+    copy.addEventListener('click', async () => {
+      const command = document.getElementById('install-cmd');
+      try {
+        await navigator.clipboard.writeText(command.textContent);
+        copy.textContent = 'Copied';
+      } catch {
+        getSelection().selectAllChildren(command);
+        copy.textContent = 'Press Ctrl+C';
+      }
+      setTimeout(() => { copy.textContent = 'Copy'; }, 1600);
+    });
+
+    for (const tablist of document.querySelectorAll('[role="tablist"]')) {
+      const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+      const select = (tab, focus) => {
+        for (const t of tabs) {
+          const on = t === tab;
+          t.setAttribute('aria-selected', String(on));
+          t.tabIndex = on ? 0 : -1;
+          document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+        }
+        // Keep the selected tab visible when the row scrolls on narrow screens.
+        const left = tab.offsetLeft;
+        if (left < tablist.scrollLeft || left + tab.offsetWidth > tablist.scrollLeft + tablist.clientWidth) {
+          tablist.scrollLeft = left - 16;
+        }
+        if (focus) tab.focus({ preventScroll: true });
+      };
+      for (const tab of tabs) {
+        tab.addEventListener('click', () => select(tab, false));
+        tab.addEventListener('keydown', (e) => {
+          const i = tabs.indexOf(tab);
+          const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+          if (next === undefined) return;
+          e.preventDefault();
+          select(tabs[(next + tabs.length) % tabs.length], true);
+        });
+      }
+    }
+  </script>
+</body>
+</html>
