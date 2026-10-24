@@ -133,6 +133,17 @@ test('accepting file:line:column retains the target after the picker hides', asy
   });
 });
 
+test('accepting a text result reveals the matching line at the top of the editor', async () => {
+  const revealRange = vi.fn();
+  vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue({ revealRange } as any);
+  modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
+  const result = { label: 'needle', mode: SearchMode.Text, uri: vscode.Uri.file('/workspace/a.ts'), lineNumber: 100, column: 3 };
+  requests[0].publish([result]); picker.selectedItems = [result] as any;
+  accept.fire(); await vi.runAllTimersAsync();
+  const position = new vscode.Position(100, 3);
+  expect(revealRange).toHaveBeenCalledWith(new vscode.Selection(position, position), vscode.TextEditorRevealType.AtTop);
+});
+
 test('a late absolute path lookup cannot replace a newer query', async () => {
   let finish!: (stat: { type: number }) => void;
   vi.spyOn(vscode.workspace.fs, 'stat').mockImplementation(() => new Promise(resolve => { finish = resolve; }));
@@ -236,6 +247,19 @@ test('Go to File opens a positioned result in the current group with one operati
     ['vscode.open', uri, { selection: new vscode.Selection(position, position) }],
   ]);
   expect(open).not.toHaveBeenCalled();
+});
+
+test('Go to File reveals a text match at the top of the opened editor', async () => {
+  const uri = vscode.Uri.file('/workspace/a.ts');
+  const revealRange = vi.fn();
+  vscode.window.activeTextEditor = { document: { uri }, revealRange } as any;
+  modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
+  requests[0].publish([{ label: 'needle', mode: SearchMode.Text, uri, lineNumber: 100, column: 3 }]);
+  const item: any = picker.items[0];
+  itemButton.fire({ item, button: item.buttons.find((button: any) => button.tooltip === 'Go to File') });
+  await vi.runAllTimersAsync();
+  const position = new vscode.Position(100, 3);
+  expect(revealRange).toHaveBeenCalledWith(new vscode.Selection(position, position), vscode.TextEditorRevealType.AtTop);
 });
 
 test('Go to File retains the typed line and column after hiding', async () => {

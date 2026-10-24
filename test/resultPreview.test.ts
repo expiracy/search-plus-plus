@@ -180,11 +180,11 @@ test('closing and reopening a file manually does not restore preview ownership',
   expect(close).not.toHaveBeenCalledWith(reopened, expect.anything());
 });
 
-test('a matched line is always centered in the preview editor', async () => {
+test('a matched line is placed at the top of the preview editor', async () => {
   const uri = vscode.Uri.file('/workspace/a.ts');
   const selection = new vscode.Range(new vscode.Position(100, 3), new vscode.Position(100, 3));
   const revealRange = vi.fn();
   vscode.window.visibleTextEditors = [{ document: { uri }, viewColumn: 1, revealRange }];
   await new ResultPreview().show(uri as any, selection as any);
-  expect(revealRange).toHaveBeenCalledWith(selection, vscode.TextEditorRevealType.InCenter);
+  expect(revealRange).toHaveBeenCalledWith(selection, vscode.TextEditorRevealType.AtTop);
 });

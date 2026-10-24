@@ -242,7 +242,7 @@ export const window = {
   visibleTextEditors: [] as any[],
   tabGroups: { all: [defaultTabGroup], activeTabGroup: defaultTabGroup, onDidChangeTabs: (_listener: (event: any) => void) => ({ dispose() {} }), close: async (..._args: any[]) => true },
   activeTextEditor: undefined,
-  showTextDocument: async () => ({}),
+  showTextDocument: async () => ({ revealRange: (_range: Range, _revealType: number) => {} }),
   createQuickPick: () => ({
     onDidChangeValue: () => ({ dispose() {} }),
     onDidAccept: () => ({ dispose() {} }),

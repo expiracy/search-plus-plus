@@ -711,13 +711,13 @@ export class SearchModal implements vscode.Disposable {
         () => {
           if (line !== undefined && !uri.fsPath.endsWith('.ipynb')) {
             const pos = new vscode.Position(line, col);
-            vscode.window.showTextDocument(uri, {
-              selection: new vscode.Selection(pos, pos),
+            const selection = new vscode.Selection(pos, pos);
+            return vscode.window.showTextDocument(uri, { selection }).then(editor => {
+              editor.revealRange(selection, vscode.TextEditorRevealType.AtTop);
             });
           }
         },
-        () => {},
-      );
+      ).then(undefined, () => {});
     });
   }
 
@@ -771,11 +771,18 @@ export class SearchModal implements vscode.Disposable {
       const column = item.column ?? Math.max(0, (this.gotoColumn ?? 1) - 1);
       const position = line !== undefined && !uri.fsPath.endsWith('.ipynb')
         ? new vscode.Position(line, column) : undefined;
+      const selection = position && new vscode.Selection(position, position);
       qp.hide();
 
       this.preview.finish(uri).then(() => vscode.commands.executeCommand('vscode.open', uri, {
-        ...(position ? { selection: new vscode.Selection(position, position) } : {}),
-      })).then(() => this.history.addOpened(uri, line, column)).then(undefined, () => {});
+        ...(selection ? { selection } : {}),
+      })).then(() => {
+        const editor = vscode.window.activeTextEditor;
+        if (selection && editor?.document.uri.toString() === uri.toString()) {
+          editor.revealRange(selection, vscode.TextEditorRevealType.AtTop);
+        }
+        return this.history.addOpened(uri, line, column);
+      }).then(undefined, () => {});
     });
   }
 

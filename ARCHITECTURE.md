@@ -79,7 +79,7 @@ with a link to the individual tab when more results are available.
 
 Right Arrow previews the active resource through `ResultPreview`, preserving
 QuickPick focus and the match position. The matching text editor reveals the
-selected range with `TextEditorRevealType.InCenter`, including when that range
+selected range with `TextEditorRevealType.AtTop`, including when that range
 is already visible. The controller tracks only tabs created
 by preview requests. It replaces its previous clean tab before opening another,
 so tab reuse works with VS Code preview editors enabled or disabled. Existing
@@ -90,6 +90,8 @@ Preview requests run serially and skip queued work superseded by a newer request
 Closing the popup cancels queued previews. Accepting a result waits for an
 in-flight preview to settle before opening the final selection, preventing an old
 preview from replacing the accepted file. Preview errors leave the popup open.
+Accepting a positioned result or using Go to File also reveals the matched line
+at the top of the text editor after opening it.
 
 ## Workspace discovery and exclusions
 

@@ -88,7 +88,7 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown and clear navigation, mode commands, reusable preview tab and centered matches with both preview settings, Go to File opens positioned results without splitting the editor, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown and clear navigation, mode commands, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
 }
@@ -151,12 +151,16 @@ async function verifyResultPreview(root: vscode.Uri): Promise<void> {
         assert.ok([...baseline].every(id => tabs().some(tab => key(tab) === id)), 'existing user tabs are preserved');
         await Promise.all([preview.show(first), preview.show(second), preview.show(first)]);
         assert.equal(tabs().length, baseline.size + 1, 'rapid previews still use one extra tab');
-        await verifyCenteredLine(preview, longFile, 200);
+        const showLine = (line: number) => {
+          const position = new vscode.Position(line, 3);
+          return preview.show(longFile, new vscode.Selection(position, position));
+        };
+        await verifyLineAtTop(longFile, 200, () => showLine(200));
         const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === longFile.toString())!;
-        const nearTop = editor.visibleRanges[0].start.line + 2;
-        assert.ok(Math.abs(nearTop - 200) > 2, 'second target is already visible but away from the center');
-        await verifyCenteredLine(preview, longFile, nearTop);
-        assert.equal(tabs().length, baseline.size + 1, 'centering also reuses the preview tab');
+        const alreadyVisible = editor.visibleRanges[0].start.line + 2;
+        assert.ok(alreadyVisible <= editor.visibleRanges[0].end.line, 'second target is already visible below the top');
+        await verifyLineAtTop(longFile, alreadyVisible, () => showLine(alreadyVisible));
+        assert.equal(tabs().length, baseline.size + 1, 'scrolling to the top also reuses the preview tab');
         await preview.show(baselineUri);
         assert.equal(tabs().length, baseline.size, 'existing files reuse their current tabs');
         assert.equal(hidden, false, 'the search popup keeps focus during preview');
@@ -169,66 +173,82 @@ async function verifyResultPreview(root: vscode.Uri): Promise<void> {
   } finally { await config.update('enablePreview', previous, vscode.ConfigurationTarget.Workspace); }
 }
 
-async function verifyCenteredLine(preview: ResultPreview, uri: vscode.Uri, line: number): Promise<void> {
+async function verifyLineAtTop(uri: vscode.Uri, line: number, navigate: () => Promise<unknown>): Promise<void> {
+  const config = vscode.workspace.getConfiguration('editor', uri);
+  // AtTop still reserves the editor's sticky-header and cursor context margin.
+  const stickyMargin = config.get<boolean>('stickyScroll.enabled', false) ? config.get<number>('stickyScroll.maxLineCount', 5) : 0;
+  const topMargin = Math.max(config.get<number>('cursorSurroundingLines', 0), stickyMargin);
+  const expectedStart = Math.max(0, line - topMargin);
   let check!: () => void;
   let timer: ReturnType<typeof setTimeout>;
-  const centered = new Promise<void>((resolve, reject) => {
+  const atTop = new Promise<void>((resolve, reject) => {
     check = () => {
       const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === uri.toString());
       const range = editor?.visibleRanges[0];
-      if (range && Math.abs((range.start.line + range.end.line) / 2 - line) <= 2) resolve();
+      if (range?.start.line === expectedStart) resolve();
     };
     timer = setTimeout(() => {
       const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === uri.toString());
       const range = editor?.visibleRanges[0];
-      reject(new Error(`Preview line ${line} was not centered; visible lines: ${range?.start.line}-${range?.end.line}`));
+      reject(new Error(`Match line ${line} was not at the top with ${topMargin} context lines; visible lines: ${range?.start.line}-${range?.end.line}`));
     }, 5000);
   });
   const listener = vscode.window.onDidChangeTextEditorVisibleRanges(check);
-  const position = new vscode.Position(line, 3);
-  try { await Promise.all([centered, preview.show(uri, new vscode.Selection(position, position)).then(check)]); }
+  try { await Promise.all([atTop, navigate().then(check)]); }
   finally { clearTimeout(timer!); listener.dispose(); }
 }
 
 async function verifyRowNavigation(root: vscode.Uri): Promise<void> {
   const target = vscode.Uri.joinPath(root, 'row-navigation.txt');
-  await vscode.workspace.fs.writeFile(target, Buffer.from(Array.from({ length: 100 }, (_, index) => `Line ${index + 1}`).join('\n')));
-  const picker = vscode.window.createQuickPick<SearchResult>();
-  const actions = new vscode.EventEmitter<vscode.QuickPickItemButtonEvent<SearchResult>>();
-  // Inject the action event while retaining the real native picker and editor APIs.
-  const controlledPicker = new Proxy(picker, {
-    get(target, property) {
-      if (property === 'onDidTriggerItemButton') return actions.event;
-      const value = Reflect.get(target, property, target);
-      return typeof value === 'function' ? value.bind(target) : value;
-    },
-    set: (target, property, value) => Reflect.set(target, property, value, target),
-  });
-  const result: SearchResult = { label: 'row-navigation.txt', mode: SearchMode.File, uri: target };
-  const searched = new vscode.EventEmitter<void>();
-  const provider: SearchProvider = { mode: SearchMode.File, search(_query, _options, publish) {
-    publish([result]); searched.fire(); return { dispose() {} };
-  } };
-  const baselineGroups = new Set(vscode.window.tabGroups.all.map(group => group.viewColumn));
-  const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
-    { getRecentItems: () => [], addOpened: async () => {} } as any, new Map([[SearchMode.File, provider]]), () => controlledPicker);
-  try {
-    modal.show(SearchMode.File);
-    const ready = nextEvent(searched.event, () => true);
-    picker.value = 'row-navigation.txt:42:5';
-    await ready;
-    const opened = nextEvent(vscode.window.onDidChangeTextEditorSelection, event =>
-      event.textEditor.document.uri.toString() === target.toString()
-      && event.selections[0].active.isEqual(new vscode.Position(41, 4)));
-    const item = picker.items[0];
-    actions.fire({ item, button: item.buttons!.find(button => button.tooltip === 'Go to File')! });
-    await opened;
-    assert.equal(vscode.window.tabGroups.all.length, baselineGroups.size, 'Go to File does not split the editor');
-    assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), target.toString());
-    assert.ok(vscode.window.activeTextEditor?.selection.active.isEqual(new vscode.Position(41, 4)), 'Go to File preserves typed line and column');
-  } finally {
-    modal.dispose(); actions.dispose(); searched.dispose();
-    await vscode.window.tabGroups.close(vscode.window.tabGroups.all.filter(group => !baselineGroups.has(group.viewColumn)), true);
+  await vscode.workspace.fs.writeFile(target, Buffer.from(Array.from({ length: 400 }, (_, index) => `Line ${index + 1}`).join('\n')));
+  for (const useButton of [true, false]) {
+    const picker = vscode.window.createQuickPick<SearchResult>();
+    const actions = new vscode.EventEmitter<vscode.QuickPickItemButtonEvent<SearchResult>>();
+    const accept = new vscode.EventEmitter<void>();
+    // Inject the action event while retaining the real native picker and editor APIs.
+    const controlledPicker = new Proxy(picker, {
+      get(target, property) {
+        if (property === 'onDidTriggerItemButton') return actions.event;
+        if (property === 'onDidAccept') return accept.event;
+        if (property === 'selectedItems') return picker.items.slice(0, 1);
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+      set: (target, property, value) => Reflect.set(target, property, value, target),
+    });
+    const mode = useButton ? SearchMode.File : SearchMode.Text;
+    const position = useButton ? new vscode.Position(41, 4) : new vscode.Position(200, 3);
+    const result: SearchResult = { label: 'row-navigation.txt', mode, uri: target,
+      ...(!useButton ? { lineNumber: position.line, column: position.character } : {}),
+    };
+    const searched = new vscode.EventEmitter<void>();
+    const provider: SearchProvider = { mode, search(_query, _options, publish) {
+      publish([result]); searched.fire(); return { dispose() {} };
+    } };
+    const baselineGroups = new Set(vscode.window.tabGroups.all.map(group => group.viewColumn));
+    const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
+      { getRecentItems: () => [], addOpened: async () => {} } as any, new Map([[mode, provider]]), () => controlledPicker);
+    try {
+      modal.show(mode);
+      const ready = nextEvent(searched.event, () => true);
+      picker.value = useButton ? 'row-navigation.txt:42:5' : 'Line 201';
+      await ready;
+      const opened = nextEvent(vscode.window.onDidChangeTextEditorSelection, event =>
+        event.textEditor.document.uri.toString() === target.toString()
+        && event.selections[0].active.isEqual(position));
+      const item = picker.items[0];
+      await verifyLineAtTop(target, position.line, async () => {
+        if (useButton) actions.fire({ item, button: item.buttons!.find(button => button.tooltip === 'Go to File')! });
+        else accept.fire();
+        await opened;
+      });
+      assert.equal(vscode.window.tabGroups.all.length, baselineGroups.size, 'navigation does not split the editor');
+      assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), target.toString());
+      assert.ok(vscode.window.activeTextEditor?.selection.active.isEqual(position), 'navigation preserves the matching line and column');
+    } finally {
+      modal.dispose(); actions.dispose(); accept.dispose(); searched.dispose();
+      await vscode.window.tabGroups.close(vscode.window.tabGroups.all.filter(group => !baselineGroups.has(group.viewColumn)), true);
+    }
   }
 }
 

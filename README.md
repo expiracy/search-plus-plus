@@ -33,7 +33,8 @@
 - **Everything at a glance.** The Everything tab groups the best matches from each
   source, so you can find a file, a line of text, or a command from one place.
 - **Browse results without leaving the popup.** Press **Right Arrow** to preview a
-  result in a reusable editor tab. The matched line is centered, and the popup keeps focus.
+  result in a reusable editor tab. The matched line appears at the top, and the
+  popup keeps focus.
 - **Find usages in the same popup.** Pick a symbol and press **Shift+F12** to list
   its references. Type over the name to filter them by text or path.
 - **Fast on large workspaces.** File search uses an in-memory index with fzf
@@ -116,12 +117,12 @@ references.
 
 Press **Right Arrow** on a file, text, symbol, or usage result to preview its file
 while the popup keeps focus. Text matches jump to their line and column, with the
-matched line centered in the editor where scrolling permits. Use the arrow keys
-to select another result and **Right Arrow** to preview it in the same additional
-editor tab, including when VS Code's preview tabs are disabled.
+matched line at the top of the editor viewport where scrolling permits. Use the
+arrow keys to select another result and **Right Arrow** to preview it in the same
+additional editor tab, including when VS Code's preview tabs are disabled.
 Existing tabs are reused. Files you edit, pin, or keep open are preserved.
-Press **Enter** to open the selected result normally. Folders, commands, and
-informational rows have no file preview.
+Press **Enter** to open the selected result with its matching line at the top.
+Folders, commands, and informational rows have no file preview.
 
 ![Previewing a text match: the editor shows the matched line while the popup stays open](media/preview.png)
 
@@ -147,8 +148,9 @@ interpreted as navigation.
 
 Click the **Go to File** button on a file, text, symbol, usage, or recent-history
 row to open its file in the current editor group. Matches retain their line and
-column, including a location typed as `file:line:column`. Confirmed opens are
-added to recent history.
+column, including a location typed as `file:line:column`, and show the matching
+line at the top of the editor viewport where scrolling permits. Confirmed opens
+are added to recent history.
 
 ### Search Options
 

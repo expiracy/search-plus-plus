@@ -70,7 +70,7 @@ export class ResultPreview implements vscode.Disposable {
     if (selection && version === this.version) {
       const editor = vscode.window.visibleTextEditors.find(editor =>
         editor.document.uri.toString() === uri.toString() && editor.viewColumn === group.viewColumn);
-      editor?.revealRange(selection, vscode.TextEditorRevealType.InCenter);
+      editor?.revealRange(selection, vscode.TextEditorRevealType.AtTop);
     }
   }
 

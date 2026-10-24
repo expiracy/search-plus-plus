@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.3 — 2026-10-24
+
+### Fixed
+
+- Opening or previewing a search result places its matching line at the top of
+  the editor viewport where scrolling permits.
+
 ## 3.0.2 — 2026-10-22
 
 ### Fixed
