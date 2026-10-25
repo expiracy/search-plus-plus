@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.0.4 — 2026-10-25
+
+### Changed
+
+- A refreshed search++ logo and banner with more depth and an amber `++` that
+  stays visible at small icon sizes.
+- The README and website link to Ko-fi for anyone who wants to support
+  search++.
+
 ## 3.0.3 — 2026-10-24
 
 ### Fixed

@@ -1,40 +1,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 480" width="1600" height="480">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0E1A2E"/><stop offset="1" stop-color="#0A0F1A"/>
+      <stop offset="0" stop-color="#101C33"/><stop offset="1" stop-color="#080C16"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.26" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#1E88E5" stop-opacity="0.35"/><stop offset="1" stop-color="#1E88E5" stop-opacity="0"/>
+    <radialGradient id="glow" cx="0.16" cy="0.5" r="0.42">
+      <stop offset="0" stop-color="#2563EB" stop-opacity="0.55"/><stop offset="1" stop-color="#2563EB" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="pp" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4FC3F7"/><stop offset="1" stop-color="#1E88E5"/>
+    <radialGradient id="glow2" cx="0.86" cy="0.62" r="0.32">
+      <stop offset="0" stop-color="#F59E0B" stop-opacity="0.16"/><stop offset="1" stop-color="#F59E0B" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="14" cy="14" r="1.6" fill="#FFFFFF" fill-opacity="0.07"/>
+    </pattern>
+    <linearGradient id="dotsFade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.15"/>
     </linearGradient>
+    <mask id="dotsMask"><rect width="1600" height="480" fill="url(#dotsFade)"/></mask>
+    <linearGradient id="pp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FCD34D"/><stop offset="1" stop-color="#F59E0B"/></linearGradient>
+    <filter id="tileShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="22"/>
+      <feOffset dy="18"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.6"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
   <rect width="1600" height="480" rx="36" fill="url(#bg)"/>
+  <rect width="1600" height="480" rx="36" fill="url(#dots)" mask="url(#dotsMask)"/>
   <rect width="1600" height="480" rx="36" fill="url(#glow)"/>
-  <rect x="1" y="1" width="1598" height="478" rx="35" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
-  <g transform="translate(120 110) scale(0.5078125)">
+  <rect width="1600" height="480" rx="36" fill="url(#glow2)"/>
+  <rect x="1" y="1" width="1598" height="478" rx="35" fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="2"/>
+  <g transform="translate(110 100) scale(0.546875)" filter="url(#tileShadow)">
     <defs>
-      <linearGradient id="tileb" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#4FC3F7"/><stop offset="0.55" stop-color="#1E88E5"/><stop offset="1" stop-color="#1A3FA8"/>
-      </linearGradient>
-      <linearGradient id="glossb" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
-      </linearGradient>
+      <linearGradient id="btile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B9CF6"/><stop offset="0.55" stop-color="#1D4ED8"/><stop offset="1" stop-color="#1E2A78"/></linearGradient>
+      <radialGradient id="bsheen" cx="0.22" cy="0.12" r="0.75"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.3"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
+      <linearGradient id="bedge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.08"/><stop offset="1" stop-color="#000000" stop-opacity="0.25"/></linearGradient>
+      <filter id="bdrop" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+      <linearGradient id="bplusG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset="1" stop-color="#F59E0B"/></linearGradient>
     </defs>
-    <rect width="512" height="512" rx="112" fill="url(#tileb)"/>
-    <rect width="512" height="512" rx="112" fill="url(#glossb)"/>
-    <g fill="none" stroke="#0B2A6B" stroke-opacity="0.25" stroke-linecap="round" transform="translate(6 10)">
-      <circle cx="222" cy="222" r="122" stroke-width="40"/><path d="M312 312L404 404" stroke-width="52"/>
+    <rect width="512" height="512" rx="112" fill="url(#btile)"/>
+    <rect width="512" height="512" rx="112" fill="url(#bsheen)"/>
+    <rect x="3" y="3" width="506" height="506" rx="109" fill="none" stroke="url(#bedge)" stroke-width="6"/>
+    <g fill="none" stroke="#0B1446" stroke-opacity="0.5" stroke-linecap="round" transform="translate(0 14)" filter="url(#bdrop)">
+      <circle cx="222" cy="222" r="122" stroke-width="42"/><path d="M314 314L402 402" stroke-width="56"/>
     </g>
+    <circle cx="222" cy="222" r="101" fill="#0B1446" fill-opacity="0.28"/>
+    <path d="M140 184A90 90 0 0 1 184 140" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="10" stroke-linecap="round"/>
     <g fill="none" stroke="#FFFFFF" stroke-linecap="round">
-      <circle cx="222" cy="222" r="122" stroke-width="40"/>
-      <path d="M312 312L404 404" stroke-width="52"/>
-      <path d="M144 222H200M172 194V250M244 222H300M272 194V250" stroke-width="22"/>
+      <circle cx="222" cy="222" r="122" stroke-width="42"/>
+      <path d="M314 314L402 402" stroke-width="56"/>
+    </g>
+    <g fill="none" stroke="url(#bplusG)" stroke-linecap="round">
+      <path d="M146 222H198M172 196V248M246 222H298M272 196V248" stroke-width="24"/>
     </g>
   </g>
   <g transform="translate(450 120) scale(1.12)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="18">
-    <g stroke="#F3F6FB"><path d="M69.1 110.7A38 25 0 1 0 38 150A38 25 0 1 1 6.9 189.3"/><path d="M116 150H216A50 50 0 1 0 204.3 182.1"/><path d="M356 150A50 50 0 1 0 256 150A50 50 0 1 0 356 150M356 100V200"/><path d="M396 200V100M396 150A50 50 0 0 1 446 100"/><path d="M574.3 117.9A50 50 0 1 0 574.3 182.1"/><path d="M614 200V30M614 150A50 50 0 0 1 714 150V200"/></g>
-    <path d="M754 150H818M786 118V182M848 150H912M880 118V182" stroke="url(#pp)"/>
+    <g stroke="#F5F8FF"><path d="M69.1 110.7A38 25 0 1 0 38 150A38 25 0 1 1 6.9 189.3"/><path d="M116 150H216A50 50 0 1 0 204.3 182.1"/><path d="M356 150A50 50 0 1 0 256 150A50 50 0 1 0 356 150M356 100V200"/><path d="M396 200V100M396 150A50 50 0 0 1 446 100"/><path d="M574.3 117.9A50 50 0 1 0 574.3 182.1"/><path d="M614 200V30M614 150A50 50 0 0 1 714 150V200"/></g>
+    <g stroke="url(#pp)"><path d="M754 150H818M786 118V182M848 150H912M880 118V182"/></g>
   </g>
 </svg>

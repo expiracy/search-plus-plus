@@ -12,6 +12,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus"><img src="https://vsmarketplacebadges.dev/version-short/expiracy.search-plus-plus.svg" alt="Marketplace version"></a>
   <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus"><img src="https://vsmarketplacebadges.dev/installs-short/expiracy.search-plus-plus.svg" alt="Marketplace installs"></a>
   <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus&ssr=false#review-details"><img src="https://vsmarketplacebadges.dev/rating-short/expiracy.search-plus-plus.svg" alt="Marketplace rating"></a>
+  <a href="https://ko-fi.com/expiracy"><img src="https://img.shields.io/badge/Ko--fi-Support%20search%2B%2B-FF5E5B?logo=ko-fi&logoColor=white" alt="Support search++ on Ko-fi"></a>
 </p>
 
 <p align="center">
