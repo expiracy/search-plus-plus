@@ -99,6 +99,66 @@ describe('workspace discovery', () => {
     expect(index.filter('index')).toEqual([]);
   });
 
+  test('a batch deleting many files and a directory keeps unrelated files', async () => {
+    vi.useFakeTimers();
+    const deleted = new vscode.EventEmitter<vscode.Uri>();
+    vi.spyOn(vscode.workspace, 'createFileSystemWatcher').mockReturnValue({
+      onDidCreate: () => ({ dispose() {} }), onDidChange: () => ({ dispose() {} }),
+      onDidDelete: deleted.event, dispose() {},
+    });
+    const paths = ['src/a.ts', 'src/b.ts', 'lib/deep/c.ts', 'lib/deep-sibling.ts', 'keep.ts'];
+    vi.spyOn(vscode.workspace, 'findFiles').mockResolvedValue(paths.map(p => vscode.Uri.file(`/workspace/${p}`)));
+    await index.build();
+    for (const p of ['src/a.ts', 'src/b.ts', 'lib/deep', 'missing.ts']) deleted.fire(vscode.Uri.file(`/workspace/${p}`));
+    await vi.advanceTimersByTimeAsync(350);
+    expect(index.filter('').map(e => e.relativePath)).toEqual(['lib/deep-sibling.ts', 'keep.ts']);
+  });
+
+  test('a file created inside a directory after its deletion stays indexed', async () => {
+    vi.useFakeTimers();
+    const created = new vscode.EventEmitter<vscode.Uri>();
+    const deleted = new vscode.EventEmitter<vscode.Uri>();
+    vi.spyOn(vscode.workspace, 'createFileSystemWatcher').mockReturnValue({
+      onDidCreate: created.event, onDidChange: () => ({ dispose() {} }), onDidDelete: deleted.event, dispose() {},
+    });
+    vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.File });
+    vi.spyOn(vscode.workspace, 'findFiles').mockResolvedValue([vscode.Uri.file('/workspace/src/old.ts')]);
+    await index.build();
+    deleted.fire(vscode.Uri.file('/workspace/src'));
+    created.fire(vscode.Uri.file('/workspace/src/new.ts'));
+    await vi.advanceTimersByTimeAsync(350);
+    expect(index.filter('').map(e => e.relativePath)).toEqual(['src/new.ts']);
+  });
+
+  test('watcher batches apply ignore rules only to created files', async () => {
+    vi.useFakeTimers();
+    const created = new vscode.EventEmitter<vscode.Uri>();
+    vi.spyOn(vscode.workspace, 'createFileSystemWatcher').mockReturnValue({
+      onDidCreate: created.event, onDidChange: () => ({ dispose() {} }), onDidDelete: () => ({ dispose() {} }), dispose() {},
+    });
+    vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.File });
+    vi.spyOn(vscode.workspace, 'findFiles').mockResolvedValue([vscode.Uri.file('/workspace/src/index.ts')]);
+    const ignored = vi.spyOn(rules, 'isGitIgnored').mockImplementation(p => p.startsWith('build/'));
+    await index.build();
+    ignored.mockClear();
+    created.fire(vscode.Uri.file('/workspace/build/out.js'));
+    await vi.advanceTimersByTimeAsync(350);
+    expect(ignored.mock.calls.map(call => call[0])).toEqual(['build/out.js']);
+    expect(index.filter('').map(e => e.relativePath)).toEqual(['src/index.ts']);
+    expect(index.filter('', 200, false).map(e => e.relativePath)).toEqual(['src/index.ts', 'build/out.js']);
+  });
+
+  test('notebooks come from the snapshot and follow the exclusion toggles', () => {
+    vi.spyOn(rules, 'isSearchIgnored').mockImplementation(p => p.startsWith('scratch/'));
+    const filtered = ['nb/a.ipynb', 'scratch/b.ipynb', 'src/c.ts'].map(relativePath => ({ relativePath, uri: vscode.Uri.file(`/workspace/${relativePath}`) }));
+    const ignoredNotebook = { relativePath: 'build/d.ipynb', uri: vscode.Uri.file('/workspace/build/d.ipynb') };
+    index.buildFromEntries(filtered, [...filtered, ignoredNotebook]);
+    const paths = (git: boolean, search: boolean) => index.getNotebooks(git, search).map(uri => uri.path);
+    expect(paths(true, true)).toEqual(['/workspace/nb/a.ipynb']);
+    expect(paths(true, false)).toEqual(['/workspace/nb/a.ipynb', '/workspace/scratch/b.ipynb']);
+    expect(paths(false, true)).toEqual(['/workspace/nb/a.ipynb', '/workspace/build/d.ipynb']);
+  });
+
   test('a file created and deleted in the same batch is not resurrected', async () => {
     vi.useFakeTimers();
     const created = new vscode.EventEmitter<vscode.Uri>();
