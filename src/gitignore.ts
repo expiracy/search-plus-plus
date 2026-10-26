@@ -13,6 +13,8 @@ type ExclusionOptions = { excludeGitIgnored: boolean; excludeSearchIgnored: bool
 export class GitIgnoreManager implements vscode.Disposable {
   private gitRules: ScopedRules[] = [];
   private searchRules: ScopedRules[] = [];
+  // Directory decisions per published rule set; replaced rule sets drop their cache.
+  private readonly directoryCache = new WeakMap<ScopedRules[], Map<string, boolean>>();
   private customIg: Ignore = ignore();
   private cachedCustomExcludes: string[] = [];
   private watchers: vscode.Disposable[] = [];
@@ -102,6 +104,7 @@ export class GitIgnoreManager implements vscode.Disposable {
   isCustomExcluded(relativePath: string, uri?: vscode.Uri): boolean {
     const p = this.resolvePath(relativePath, uri).path;
     if (/(^|\/)\.git(?:\/|$)/.test(p)) return true;
+    if (!this.cachedCustomExcludes.length) return false;
     try { return this.customIg.ignores(p); } catch { return false; }
   }
 
@@ -122,14 +125,31 @@ export class GitIgnoreManager implements vscode.Disposable {
   }
 
   private testScoped(rules: ScopedRules[], relativePath: string, uri?: vscode.Uri): boolean {
+    if (!rules.length) return false;
     const resolved = this.resolvePath(relativePath, uri);
     const scoped = rules.filter(rule => rule.root === resolved.root);
-    const parts = resolved.path.split('/');
-    // A rule inside an ignored directory cannot re-include that directory's files.
-    for (let i = 1; i < parts.length; i++) {
-      if (this.testAtPath(scoped, parts.slice(0, i).join('/') + '/')) return true;
-    }
+    if (!scoped.length) return false;
+    const slash = resolved.path.lastIndexOf('/');
+    if (slash > 0 && this.isDirectoryIgnored(rules, scoped, resolved.root, resolved.path.slice(0, slash))) return true;
     return this.testAtPath(scoped, resolved.path);
+  }
+
+  /** A rule inside an ignored directory cannot re-include that directory's files. */
+  private isDirectoryIgnored(rules: ScopedRules[], scoped: ScopedRules[], root: string | undefined, directory: string): boolean {
+    let cache = this.directoryCache.get(rules);
+    if (!cache) {
+      cache = new Map();
+      this.directoryCache.set(rules, cache);
+    }
+    const key = `${root ?? ''}\n${directory}`;
+    let ignored = cache.get(key);
+    if (ignored === undefined) {
+      const slash = directory.lastIndexOf('/');
+      ignored = (slash > 0 && this.isDirectoryIgnored(rules, scoped, root, directory.slice(0, slash)))
+        || this.testAtPath(scoped, directory + '/');
+      cache.set(key, ignored);
+    }
+    return ignored;
   }
 
   private testAtPath(rules: ScopedRules[], path: string): boolean {

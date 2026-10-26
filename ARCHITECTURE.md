@@ -120,7 +120,9 @@ snapshot before publication.
 
 Watcher updates are batched and deduplicated by URI. Creation events are checked
 to distinguish files from directories. Deleting a directory removes its indexed
-descendants. Directory creation and bulk changes mark the index stale so
+descendants; a batch removes all deleted directories in one pass over the index.
+Ignore rules are evaluated only for created files, because rule changes rebuild
+the index. Directory creation and bulk changes mark the index stale so
 [IndexManager](src/index/indexManager.ts) can schedule a rescan. Rebuild requests
 are serialized, and the status bar reports building, ready, stale, or error state.
 
@@ -145,6 +147,8 @@ preserves UTF-8 characters across chunks, and match byte offsets are converted t
 VS Code's UTF-16 editor columns.
 
 Notebook search reads `.ipynb` cell source separately from ripgrep's file search.
+The notebook list comes from the file index snapshot for the active exclusion
+toggles, so a text search does not walk the workspace again.
 Successful searches signal completion after the notebook stage finishes.
 Selecting a notebook match opens the notebook; navigation to a specific cell is
 unsupported.
