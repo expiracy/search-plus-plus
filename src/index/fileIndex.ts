@@ -227,8 +227,9 @@ export class FileIndex implements vscode.Disposable {
   }
 
   private findInView(view: IndexView, query: string): FzfResultItem<FileEntry>[] {
-    // Fuzzy matches of an extended query are a subset of the shorter query's matches.
-    const narrowed = query && view.narrowed && query.startsWith(view.narrowed.query) ? view.narrowed : undefined;
+    // Match fzf's normalization and casing before checking whether candidates can narrow.
+    const normalizedQuery = query.normalize().toLowerCase();
+    const narrowed = query && view.narrowed && normalizedQuery.startsWith(view.narrowed.query) ? view.narrowed : undefined;
     let fzf: Fzf<FileEntry[]>;
     if (narrowed) fzf = narrowed.fzf ??= createFzf(narrowed.matches);
     else fzf = view.fzf ??= createFzf(view.entries);
@@ -237,7 +238,7 @@ export class FileIndex implements vscode.Disposable {
     // Rebuilding a matcher only pays off when the query removed most candidates.
     if (query && results.length <= source.length / 2) {
       const matched = new Set(results.map(result => result.item));
-      view.narrowed = { query, matches: source.filter(entry => matched.has(entry)) };
+      view.narrowed = { query: normalizedQuery, matches: source.filter(entry => matched.has(entry)) };
     } else if (!narrowed) {
       view.narrowed = undefined;
     }
