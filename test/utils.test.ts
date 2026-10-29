@@ -64,10 +64,10 @@ describe('debounce', () => {
 describe('getEnabledSections', () => {
   test('returns defaults for non-array input', () => {
     expect(getEnabledSections(undefined)).toEqual([
-      ResultSection.Files, ResultSection.Folders, ResultSection.Text, ResultSection.Symbols, ResultSection.Commands,
+      ResultSection.Files, ResultSection.Folders, ResultSection.Symbols, ResultSection.Text, ResultSection.Commands,
     ]);
     expect(getEnabledSections(null)).toEqual([
-      ResultSection.Files, ResultSection.Folders, ResultSection.Text, ResultSection.Symbols, ResultSection.Commands,
+      ResultSection.Files, ResultSection.Folders, ResultSection.Symbols, ResultSection.Text, ResultSection.Commands,
     ]);
   });
 

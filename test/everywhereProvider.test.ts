@@ -34,3 +34,15 @@ test('disabling every section still settles the search with an empty result', as
     expect(unused.search).not.toHaveBeenCalled();
   } finally { request.dispose(); }
 });
+
+
+test('late symbol results appear before text in the default Everything groups', async () => {
+  vi.useFakeTimers();
+  const section = (mode: string) => ({ search: (_query: string, _options: unknown, publish: (results: any[]) => void) => { publish([{ label: mode, mode }]); return { dispose() {} }; } });
+  const publish = vi.fn();
+  const request = new EverywhereProvider(section(SearchMode.File) as any, section(SearchMode.Folder) as any, section(SearchMode.Text) as any, section(SearchMode.Symbol) as any, section(SearchMode.Command) as any).search('match', options, publish);
+  try {
+    await vi.runAllTimersAsync();
+    expect(publish.mock.lastCall![0].map((item: any) => item.belongsToSection)).toEqual(['files', 'folders', 'symbols', 'text', 'commands']);
+  } finally { request.dispose(); vi.useRealTimers(); }
+});

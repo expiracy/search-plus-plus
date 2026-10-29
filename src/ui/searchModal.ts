@@ -6,6 +6,7 @@ import { isAbsolutePath } from '../utils';
 import { SearchSession } from '../searchSession';
 import { ResultPreview } from './resultPreview';
 import { buildTitle, parseLineCol } from './searchModel';
+import { getTabOrder } from '../searchModes';
 
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
 interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.QuickPick<T> {
@@ -23,16 +24,6 @@ function getItemKey(item: SearchResult): string | undefined {
   }
   return undefined;
 }
-
-const TAB_ORDER: SearchMode[] = [
-  SearchMode.Everywhere,
-  SearchMode.File,
-  SearchMode.Folder,
-  SearchMode.Text,
-  SearchMode.Symbol,
-  SearchMode.Usages,
-  SearchMode.Command,
-];
 
 const PLACEHOLDERS: Record<SearchMode, string> = {
   [SearchMode.Everywhere]: 'Search everywhere...',
@@ -73,6 +64,7 @@ export class SearchModal implements vscode.Disposable {
   private searchSession = new SearchSession<SearchResult[]>();
   private preview = new ResultPreview();
   private modernButtons: boolean;
+  private readonly configurationListener: vscode.Disposable;
 
   // Search option toggles
   private excludeGitIgnored: boolean;
@@ -117,6 +109,9 @@ export class SearchModal implements vscode.Disposable {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     this.excludeGitIgnored = config.get<boolean>('excludeGitIgnored', true);
     this.excludeSearchIgnored = config.get<boolean>('excludeSearchIgnored', true);
+    this.configurationListener = vscode.workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration('searchPlusPlus.tabOrder') && this.activeQuickPick) this.rebuildButtons(this.activeQuickPick);
+    });
   }
 
   private filterAndDisplay(): void {
@@ -533,14 +528,18 @@ export class SearchModal implements vscode.Disposable {
     }
   }
 
+  private tabOrder(): SearchMode[] {
+    return getTabOrder(vscode.workspace.getConfiguration('searchPlusPlus').get('tabOrder'));
+  }
+
   nextTab(): void {
-    const idx = TAB_ORDER.indexOf(this.activeTab);
-    this.switchTab(TAB_ORDER[(idx + 1) % TAB_ORDER.length]);
+    const order = this.tabOrder();
+    this.switchTab(order[(order.indexOf(this.activeTab) + 1) % order.length]);
   }
 
   prevTab(): void {
-    const idx = TAB_ORDER.indexOf(this.activeTab);
-    this.switchTab(TAB_ORDER[(idx - 1 + TAB_ORDER.length) % TAB_ORDER.length]);
+    const order = this.tabOrder();
+    this.switchTab(order[(order.indexOf(this.activeTab) - 1 + order.length) % order.length]);
   }
 
   // --- Buttons ---
@@ -572,8 +571,13 @@ export class SearchModal implements vscode.Disposable {
     const fuzzyBtn = this.toggle('sparkle', `Fuzzy Search (${this.altKey}+F)`, this.fuzzySearch,
       vscode.QuickInputButtonLocation?.Inline);
 
+    const tabButtons: Record<SearchMode, vscode.QuickInputButton> = {
+      [SearchMode.Everywhere]: everywhereBtn, [SearchMode.File]: fileBtn,
+      [SearchMode.Folder]: folderBtn, [SearchMode.Text]: textBtn,
+      [SearchMode.Symbol]: symbolBtn, [SearchMode.Usages]: usagesBtn, [SearchMode.Command]: commandBtn,
+    };
     qp.buttons = [
-      everywhereBtn, fileBtn, folderBtn, textBtn, symbolBtn, usagesBtn, commandBtn,
+      ...this.tabOrder().map(mode => tabButtons[mode]),
       gitIgnoreBtn, searchIgnoreBtn, caseSensitiveBtn, regexBtn, wholeWordBtn, fuzzyBtn,
     ];
 
@@ -885,6 +889,7 @@ export class SearchModal implements vscode.Disposable {
   }
 
   dispose(): void {
+    this.configurationListener.dispose();
     this.preview.dispose();
     this.searchSession.cancel();
     this.activeQuickPick?.hide();

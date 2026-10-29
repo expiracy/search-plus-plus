@@ -311,9 +311,21 @@ All settings are under the `searchPlusPlus` namespace.
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
 | `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
+| `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "usages", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
-| `searchPlusPlus.everywhere.sections` | `["files", "folders", "text", "symbols", "commands"]` | Sections shown on the Everything tab; array order controls display order |
+| `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
+
+### Search Order
+
+Use `searchPlusPlus.tabOrder` to reorder the mode buttons and keyboard Tab
+navigation together. Duplicate or unknown modes are ignored, and any missing
+modes are appended so all seven remain available. Changes apply to an open popup.
+
+The separate `searchPlusPlus.everywhere.sections` setting controls the order of
+result groups inside Everything. Its default is files, folders, symbols, text,
+then commands; your explicit custom order is preserved. VS Code controls the
+native Command Palette order independently.
 
 ### `.searchignore`
 
