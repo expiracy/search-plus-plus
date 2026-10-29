@@ -74,6 +74,22 @@ test('cancellation suppresses completion after an outstanding notebook lookup', 
   expect(publish).not.toHaveBeenCalled();
 });
 
+test('a notebook source replaces the workspace notebook lookup', async () => {
+  search.dispose();
+  const source = vi.fn(async () => [vscode.Uri.file('/workspace/nb.ipynb')]);
+  search = new TextSearch('rg-test', undefined, source);
+  vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValue(new TextEncoder().encode(
+    JSON.stringify({ cells: [{ cell_type: 'code', source: ['x = 1\n', 'needle = 2\n'] }] }),
+  ));
+  const publish = vi.fn();
+  search.search('needle', { ...options, excludeGitIgnored: true }, publish);
+  process.emit('close', 0);
+  await vi.waitFor(() => expect(publish).toHaveBeenCalled());
+  expect(vscode.workspace.findFiles).not.toHaveBeenCalled();
+  expect(source).toHaveBeenCalledWith(expect.objectContaining({ excludeGitIgnored: true, excludeSearchIgnored: false }));
+  expect(publish.mock.lastCall![0].map((r: any) => [r.relativePath, r.lineNumber])).toEqual([['nb.ipynb', 1]]);
+});
+
 test('shared exclusions apply before text matches consume the result limit', async () => {
   search.dispose();
   search = new TextSearch('rg-test', { shouldExclude: (p: string) => p.startsWith('hidden/') } as any);
