@@ -64,6 +64,38 @@ describe('workspace discovery', () => {
     expect(index.find('INDEX', 200, true, true, true)).toEqual([]);
   });
 
+  test('appending uppercase Greek letters can recover matches after a final sigma', () => {
+    index.buildFromEntries([{ relativePath: 'οσα.ts', uri: vscode.Uri.file('/workspace/οσα.ts') }]);
+    expect(index.find('Ο').map(r => r.item.relativePath)).toEqual(['οσα.ts']);
+    expect(index.find('ΟΣ')).toEqual([]);
+    expect(index.find('ΟΣΑ').map(r => r.item.relativePath)).toEqual(['οσα.ts']);
+  });
+
+  test('appending a combining Hangul vowel can recover a normalized filename match', () => {
+    index.buildFromEntries([{ relativePath: '가.ts', uri: vscode.Uri.file('/workspace/가.ts') }]);
+    expect(index.find('\u1100')).toEqual([]);
+    expect(index.find('\u1100\u1161').map(r => r.item.relativePath)).toEqual(['가.ts']);
+  });
+
+  test('cached searches never expose git metadata or custom-excluded notebooks when toggles change', async () => {
+    vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+      get: (_key: string, fallback: unknown) => _key === 'excludePaths' ? ['private/'] : fallback,
+    } as any);
+    vi.spyOn(vscode.workspace, 'findFiles').mockImplementation(async (pattern: string) => pattern === '**/*'
+      ? ['visible/οσα.ipynb', 'private/οσα.ipynb', '.git/οσα.ipynb'].map(p => vscode.Uri.file(`/workspace/${p}`))
+      : []);
+    await rules.load();
+    await index.build();
+
+    for (const excludeGit of [false, true]) {
+      for (const excludeSearch of [false, true]) {
+        index.find('ΟΣ', 200, excludeGit, excludeSearch);
+        expect(index.find('ΟΣΑ', 200, excludeGit, excludeSearch).map(r => r.item.relativePath)).toEqual(['visible/οσα.ipynb']);
+        expect(index.getNotebooks(excludeGit, excludeSearch).map(uri => uri.path)).toEqual(['/workspace/visible/οσα.ipynb']);
+      }
+    }
+  });
+
   test('excluded fuzzy matches do not consume the result budget', () => {
     vi.spyOn(rules, 'isSearchIgnored').mockImplementation(p => p.startsWith('hidden/'));
     const paths = [...Array.from({ length: 1100 }, (_, i) => `hidden/match${i}.ts`), 'visible/very/long/path/match.ts'];
