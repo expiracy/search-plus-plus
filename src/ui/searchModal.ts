@@ -101,6 +101,7 @@ export class SearchModal implements vscode.Disposable {
     private history: SearchHistory,
     private providers: ReadonlyMap<SearchMode, SearchProvider>,
     private createPicker: () => vscode.QuickPick<SearchResult> = () => vscode.window.createQuickPick<SearchResult>(),
+    private workspaceState?: vscode.Memento,
   ) {
     // Location and toggle controls became stable in VS Code 1.109.
     const [major, minor] = (vscode.version ?? '').split('.').map(Number);
@@ -227,7 +228,10 @@ export class SearchModal implements vscode.Disposable {
     this.fullResults = [];
     const qp = this.createPicker() as SortableQuickPick<SearchResult>;
     this.activeQuickPick = qp;
-    this.activeTab = initialMode ?? SearchMode.Everywhere;
+    const config = vscode.workspace.getConfiguration('searchPlusPlus');
+    const savedMode = config.get<boolean>('rememberLastMode', false)
+      ? this.workspaceState?.get<unknown>('searchPlusPlus.lastSearchMode') : undefined;
+    this.activeTab = initialMode ?? (Object.values(SearchMode).includes(savedMode as SearchMode) ? savedMode as SearchMode : SearchMode.Everywhere);
     qp.placeholder = this.placeholder();
     if (this.activeTab === SearchMode.Usages && this.usageTarget) qp.value = this.usageQuery;
     qp.matchOnDescription = false;
@@ -238,7 +242,6 @@ export class SearchModal implements vscode.Disposable {
     this.rebuildButtons(qp);
     qp.title = buildTitle(this.tabTitle(), this.indexManager.state);
 
-    const config = vscode.workspace.getConfiguration('searchPlusPlus');
     const debounceMs = config.get<number>('debounceMs', 200);
 
     const getOptions = (): SearchOptions => ({
@@ -450,6 +453,9 @@ export class SearchModal implements vscode.Disposable {
 
     // Cleanup on hide
     const hideDisposable = qp.onDidHide(() => {
+      if (vscode.workspace.getConfiguration('searchPlusPlus').get<boolean>('rememberLastMode', false)) {
+        void this.workspaceState?.update('searchPlusPlus.lastSearchMode', this.activeTab).then(undefined, () => {});
+      }
       clearBusyTimer();
       this.preview.cancel();
 

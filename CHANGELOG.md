@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Performance
+
+- File search in very large workspaces responds faster as you type. Ignore
+  rules are evaluated once per index snapshot instead of on every keystroke,
+  and longer queries search only the previous query's matches. In a
+  200,000-file workspace a keystroke takes about 0.5–1 s instead of 1.5–2.6 s,
+  and much less once a query narrows the results.
+- Folder search reuses the folder list until the index changes, so each
+  keystroke takes milliseconds instead of several seconds in large workspaces.
+- Indexing a large workspace is several times faster: ignore decisions are
+  cached per directory, and custom exclusions are skipped when none are
+  configured.
+- Deleting many files at once no longer stalls the editor. Removing 1,000
+  files from a 250,000-file index takes about 0.25 s instead of 44 s.
+- Text search finds notebooks through the file index instead of scanning the
+  workspace again for every query.
+
 ## 3.0.4 — 2026-10-25
 
 ### Changed

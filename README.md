@@ -177,6 +177,14 @@ On the **Files**, **Folders**, or **Everything** tab, enter a full filesystem pa
 such as `C:\Users\me\file.ts` or `/home/me/file.ts`. Select the result to open the
 file or reveal the folder in the Explorer.
 
+### Remember Your Search Mode
+
+Enable `searchPlusPlus.rememberLastMode` to reopen the last mode used in this
+workspace, including after restarting VS Code. It is off by default. Commands
+such as **Search Files** still open their requested mode. Only the mode is saved;
+search text and nested usage lookups are cleared when the popup closes. Returning
+to Usages opens its symbol chooser.
+
 ### Search History
 
 Recently opened files and locations appear when the search input is empty,
@@ -234,6 +242,29 @@ The rule applies while the popup is open. See VS Code's
 [keyboard shortcut rules](https://code.visualstudio.com/docs/configure/keybindings#_keyboard-rules)
 for how user overrides take precedence.
 
+### Direct Search Shortcuts
+
+Choose `searchPlusPlus.shortcutPreset` to open individual modes directly. It
+defaults to `none`, which keeps your existing shortcuts. Both presets are opt-in.
+
+| Mode | VS Code preset (macOS / Windows & Linux) | IntelliJ preset (macOS / Windows & Linux) |
+|------|-----------------------------------------|------------------------------------------|
+| Files | Cmd+P / Ctrl+P | Cmd+Shift+O / Ctrl+Shift+N |
+| Symbols | Cmd+T / Ctrl+T | Cmd+O / Ctrl+N |
+| Text | Cmd+Shift+F / Ctrl+Shift+F | Cmd+Shift+F / Ctrl+Shift+F |
+| Commands | Cmd+Shift+P / Ctrl+Shift+P | Cmd+Shift+A / Ctrl+Shift+A |
+
+With the VS Code preset, **F1** still opens the native Command Palette. The
+Symbols shortcut searches workspace symbols, rather than symbols only in the
+current file. To change individual shortcuts, open **Preferences: Open Keyboard
+Shortcuts** and search for `search++`.
+
+Other keymap extensions can claim the same keys, including Shift+Shift. Explicit
+user bindings take precedence. For example, an IntelliJ keymap user can bind
+**Search Files** to Cmd+Shift+O on macOS or Ctrl+Shift+N on Windows/Linux using
+`searchPlusPlus.openFiles` in their own `keybindings.json`. See VS Code's
+[keybinding rules](https://code.visualstudio.com/docs/configure/keybindings#_keyboard-rules).
+
 ## Commands
 
 These commands are available from the command palette: **Cmd+Shift+P** on macOS
@@ -278,6 +309,8 @@ All settings are under the `searchPlusPlus` namespace.
 | `searchPlusPlus.excludeSearchIgnored` | `true` | Exclude files matching `.searchignore` patterns by default |
 | `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
+| `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
+| `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
 | `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "usages", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
 | `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
