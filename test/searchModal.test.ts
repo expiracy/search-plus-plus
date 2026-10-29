@@ -13,6 +13,7 @@ let state: InstanceType<typeof vscode.EventEmitter<string>>;
 let itemButton: InstanceType<typeof vscode.EventEmitter<any>>;
 let button: InstanceType<typeof vscode.EventEmitter<any>>;
 let hide: InstanceType<typeof vscode.EventEmitter<void>>;
+let workspaceState: { get: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
 let history: { getRecentItems: () => any[]; addOpened: ReturnType<typeof vi.fn> };
 let requests: Array<{ mode: string; query: string; options: any; publish: (results: any[]) => void; dispose: ReturnType<typeof vi.fn> }>;
 
@@ -45,9 +46,11 @@ beforeEach(() => {
       return { dispose };
     },
   });
+  const saved = new Map<string, unknown>();
+  workspaceState = { get: vi.fn((key: string) => saved.get(key)), update: vi.fn(async (key: string, value: unknown) => { saved.set(key, value); }) };
   history = { getRecentItems: () => [], addOpened: vi.fn() };
   modal = new SearchModal(manager as any, history as any,
-    new Map(Object.values(SearchMode).map(mode => [mode, provider(mode)])) as any);
+    new Map(Object.values(SearchMode).map(mode => [mode, provider(mode)])) as any, undefined, workspaceState as any);
 });
 
 afterEach(() => {
@@ -563,4 +566,46 @@ test('streaming Everything results preserve the selected symbol when text has th
   requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
   requests[0].publish([text, symbol]);
   expect((picker.activeItems[0] as any).mode).toBe(SearchMode.Symbol);
+});
+
+
+test('remembering a mode is opt-in and restores the last closed mode in the workspace', () => {
+  let remember = false;
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? remember : fallback } as any);
+  modal.show(SearchMode.Text);
+  picker.hide();
+  expect(workspaceState.update).not.toHaveBeenCalled();
+  modal.show();
+  expect(picker.placeholder).toBe('Search everywhere...');
+  picker.hide();
+  remember = true;
+  modal.show(SearchMode.Text);
+  picker.hide();
+  expect(workspaceState.update).toHaveBeenCalledWith('searchPlusPlus.lastSearchMode', 'text');
+  modal.show();
+  expect(picker.placeholder).toBe('Search text content...');
+});
+
+
+test('an explicitly requested mode overrides a valid mode stored by a previous session', () => {
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  workspaceState.get.mockReturnValue(SearchMode.Symbol);
+  modal.show();
+  expect(picker.placeholder).toContain('Search symbols');
+  picker.hide();
+  modal.show(SearchMode.File);
+  expect(picker.placeholder).toContain('Search files');
+});
+
+
+test('an invalid stored mode falls back to Everything without restoring a usage lookup', () => {
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  workspaceState.get.mockReturnValue('removed-mode');
+  modal.show();
+  expect(picker.placeholder).toBe('Search everywhere...');
+  picker.hide();
+  workspaceState.get.mockReturnValue(SearchMode.Usages);
+  modal.show();
+  expect(picker.placeholder).toBe('Search symbols to find usages...');
+  expect(picker.items[0].label).toContain('Search for a symbol');
 });
