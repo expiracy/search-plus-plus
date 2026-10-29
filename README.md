@@ -177,6 +177,14 @@ On the **Files**, **Folders**, or **Everything** tab, enter a full filesystem pa
 such as `C:\Users\me\file.ts` or `/home/me/file.ts`. Select the result to open the
 file or reveal the folder in the Explorer.
 
+### Remember Your Search Mode
+
+Enable `searchPlusPlus.rememberLastMode` to reopen the last mode used in this
+workspace, including after restarting VS Code. It is off by default. Commands
+such as **Search Files** still open their requested mode. Only the mode is saved;
+search text and nested usage lookups are cleared when the popup closes. Returning
+to Usages opens its symbol chooser.
+
 ### Search History
 
 Recently opened files and locations appear when the search input is empty,
@@ -303,6 +311,7 @@ All settings are under the `searchPlusPlus` namespace.
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
 | `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "usages", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
+| `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
 | `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |

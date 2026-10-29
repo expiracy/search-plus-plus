@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   const history = new SearchHistory(context.workspaceState);
   const providers = createProviders(indexManager);
-  const modal = new SearchModal(indexManager, history, providers.providers);
+  const modal = new SearchModal(indexManager, history, providers.providers, undefined, context.workspaceState);
 
   context.subscriptions.push(
     indexManager,

@@ -308,6 +308,12 @@
               "command"
             ],
             "description": "Order of the search mode buttons and Tab navigation. Missing modes are appended automatically; every mode stays available."
+          },
+          "searchPlusPlus.rememberLastMode": {
+            "order": 6,
+            "type": "boolean",
+            "default": false,
+            "description": "Remember the last search mode per workspace, including after restarting VS Code. Direct mode commands always open their requested mode."
           }
         }
       },
