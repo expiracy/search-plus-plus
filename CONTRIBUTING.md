@@ -37,40 +37,46 @@ other files in `media/` are excluded. The
 they are merged into `master`. The command uses `--skip-license` because this
 repository currently has no license file.
 
-Every branch push and pull request runs checks on Linux, macOS, and Windows, plus
-extension-host smoke tests against VS Code 1.96.0 and current stable. Once those
+Every non-master branch push and pull request runs checks on Linux, macOS, and
+Windows, plus extension-host smoke tests against VS Code 1.96.0 and current stable. Once those
 checks pass, CI builds and retains the VSIX as the `search-plus-plus-vsix` artifact
 for 14 days.
 
-Marketplace publication runs only when a stable version tag in the form `vX.Y.Z`
-is pushed. The workflow repeats validation, requires the tag to match `package.json`
-and both versions in `package-lock.json`, and requires the tagged commit to be in
-`master`. It publishes the validated VSIX artifact using the `VSCE_PAT`
-repository secret. The token is available only to the publishing step.
+Marketplace publication is manual. Merging to `master` does not trigger validation,
+publication, or Pages deployment. Pull requests and non-master branch pushes
+still run validation automatically.
 
 To publish a release:
 
-1. Merge the release changes into `master` and update your local checkout.
-2. Run `npm ci` and `npm run check`.
-3. Choose the version increment with `npm version major`, `npm version minor`,
-   or `npm version patch`. This updates both package manifests and creates a
-   version commit and tag.
-4. Push `master` and the specific tag created by the version command with
-   `git push origin master <tag>`, replacing `<tag>` with that version tag.
-5. Check the **Publish to VS Code Marketplace** workflow for validation and
-   publication results.
+1. Merge the changes you want to release into `master`.
+2. Open **Actions → Release search++ → Run workflow** and select **master**.
+3. Enter the new stable version, such as `3.1.0`, without a `v` prefix. It must be
+   newer than the version in `package.json`.
+4. Run the workflow. It prepares all manifest versions, runs the cross-platform
+   checks and VS Code smoke tests, and packages a VSIX with your chosen version.
+5. After validation, it commits the version to `master`, creates the matching
+   `vX.Y.Z` tag, publishes that validated VSIX to the Marketplace, creates a GitHub
+   release with the VSIX attached, and deploys the site from the release tag.
 
-Each release needs a new version. Reusing a published version causes the publish
-step to fail.
+The publishing job needs the existing `VSCE_PAT` repository secret and write
+access for `GITHUB_TOKEN` to record the release commit and tag. Only the Marketplace
+credential steps receive `VSCE_PAT`. The input is validated before use and is
+passed through environment variables rather than interpolated into shell code.
+
+If publishing fails after the tag is recorded, rerun the failed jobs from the
+same Actions run. A retry checks that the existing tag matches the validated
+source tree, skips an already-published Marketplace version, and reuses an
+existing GitHub release. A concurrent change to `master` rejects the release
+push; start a new run from the updated branch. Pushing tags alone no longer
+starts publication.
 
 ## Project Website
 
 The GitHub Pages site lives in `site/`. `npm run build:site` assembles it in
 `_site/` with the images from `media/` and the version from `package.json`;
-serve that folder locally to preview it. The **Deploy GitHub Pages** workflow
-rebuilds and publishes the site when `master` changes the site, its images, or the
-package version. To deploy at any other time, open the workflow on the **Actions**
-page and choose **Run workflow**. The repository's Pages source must be set to
+serve that folder locally to preview it. The manual release workflow rebuilds
+and publishes the site from its release tag. To deploy the site separately, open **Deploy GitHub Pages** on the
+**Actions** page and choose **Run workflow**. The repository's Pages source must be set to
 **GitHub Actions**.
 
 The workflows pin action commits and use a cached, locked npm install. The install

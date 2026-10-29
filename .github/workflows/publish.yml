@@ -1,31 +1,69 @@
-name: Publish to VS Code Marketplace
+name: Release search++
 
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New stable version, for example 3.1.0 (without v)'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: marketplace-${{ github.ref }}
+  group: marketplace-release
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Validate the chosen version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Require the master branch
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/master ]; then
+            echo '::error::Run this release workflow from master.'
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Prepare the chosen version
+        run: node scripts/prepare-release.mjs
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+      - id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
   validate:
+    needs: prepare
     uses: ./.github/workflows/check.yml
+    with:
+      release_version: ${{ needs.prepare.outputs.version }}
 
   publish:
-    needs: validate
+    needs: [prepare, validate]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     env:
       HUSKY: '0'
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+      RELEASE_TAG: v${{ needs.prepare.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
-          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
@@ -33,22 +71,64 @@ jobs:
       - run: npm ci
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Validate the release version and branch
-        run: |
-          npm run check:release
-          git merge-base --is-ancestor HEAD origin/master
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
+      - run: node scripts/prepare-release.mjs
+      - run: npm run check:release
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: search-plus-plus-vsix
           path: .
-      - name: Publish the validated VSIX
+      - name: Verify the validated VSIX version
+        run: |
+          unzip -p search-plus-plus.vsix extension/package.json > "$RUNNER_TEMP/searchpp-package.json"
+          node --input-type=module <<'JS'
+          import { readFile } from 'node:fs/promises';
+          import path from 'node:path';
+          const packaged = JSON.parse(await readFile(path.join(process.env.RUNNER_TEMP, 'searchpp-package.json'), 'utf8'));
+          if (packaged.version !== process.env.RELEASE_VERSION || packaged.name !== 'search-plus-plus' || packaged.publisher !== 'expiracy') {
+            throw new Error('The validated VSIX does not match the requested release.');
+          }
+          JS
+      - name: Require Marketplace credentials
         run: |
           if [ -z "$VSCE_PAT" ]; then
             echo '::error::Configure the VSCE_PAT repository secret for Marketplace publishing.'
             exit 1
           fi
-          npm run publish:marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Record the validated release on master
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            # A retry must refer to exactly the same validated source tree.
+            test "$(git rev-parse "$RELEASE_TAG^{tree}")" = "$(git write-tree)"
+            git merge-base --is-ancestor "$RELEASE_TAG^{commit}" origin/master
+          else
+            git commit -m "Release search++ $RELEASE_VERSION"
+            git tag -a "$RELEASE_TAG" -m "search++ $RELEASE_VERSION"
+            # A concurrent change to master or the tag rejects the entire push.
+            git push --atomic origin HEAD:refs/heads/master "refs/tags/$RELEASE_TAG"
+          fi
+      - name: Publish the validated VSIX
+        run: npm run publish:marketplace -- --skip-duplicate
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      - name: Create the GitHub release
+        run: |
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" search-plus-plus.vsix --verify-tag --title "search++ $RELEASE_VERSION" --generate-notes
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  pages:
+    needs: [prepare, publish]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      ref: refs/tags/v${{ needs.prepare.outputs.version }}

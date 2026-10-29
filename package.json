@@ -266,8 +266,14 @@
             "default": 300,
             "description": "Debounce delay in milliseconds before triggering search"
           },
-          "searchPlusPlus.shortcutPreset": {
+          "searchPlusPlus.rememberLastMode": {
             "order": 6,
+            "type": "boolean",
+            "default": false,
+            "description": "Remember the last search mode per workspace, including after restarting VS Code. Direct mode commands always open their requested mode."
+          },
+          "searchPlusPlus.shortcutPreset": {
+            "order": 7,
             "type": "string",
             "enum": [
               "none",

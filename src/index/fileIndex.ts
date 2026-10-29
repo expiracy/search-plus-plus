@@ -10,12 +10,41 @@ export interface FileEntry {
 
 interface FileChange { uri: vscode.Uri; created: boolean }
 
+/** Snapshot entries for one combination of the ignore toggles. */
+interface IndexView {
+  entries: FileEntry[];
+  fzf?: Fzf<FileEntry[]>;
+  notebooks?: vscode.Uri[];
+  /** Candidates for queries extending `query`, in snapshot order so ranking ties are unchanged. */
+  narrowed?: { query: string; matches: FileEntry[]; fzf?: Fzf<FileEntry[]> };
+}
+
+function createFzf(entries: FileEntry[]): Fzf<FileEntry[]> {
+  return new Fzf(entries, {
+    selector: (item) => item.relativePath,
+    casing: 'case-insensitive',
+    forward: false,
+    tiebreakers: [
+      // Prefer shorter paths (less nested)
+      (a, b) => a.item.relativePath.length - b.item.relativePath.length,
+    ],
+  });
+}
+
+/** True when `key` lies inside one of the directory URIs in `directories`. */
+function isWithinAny(key: string, directories: ReadonlySet<string>): boolean {
+  for (let slash = key.lastIndexOf('/'); slash > 0; slash = key.lastIndexOf('/', slash - 1)) {
+    if (directories.has(key.slice(0, slash))) return true;
+  }
+  return false;
+}
+
 export class FileIndex implements vscode.Disposable {
   private entries: FileEntry[] = [];
   private filteredEntries: FileEntry[] = [];
-  private fzfInstance: Fzf<FileEntry[]> | null = null;
-  private unfilteredFzfInstance: Fzf<FileEntry[]> | null = null;
-  private fzfDirty = false;
+  // Built lazily per snapshot so searches never re-evaluate ignore rules per keystroke.
+  private readonly views = new Map<string, IndexView>();
+  private ready = false;
   private watcher: vscode.FileSystemWatcher | null = null;
 
   // Debounced batch updates for bulk operations
@@ -40,7 +69,7 @@ export class FileIndex implements vscode.Disposable {
   constructor(private gitIgnore: GitIgnoreManager) {}
 
   get isReady(): boolean {
-    return this.fzfInstance !== null;
+    return this.ready;
   }
 
   get isStale(): boolean {
@@ -101,44 +130,40 @@ export class FileIndex implements vscode.Disposable {
 
       this._isStale = false;
 
-      this.entries = this.applyChanges(uris.map((uri) => ({
-        relativePath: vscode.workspace.asRelativePath(uri),
-        uri,
-      })), changes);
+      const discovered = uris
+        .map((uri) => ({ relativePath: vscode.workspace.asRelativePath(uri), uri }))
+        .filter(entry => !this.gitIgnore.isCustomExcluded(entry.relativePath, entry.uri));
+      this.entries = this.applyChanges(discovered, changes);
 
       this.filteredEntries = this.entries.filter(
         (e) => !this.gitIgnore.isGitIgnored(e.relativePath, e.uri),
       );
 
-      this.rebuildFzf();
-      this.fzfDirty = false;
+      this.publishSnapshot();
     } finally {
       if (this.buildChanges === changes) this.buildChanges = undefined;
     }
   }
 
   find(query: string, limit = 200, excludeGitIgnored = true, excludeSearchIgnored = true, caseSensitive = false): FzfResultItem<FileEntry>[] {
-    if (this.fzfDirty) {
-      this.rebuildFzf();
-      this.fzfDirty = false;
-    }
-    const fzf = this.getFzfFor(excludeGitIgnored);
-    if (!fzf) return [];
-    let results = fzf.find(query);
-    if (excludeSearchIgnored) {
-      results = results.filter((r) => !this.gitIgnore.isSearchIgnored(r.item.relativePath, r.item.uri));
-    }
+    let results = this.findInView(this.getView(excludeGitIgnored, excludeSearchIgnored), query);
     // When match case is on, require an exact-case subsequence after ranking.
     if (caseSensitive && query.length > 0) {
       results = results.filter((r) => hasCaseSensitiveSubsequence(r.item.relativePath, query));
     }
-    // Stable re-sort: prioritize results where the match falls in the filename
+    // Stable partition: prioritize results where the match falls in the filename
     if (query.length > 0) {
-      results.sort((a, b) => {
-        const aInFilename = a.start > a.item.relativePath.lastIndexOf('/') ? 0 : 1;
-        const bInFilename = b.start > b.item.relativePath.lastIndexOf('/') ? 0 : 1;
-        return aInFilename - bInFilename;
-      });
+      const inFilename: FzfResultItem<FileEntry>[] = [];
+      const inPath: FzfResultItem<FileEntry>[] = [];
+      for (const result of results) {
+        if (result.start > result.item.relativePath.lastIndexOf('/')) {
+          inFilename.push(result);
+          if (inFilename.length >= limit) break;
+        } else if (inPath.length < limit) {
+          inPath.push(result);
+        }
+      }
+      results = inFilename.concat(inPath);
     }
     return results.slice(0, limit);
   }
@@ -151,11 +176,8 @@ export class FileIndex implements vscode.Disposable {
     matchWholeWord = false,
     excludeSearchIgnored = true,
   ): FileEntry[] {
-    const entries = this.getEntriesFor(excludeGitIgnored);
-
     const matches: FileEntry[] = [];
-    for (const entry of entries) {
-      if (excludeSearchIgnored && this.gitIgnore.isSearchIgnored(entry.relativePath, entry.uri)) continue;
+    for (const entry of this.getEntries(excludeGitIgnored, excludeSearchIgnored)) {
       if (!containsQuery(entry.relativePath, query, { caseSensitive, matchWholeWord })) continue;
 
       matches.push(entry);
@@ -173,50 +195,59 @@ export class FileIndex implements vscode.Disposable {
     this._isStale = false;
     this.filteredEntries = filtered;
     this.entries = unfiltered ?? filtered;
-    this.fzfDirty = false;
-    this.rebuildFzf();
+    this.publishSnapshot();
   }
 
-  private getEntriesFor(excludeGit: boolean): FileEntry[] {
-    if (excludeGit) return this.filteredEntries;
-    return this.entries;
+  /** Eligible entries for the toggles; the same array is returned until the snapshot changes. */
+  getEntries(excludeGitIgnored = true, excludeSearchIgnored = true): readonly FileEntry[] {
+    return this.getView(excludeGitIgnored, excludeSearchIgnored).entries;
   }
 
-  private getFzfFor(excludeGit: boolean): Fzf<FileEntry[]> | null {
-    if (excludeGit) return this.fzfInstance;
-    return this.getUnfilteredFzf();
+  /** Notebook files eligible for the toggles, cached with the snapshot. */
+  getNotebooks(excludeGitIgnored = true, excludeSearchIgnored = true): readonly vscode.Uri[] {
+    const view = this.getView(excludeGitIgnored, excludeSearchIgnored);
+    // Matches ripgrep's case-sensitive `!*.ipynb` glob, so no file is searched twice or skipped.
+    view.notebooks ??= view.entries.filter(entry => entry.uri.path.endsWith('.ipynb')).map(entry => entry.uri);
+    return view.notebooks;
   }
 
-  private rebuildFzf(): void {
-    this.fzfInstance = new Fzf(this.filteredEntries, {
-      selector: (item) => item.relativePath,
-      casing: 'case-insensitive',
-      forward: false,
-      tiebreakers: [
-        // Prefer shorter paths (less nested)
-        (a, b) => a.item.relativePath.length - b.item.relativePath.length,
-      ],
-    });
-    this.unfilteredFzfInstance = null;
-  }
-
-  private buildLazyFzf(entries: FileEntry[]): Fzf<FileEntry[]> | null {
-    if (entries.length === 0) return null;
-    return new Fzf(entries, {
-      selector: (item) => item.relativePath,
-      casing: 'case-insensitive',
-      forward: false,
-      tiebreakers: [
-        (a, b) => a.item.relativePath.length - b.item.relativePath.length,
-      ],
-    });
-  }
-
-  private getUnfilteredFzf(): Fzf<FileEntry[]> | null {
-    if (!this.unfilteredFzfInstance) {
-      this.unfilteredFzfInstance = this.buildLazyFzf(this.entries);
+  private getView(excludeGit: boolean, excludeSearch: boolean): IndexView {
+    const key = `${excludeGit}:${excludeSearch}`;
+    let view = this.views.get(key);
+    if (!view) {
+      const base = excludeGit ? this.filteredEntries : this.entries;
+      view = {
+        entries: excludeSearch
+          ? base.filter(entry => !this.gitIgnore.isSearchIgnored(entry.relativePath, entry.uri))
+          : base,
+      };
+      this.views.set(key, view);
     }
-    return this.unfilteredFzfInstance;
+    return view;
+  }
+
+  private findInView(view: IndexView, query: string): FzfResultItem<FileEntry>[] {
+    // Match fzf's normalization and casing before checking whether candidates can narrow.
+    const normalizedQuery = query.normalize().toLowerCase();
+    const narrowed = query && view.narrowed && normalizedQuery.startsWith(view.narrowed.query) ? view.narrowed : undefined;
+    let fzf: Fzf<FileEntry[]>;
+    if (narrowed) fzf = narrowed.fzf ??= createFzf(narrowed.matches);
+    else fzf = view.fzf ??= createFzf(view.entries);
+    const results = fzf.find(query);
+    const source = narrowed?.matches ?? view.entries;
+    // Rebuilding a matcher only pays off when the query removed most candidates.
+    if (query && results.length <= source.length / 2) {
+      const matched = new Set(results.map(result => result.item));
+      view.narrowed = { query: normalizedQuery, matches: source.filter(entry => matched.has(entry)) };
+    } else if (!narrowed) {
+      view.narrowed = undefined;
+    }
+    return results;
+  }
+
+  private publishSnapshot(): void {
+    this.views.clear();
+    this.ready = true;
   }
 
   private setupWatcher(): void {
@@ -277,26 +308,43 @@ export class FileIndex implements vscode.Disposable {
     this.batchTimer = setTimeout(() => this.applyBatchUpdate(), 300);
   }
 
-  private applyChanges(entries: FileEntry[], changes: FileChange[]): FileEntry[] {
+  private applyChanges(entries: FileEntry[], changes: FileChange[], created?: Set<FileEntry>): FileEntry[] {
     const byUri = new Map(entries.map(entry => [entry.uri.toString(), entry]));
+    // Deleted directories share one scan of the index, made before any later creation.
+    const deletedDirectories = new Set<string>();
+    const removeDeletedDirectories = () => {
+      if (!deletedDirectories.size) return;
+      for (const key of byUri.keys()) {
+        if (isWithinAny(key, deletedDirectories)) byUri.delete(key);
+      }
+      deletedDirectories.clear();
+    };
     for (const change of changes) {
       const key = change.uri.toString();
       if (change.created) {
-        byUri.set(key, { uri: change.uri, relativePath: vscode.workspace.asRelativePath(change.uri) });
-      } else {
-        for (const candidate of byUri.keys()) {
-          if (candidate === key || candidate.startsWith(key + '/')) byUri.delete(candidate);
-        }
+        removeDeletedDirectories();
+        const entry = { uri: change.uri, relativePath: vscode.workspace.asRelativePath(change.uri) };
+        if (this.gitIgnore.isCustomExcluded(entry.relativePath, entry.uri)) continue;
+        byUri.set(key, entry);
+        created?.add(entry);
+      } else if (!byUri.delete(key)) {
+        deletedDirectories.add(key);
       }
     }
-    return [...byUri.values()].filter(entry => !this.gitIgnore.isCustomExcluded(entry.relativePath, entry.uri));
+    removeDeletedDirectories();
+    return [...byUri.values()];
   }
 
   private applyBatchUpdate(): void {
     this.batchTimer = undefined;
-    this.entries = this.applyChanges(this.entries, this.pendingChanges.splice(0));
-    this.filteredEntries = this.entries.filter(entry => !this.gitIgnore.isGitIgnored(entry.relativePath, entry.uri));
-    this.fzfDirty = true;
+    const created = new Set<FileEntry>();
+    const visible = new Set(this.filteredEntries);
+    this.entries = this.applyChanges(this.entries, this.pendingChanges.splice(0), created);
+    // Rule changes rebuild the index, so only created entries need the ignore rules.
+    this.filteredEntries = this.entries.filter(entry => created.has(entry)
+      ? !this.gitIgnore.isGitIgnored(entry.relativePath, entry.uri)
+      : visible.has(entry));
+    this.views.clear();
   }
 
   private disposeWatcher(): void {

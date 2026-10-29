@@ -88,6 +88,9 @@ function isNotebookJson(value: unknown): value is NotebookJson {
   return obj.cells === undefined || Array.isArray(obj.cells);
 }
 
+/** Lists notebooks eligible for a search without walking the workspace for each query. */
+export type NotebookSource = (options: TextSearchOptions) => Promise<readonly vscode.Uri[]>;
+
 export interface TextMatch {
   filePath: string;
   relativePath: string;
@@ -104,7 +107,7 @@ export class TextSearch implements vscode.Disposable {
   private excludePatterns: string[] = [];
   private searchIgnorePatterns: string[] = [];
 
-  constructor(rgPath?: string, private gitIgnore?: GitIgnoreManager) {
+  constructor(rgPath?: string, private gitIgnore?: GitIgnoreManager, private notebookSource?: NotebookSource) {
     this.rgPath = rgPath ?? getDefaultRgPath();
   }
 
@@ -316,19 +319,10 @@ export class TextSearch implements vscode.Disposable {
     if (!folders || isCancelled() || results.length >= options.maxResults) return;
 
     try {
-      const gi = this.gitIgnore;
-      const allNotebookUris = await vscode.workspace.findFiles(
-        '**/*.ipynb',
-        gi?.getExcludeGlob() ?? '**/.git/**',
-      );
+      const notebookUris = this.notebookSource
+        ? await this.notebookSource(options)
+        : await this.findNotebooks(options);
       if (isCancelled()) return;
-
-      const notebookUris = gi
-        ? allNotebookUris.filter((uri) => {
-            const rel = vscode.workspace.asRelativePath(uri);
-            return !gi.shouldExclude(rel, options, uri);
-          })
-        : allNotebookUris;
 
       const isCaseSensitive = options.caseSensitive;
       let pattern: RegExp;
@@ -389,8 +383,15 @@ export class TextSearch implements vscode.Disposable {
         }
       }
     } catch {
-      // findFiles failed, skip notebook search
+      // Notebook discovery failed, skip notebook search
     }
+  }
+
+  private async findNotebooks(options: TextSearchOptions): Promise<vscode.Uri[]> {
+    const gi = this.gitIgnore;
+    const uris = await vscode.workspace.findFiles('**/*.ipynb', gi?.getExcludeGlob() ?? '**/.git/**');
+    if (!gi) return uris;
+    return uris.filter(uri => !gi.shouldExclude(vscode.workspace.asRelativePath(uri), options, uri));
   }
 
   private killActive(): void {
