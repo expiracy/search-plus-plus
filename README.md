@@ -55,6 +55,23 @@
 search++ requires VS Code 1.96 or a newer compatible release. See the
 [changelog](CHANGELOG.md) for release notes and upgrade changes.
 
+## Welcome & Settings
+
+Run **search++: Welcome & Settings** from the Command Palette to customise your
+search in one place. The page also opens once on first use.
+
+- Reorder the mode buttons and keyboard Tab navigation.
+- Choose and reorder the result groups inside Everything.
+- Select optional VS Code or IntelliJ shortcut presets, or open the native
+  shortcut editor to change individual bindings.
+- Remember your last search mode per workspace.
+
+Choose **User defaults** or **This workspace** before changing a setting. Changes
+save automatically; the page explains when workspace overrides take precedence
+over user defaults. Use **All search++ settings** for limits, exclusions, and
+other advanced options. Enable **Show this page on startup** to see it again
+automatically, or reopen it with its command whenever you need it.
+
 ## Seven Search Modes
 
 | Mode | What it searches |
@@ -312,6 +329,7 @@ All settings are under the `searchPlusPlus` namespace.
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
 | `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "usages", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
 | `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
+| `searchPlusPlus.showWelcomeOnStartup` | `false` | Show Welcome & Settings on every startup; it otherwise appears once on first use |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
 | `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |

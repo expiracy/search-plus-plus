@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { WelcomePage } from './ui/welcomePage';
 import { SearchModal } from './ui/searchModal';
 import { IndexManager } from './index/indexManager';
 import { SearchHistory } from './history';
@@ -15,7 +16,11 @@ export function activate(context: vscode.ExtensionContext) {
   const providers = createProviders(indexManager);
   const modal = new SearchModal(indexManager, history, providers.providers, undefined, context.workspaceState);
 
+  const welcome = new WelcomePage(context.globalState);
+
   context.subscriptions.push(
+    welcome,
+    vscode.commands.registerCommand('searchPlusPlus.openWelcome', () => welcome.show()),
     indexManager,
     modal,
     providers,
@@ -37,6 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('searchPlusPlus.nextTab', () => modal.nextTab()),
     vscode.commands.registerCommand('searchPlusPlus.prevTab', () => modal.prevTab()),
   );
+  void welcome.showOnStartup().catch(error => console.error('[search++] Could not open Welcome & Settings:', error));
 }
    
 export function deactivate() {}

@@ -51,7 +51,9 @@
     "command search",
     "actions"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -122,6 +124,10 @@
       {
         "command": "searchPlusPlus.preview",
         "title": "search++: Preview Selected Result"
+      },
+      {
+        "command": "searchPlusPlus.openWelcome",
+        "title": "search++: Welcome & Settings"
       }
     ],
     "keybindings": [
@@ -283,7 +289,7 @@
             "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
           },
           "searchPlusPlus.tabOrder": {
-            "order": 6,
+            "order": 7,
             "type": "array",
             "items": {
               "type": "string",
@@ -310,10 +316,16 @@
             "description": "Order of the search mode buttons and Tab navigation. Missing modes are appended automatically; every mode stays available."
           },
           "searchPlusPlus.rememberLastMode": {
-            "order": 6,
+            "order": 8,
             "type": "boolean",
             "default": false,
             "description": "Remember the last search mode per workspace, including after restarting VS Code. Direct mode commands always open their requested mode."
+          },
+          "searchPlusPlus.showWelcomeOnStartup": {
+            "order": 9,
+            "type": "boolean",
+            "default": false,
+            "description": "Open Welcome & Settings when search++ starts. The page is shown once on first use even when this is disabled."
           }
         }
       },

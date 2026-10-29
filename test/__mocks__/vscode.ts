@@ -85,7 +85,8 @@ export class EventEmitter<T = void> {
 // --- Enums ---
 export const QuickPickItemKind = { Separator: -1 };
 export const StatusBarAlignment = { Left: 1, Right: 2 };
-export const ViewColumn = { Beside: -2 };
+export const ViewColumn = { One: 1, Beside: -2 };
+export const ConfigurationTarget = { Global: 1, Workspace: 2 };
 export const TextEditorRevealType = { InCenter: 1, AtTop: 3 };
 export const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
 export const QuickInputButtonLocation = { Title: 1, Inline: 2, Input: 3 };
@@ -239,6 +240,7 @@ export const workspace = {
 // --- window ---
 const defaultTabGroup = { viewColumn: 1, tabs: [] as any[] };
 export const window = {
+  createWebviewPanel: (..._args: any[]) => ({} as any),
   visibleTextEditors: [] as any[],
   tabGroups: { all: [defaultTabGroup], activeTabGroup: defaultTabGroup, onDidChangeTabs: (_listener: (event: any) => void) => ({ dispose() {} }), close: async (..._args: any[]) => true },
   activeTextEditor: undefined,
