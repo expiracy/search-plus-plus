@@ -179,6 +179,54 @@
         "command": "searchPlusPlus.preview",
         "key": "right",
         "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.openFiles",
+        "key": "ctrl+p",
+        "mac": "cmd+p",
+        "when": "config.searchPlusPlus.shortcutPreset == 'vscode'"
+      },
+      {
+        "command": "searchPlusPlus.openSymbols",
+        "key": "ctrl+t",
+        "mac": "cmd+t",
+        "when": "config.searchPlusPlus.shortcutPreset == 'vscode'"
+      },
+      {
+        "command": "searchPlusPlus.openText",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "config.searchPlusPlus.shortcutPreset == 'vscode'"
+      },
+      {
+        "command": "searchPlusPlus.openCommands",
+        "key": "ctrl+shift+p",
+        "mac": "cmd+shift+p",
+        "when": "config.searchPlusPlus.shortcutPreset == 'vscode'"
+      },
+      {
+        "command": "searchPlusPlus.openFiles",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+o",
+        "when": "config.searchPlusPlus.shortcutPreset == 'intellij'"
+      },
+      {
+        "command": "searchPlusPlus.openSymbols",
+        "key": "ctrl+n",
+        "mac": "cmd+o",
+        "when": "config.searchPlusPlus.shortcutPreset == 'intellij'"
+      },
+      {
+        "command": "searchPlusPlus.openText",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "config.searchPlusPlus.shortcutPreset == 'intellij'"
+      },
+      {
+        "command": "searchPlusPlus.openCommands",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "config.searchPlusPlus.shortcutPreset == 'intellij'"
       }
     ],
     "configuration": [
@@ -223,6 +271,22 @@
             "type": "boolean",
             "default": false,
             "description": "Remember the last search mode per workspace, including after restarting VS Code. Direct mode commands always open their requested mode."
+          },
+          "searchPlusPlus.shortcutPreset": {
+            "order": 7,
+            "type": "string",
+            "enum": [
+              "none",
+              "vscode",
+              "intellij"
+            ],
+            "enumDescriptions": [
+              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
+              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
+              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
+            ],
+            "default": "none",
+            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
           }
         }
       },
