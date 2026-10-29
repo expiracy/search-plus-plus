@@ -564,3 +564,18 @@ test('streaming Everything results preserve the selected symbol when text has th
   requests[0].publish([text, symbol]);
   expect((picker.activeItems[0] as any).mode).toBe(SearchMode.Symbol);
 });
+
+
+test('configured tab order controls buttons and keyboard cycling while retaining every mode', () => {
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'tabOrder' ? ['command', 'file'] : fallback } as any);
+  modal.show();
+  expect(picker.buttons.slice(0, 7).map((item: any) => item.tooltip)).toEqual(['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols', 'Usages']);
+  modal.prevTab();
+  expect(picker.placeholder).toContain('Search files');
+  modal.prevTab();
+  expect(picker.placeholder).toBe('Search commands...');
+  modal.prevTab();
+  expect(picker.placeholder).toContain('find usages');
+  modal.nextTab();
+  expect(picker.placeholder).toBe('Search commands...');
+});

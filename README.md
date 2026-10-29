@@ -278,9 +278,21 @@ All settings are under the `searchPlusPlus` namespace.
 | `searchPlusPlus.excludeSearchIgnored` | `true` | Exclude files matching `.searchignore` patterns by default |
 | `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
+| `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "usages", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
-| `searchPlusPlus.everywhere.sections` | `["files", "folders", "text", "symbols", "commands"]` | Sections shown on the Everything tab; array order controls display order |
+| `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
+
+### Search Order
+
+Use `searchPlusPlus.tabOrder` to reorder the mode buttons and keyboard Tab
+navigation together. Duplicate or unknown modes are ignored, and any missing
+modes are appended so all seven remain available. Changes apply to an open popup.
+
+The separate `searchPlusPlus.everywhere.sections` setting controls the order of
+result groups inside Everything. Its default is files, folders, symbols, text,
+then commands; your explicit custom order is preserved. VS Code controls the
+native Command Palette order independently.
 
 ### `.searchignore`
 

@@ -56,8 +56,8 @@ export interface TextSearchOptions extends Omit<SearchOptions, 'fuzzySearch'> {
 export const DEFAULT_SECTIONS: ResultSection[] = [
   ResultSection.Files,
   ResultSection.Folders,
-  ResultSection.Text,
   ResultSection.Symbols,
+  ResultSection.Text,
   ResultSection.Commands,
 ];
 

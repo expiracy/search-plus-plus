@@ -217,6 +217,33 @@
             "type": "number",
             "default": 300,
             "description": "Debounce delay in milliseconds before triggering search"
+          },
+          "searchPlusPlus.tabOrder": {
+            "order": 6,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "everywhere",
+                "file",
+                "folder",
+                "text",
+                "symbol",
+                "usages",
+                "command"
+              ]
+            },
+            "uniqueItems": true,
+            "default": [
+              "everywhere",
+              "file",
+              "folder",
+              "text",
+              "symbol",
+              "usages",
+              "command"
+            ],
+            "description": "Order of the search mode buttons and Tab navigation. Missing modes are appended automatically; every mode stays available."
           }
         }
       },
@@ -231,8 +258,8 @@
               "enum": [
                 "files",
                 "folders",
-                "text",
                 "symbols",
+                "text",
                 "commands"
               ]
             },
@@ -240,8 +267,8 @@
             "default": [
               "files",
               "folders",
-              "text",
               "symbols",
+              "text",
               "commands"
             ],
             "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it."
