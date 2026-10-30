@@ -90,7 +90,7 @@ test('the settings cog at the end of the input row closes search and opens searc
 test('macOS search controls and empty-result hints show Option shortcuts', () => {
   vi.stubGlobal('process', { ...process, platform: 'darwin' });
   modal.show(SearchMode.File);
-  expect(picker.buttons.slice(7, -1).map((item: any) => item.tooltip)).toEqual([
+  expect(picker.buttons.slice(6, -1).map((item: any) => item.tooltip)).toEqual([
     'Exclude Git Ignored (Option+G)',
     'Exclude Search Ignored (Option+S)',
     'Case Sensitive (Option+C)',
@@ -106,7 +106,7 @@ test('macOS search controls and empty-result hints show Option shortcuts', () =>
 test('Windows search controls and empty-result hints show Alt shortcuts', () => {
   vi.stubGlobal('process', { ...process, platform: 'win32' });
   modal.show(SearchMode.File);
-  expect(picker.buttons.slice(7, -1).map((item: any) => item.tooltip)).toEqual([
+  expect(picker.buttons.slice(6, -1).map((item: any) => item.tooltip)).toEqual([
     'Exclude Git Ignored (Alt+G)',
     'Exclude Search Ignored (Alt+S)',
     'Case Sensitive (Alt+C)',
@@ -207,7 +207,8 @@ test('Shift+F12 on a selected symbol opens its semantic usages in the popup', as
   expect(picker.title).toContain('greet');
 });
 
-test('the Usages tab searches symbols and Enter chooses a reference target', async () => {
+test('legacy Usages entry points open Symbols and Enter opens the declaration', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
   modal.show(SearchMode.Usages); type('greet');
   await vi.runAllTimersAsync();
   expect(picker.placeholder).toContain('symbol');
@@ -217,20 +218,22 @@ test('the Usages tab searches symbols and Enter chooses a reference target', asy
   picker.selectedItems = [symbol] as any;
   accept.fire();
   await vi.runAllTimersAsync();
-  expect(requests.at(-1)?.options.usageTarget).toMatchObject({ name: 'greet', position: new vscode.Position(0, 16) });
-  expect(picker.title).toContain('Usages of greet');
+  expect(command).toHaveBeenCalledWith('vscode.open', symbol.uri);
+  expect(requests.every(request => request.mode === SearchMode.Symbol)).toBe(true);
 });
 
-test('returning from references to Symbols restores the original symbol query', async () => {
+test('clicking Symbols while viewing usages restores its original query and results', async () => {
   modal.show(SearchMode.Symbol); type('greet');
   await vi.runAllTimersAsync();
   const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts'), lineNumber: 0, column: 16 };
   requests[0].publish([symbol]); picker.activeItems = [symbol] as any;
   modal.findUsages(); await vi.runAllTimersAsync();
   type('consumer.ts'); await vi.runAllTimersAsync();
-  modal.prevTab(); await vi.runAllTimersAsync();
+  button.fire(picker.buttons.find((item: any) => item.tooltip === 'Symbols'));
+  await vi.runAllTimersAsync();
   expect(picker.value).toBe('greet');
-  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'greet' });
+  expect(picker.items).toMatchObject([symbol]);
+  expect(picker.title).toBe('Symbols: 1 symbols');
 });
 
 test('Find Usages from the editor opens the popup for the exact cursor position', async () => {
@@ -307,22 +310,66 @@ test('Go to File records the confirmed file and location in history', async () =
   expect(history.addOpened).toHaveBeenCalledExactlyOnceWith(uri, 41, 4);
 });
 
-test('the permanent Usages icon resets the reference filter and restores symbol candidates', async () => {
-  modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
-  const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
-  requests[0].publish([symbol]); picker.activeItems = [symbol] as any;
+test('Back restores the previous query, results and selection without restarting the search', async () => {
+  modal.show(SearchMode.Symbol); type('gre'); await vi.runAllTimersAsync();
+  requests[0].publish([
+    { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') },
+    { label: 'greetVisitor', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/visitor.ts') },
+  ]);
+  const originalItems = [...picker.items];
+  picker.activeItems = [originalItems[1]] as any;
   modal.findUsages(); await vi.runAllTimersAsync();
   type('consumer.ts'); await vi.runAllTimersAsync();
-  const choose = picker.buttons.find((button: any) => button.tooltip === 'Usages');
-  expect(choose).toBeTruthy(); button.fire(choose); await vi.runAllTimersAsync();
-  expect(picker.value).toBe('greet');
-  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'greet' });
-  expect(requests.at(-1)?.options.usageTarget).toBeUndefined();
+  const references = requests.at(-1)!;
+  const requestCount = requests.length;
+  const back = picker.buttons.find(item => item === vscode.QuickInputButtons.Back);
+  expect(back).toBeDefined();
+  button.fire(back);
+  input.fire(picker.value); // Native QuickPick reports a programmatic value change asynchronously.
+  await vi.runAllTimersAsync();
+  expect(picker.value).toBe('gre');
+  expect(picker.items).toEqual(originalItems);
+  expect(picker.activeItems).toEqual([originalItems[1]]);
+  expect(picker.title).toBe('Symbols: 2 symbols');
+  expect(picker.buttons).not.toContain(vscode.QuickInputButtons.Back);
+  expect(references.dispose).toHaveBeenCalled();
+  references.publish([{ label: 'obsolete reference', mode: SearchMode.Usages }]);
+  expect(picker.items).toEqual(originalItems);
+  expect(requests).toHaveLength(requestCount);
 });
 
-test('an empty Usages tab explains how to choose a symbol', () => {
-  modal.show(SearchMode.Usages);
-  expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol to find usages', mode: SearchMode.Usages }]);
+test('Back restores the parent search options along with its cached results', async () => {
+  modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
+  const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
+  requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
+  modal.findUsages(); await vi.runAllTimersAsync();
+  modal.toggleCaseSensitive(); await vi.runAllTimersAsync();
+  button.fire(vscode.QuickInputButtons.Back);
+  expect((picker.buttons.find((item: any) => item.iconPath.id === 'case-sensitive') as any).toggle.checked).toBe(false);
+});
+
+test('Back from an Everything symbol restores its sections and selected result', async () => {
+  modal.show(SearchMode.Everywhere); type('gre');
+  requests[0].publish([
+    { label: 'greet', mode: SearchMode.Symbol, belongsToSection: 'symbols', uri: vscode.Uri.file('/workspace/greet.ts') },
+    { label: 'greet();', mode: SearchMode.Text, belongsToSection: 'text', uri: vscode.Uri.file('/workspace/use.ts') },
+  ]);
+  const originalItems = [...picker.items];
+  const symbol = originalItems.find((item: any) => item.mode === SearchMode.Symbol)!;
+  picker.activeItems = [symbol] as any;
+  modal.findUsages(); await vi.runAllTimersAsync();
+  button.fire(vscode.QuickInputButtons.Back);
+  input.fire(picker.value); await vi.runAllTimersAsync();
+  expect(picker.value).toBe('gre');
+  expect(picker.placeholder).toBe('Search everywhere...');
+  expect(picker.items).toEqual(originalItems);
+  expect(picker.activeItems).toEqual([symbol]);
+});
+
+test('empty Symbols explains how to open a declaration or find usages', () => {
+  modal.show(SearchMode.Symbol);
+  expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol', mode: SearchMode.Symbol,
+    description: expect.stringContaining('Ctrl+Enter or Shift+F12') }]);
 });
 
 test('empty reference results distinguish semantic coverage from an ordinary search miss', async () => {
@@ -384,12 +431,14 @@ test('closing the popup forgets its reference target before a new symbol search'
   expect(requests.at(-1)?.options.usageTarget).toBeUndefined();
 });
 
-test('all seven mode icons stay in place through loading, usages, and mode changes', async () => {
-  const modes = ['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Usages', 'Commands'];
+test('all six mode icons stay in place through loading, usages, and mode changes', async () => {
+  const modes = ['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Commands'];
   const checkModes = () => {
-    expect(picker.buttons.slice(0, 7).map((item: any) => item.tooltip)).toEqual(modes);
-    expect(picker.buttons.slice(0, 7).map((item: any) => item.iconPath.id)).toEqual(['search', 'file', 'folder', 'book', 'symbol-method', 'references', 'terminal']);
-    expect(picker.buttons.some((item: any) => item.iconPath?.id.startsWith('arrow-'))).toBe(false);
+    const buttons = picker.buttons.filter((item: any) => modes.includes(item.tooltip));
+    expect(buttons.map((item: any) => item.tooltip)).toEqual(modes);
+    expect(buttons.map((item: any) => item.iconPath.id)).toEqual(['search', 'file', 'folder', 'book', 'symbol-method', 'terminal']);
+    expect(picker.buttons.filter((item: any) => item.iconPath?.id.startsWith('arrow-'))
+      .every(item => item === vscode.QuickInputButtons.Back)).toBe(true);
   };
   modal.show(SearchMode.Symbol); type('greet'); checkModes();
   await vi.runAllTimersAsync();
@@ -408,7 +457,7 @@ test('clicking the active mode keeps its icon selected', () => {
   expect((picker.buttons.find((item: any) => item.tooltip === 'Files') as any).toggle.checked).toBe(true);
 });
 
-test('Right Arrow previews the active result at its position without closing the popup', async () => {
+test('Cmd/Ctrl+Right previews the active result at its position without closing the popup', async () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
   const hidden = vi.spyOn(picker, 'hide');
   modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
@@ -418,6 +467,39 @@ test('Right Arrow previews the active result at its position without closing the
   const position = new vscode.Position(7, 3);
   expect(command).toHaveBeenCalledWith('vscode.open', result.uri, expect.objectContaining({ preserveFocus: true, preview: true, selection: new vscode.Selection(position, position) }));
   expect(hidden).not.toHaveBeenCalled();
+});
+
+test('the eye action shows the preview shortcut and previews the clicked row without closing search', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  const hidden = vi.spyOn(picker, 'hide');
+  modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
+  requests[0].publish([
+    { label: 'first', mode: SearchMode.Text, uri: vscode.Uri.file('/workspace/first.ts') },
+    { label: 'second', mode: SearchMode.Text, uri: vscode.Uri.file('/workspace/second.ts'), lineNumber: 7, column: 3 },
+  ]);
+  picker.activeItems = [picker.items[0]] as any;
+  const clicked: any = picker.items[1];
+  const eye = clicked.buttons.find((item: any) => item.iconPath.id === 'eye');
+  expect(eye?.tooltip).toBe(`Preview (${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Right)`);
+  itemButton.fire({ item: clicked, button: eye }); await vi.runAllTimersAsync();
+  expect(command).toHaveBeenCalledWith('vscode.open', clicked.uri, expect.objectContaining({
+    preserveFocus: true, preview: true,
+    selection: new vscode.Selection(new vscode.Position(7, 3), new vscode.Position(7, 3)),
+  }));
+  expect(hidden).not.toHaveBeenCalled();
+});
+
+test('recent history has an eye action that previews without recording another open', async () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  const recent = { label: 'recent.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/recent.ts') };
+  vi.spyOn(history, 'getRecentItems').mockReturnValue([recent]);
+  modal.show(SearchMode.File);
+  const item: any = picker.items.find((result: any) => result.uri);
+  const eye = item.buttons.find((action: any) => action.iconPath.id === 'eye');
+  expect(eye).toBeDefined();
+  itemButton.fire({ item, button: eye }); await vi.runAllTimersAsync();
+  expect(command).toHaveBeenCalledWith('vscode.open', recent.uri, expect.objectContaining({ preserveFocus: true }));
+  expect(history.addOpened).not.toHaveBeenCalled();
 });
 
 test('closing the popup cancels a queued preview before it can open', async () => {
@@ -450,32 +532,34 @@ test('Enter waits for an in-flight preview so the accepted file remains the fina
 
 test('preview skips folders, commands, and informational rows', async () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
-  modal.show(SearchMode.Everywhere);
-  for (const result of [
+  modal.show(SearchMode.Everywhere); type('mixed');
+  requests[0].publish([
     { label: 'folder', mode: SearchMode.Folder, uri: vscode.Uri.file('/workspace/src'), isFolder: true },
     { label: 'command', mode: SearchMode.Command, commandId: 'arbitrary.command' },
     { label: 'more', mode: SearchMode.File, moreCount: 5 },
-  ]) {
+  ]);
+  for (const result of picker.items) {
+    expect((result as any).buttons?.some((action: any) => action.iconPath.id === 'eye') ?? false).toBe(false);
     picker.activeItems = [result] as any; await modal.previewSelectedResult();
   }
   expect(command.mock.calls.every(args => args[0] === 'setContext')).toBe(true);
 });
 
-test('choosing a usage symbol keeps its name in the input so the nested lookup can be cleared', async () => {
-  modal.show(SearchMode.Usages); type('gre'); await vi.runAllTimersAsync();
+test('drilling into usages keeps the symbol name in the input so the lookup can be cleared', async () => {
+  modal.show(SearchMode.Symbol); type('gre'); await vi.runAllTimersAsync();
   const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts'), lineNumber: 0, column: 16 };
   requests[0].publish([symbol]); picker.selectedItems = [symbol] as any;
-  accept.fire(); await vi.runAllTimersAsync();
+  modal.findUsages(symbol); await vi.runAllTimersAsync();
   expect(picker.value).toBe('greet');
   expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Usages, query: '' });
   expect(requests.at(-1)?.options.usageTarget?.name).toBe('greet');
 });
 
 test('clearing a usage lookup returns to symbol search and ignores late reference results', async () => {
-  modal.show(SearchMode.Usages); type('greet'); await vi.runAllTimersAsync();
+  modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
   const symbol = { label: '$(symbol-function) greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
   requests[0].publish([symbol]); picker.selectedItems = [symbol] as any;
-  accept.fire(); await vi.runAllTimersAsync();
+  modal.findUsages(symbol); await vi.runAllTimersAsync();
   const references = requests.at(-1)!;
   type('');
   references.publish([{ label: 'stale reference', mode: SearchMode.Usages, uri: symbol.uri }]);
@@ -484,7 +568,7 @@ test('clearing a usage lookup returns to symbol search and ignores late referenc
   expect(picker.value).toBe('');
   expect(picker.placeholder).toContain('Search symbols');
   expect(picker.title).not.toContain('Usages of greet');
-  expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol to find usages' }]);
+  expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol' }]);
   type('other'); await vi.runAllTimersAsync();
   expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'other' });
   expect(requests.at(-1)?.options.usageTarget).toBeUndefined();
@@ -606,6 +690,18 @@ test('remembering a mode is opt-in and restores the last closed mode in the work
   expect(picker.placeholder).toBe('Search text content...');
 });
 
+test('closing usages remembers the combined Symbols tab without a reference target', async () => {
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
+  const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
+  requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
+  modal.findUsages(); await vi.runAllTimersAsync(); picker.hide();
+  expect(workspaceState.update).toHaveBeenCalledWith('searchPlusPlus.lastSearchMode', SearchMode.Symbol);
+  modal.show();
+  expect(picker.placeholder).toContain('Search symbols...');
+  expect(picker.buttons).not.toContain(vscode.QuickInputButtons.Back);
+});
+
 
 test('an explicitly requested mode overrides a valid mode stored by a previous session', () => {
   vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
@@ -618,7 +714,7 @@ test('an explicitly requested mode overrides a valid mode stored by a previous s
 });
 
 
-test('an invalid stored mode falls back to Everything without restoring a usage lookup', () => {
+test('invalid stored modes fall back to Everything and legacy Usages opens Symbols', () => {
   vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   workspaceState.get.mockReturnValue('removed-mode');
   modal.show();
@@ -626,20 +722,21 @@ test('an invalid stored mode falls back to Everything without restoring a usage 
   picker.hide();
   workspaceState.get.mockReturnValue(SearchMode.Usages);
   modal.show();
-  expect(picker.placeholder).toBe('Search symbols to find usages...');
+  expect(picker.placeholder).toContain('Search symbols...');
   expect(picker.items[0].label).toContain('Search for a symbol');
+  expect(picker.buttons).not.toContain(vscode.QuickInputButtons.Back);
 });
 
 test('configured tab order controls buttons and keyboard cycling while retaining every mode', () => {
   vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'tabOrder' ? ['command', 'file'] : fallback } as any);
   modal.show();
-  expect(picker.buttons.slice(0, 7).map((item: any) => item.tooltip)).toEqual(['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols', 'Usages']);
+  expect(picker.buttons.slice(0, 6).map((item: any) => item.tooltip)).toEqual(['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols']);
   modal.prevTab();
   expect(picker.placeholder).toContain('Search files');
   modal.prevTab();
   expect(picker.placeholder).toBe('Search commands...');
   modal.prevTab();
-  expect(picker.placeholder).toContain('find usages');
+  expect(picker.placeholder).toContain('Search symbols...');
   modal.nextTab();
   expect(picker.placeholder).toBe('Search commands...');
 });

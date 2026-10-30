@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Changed
+
+- **Symbols and Usages share one flow.** The separate Usages tab is removed.
+  In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
+  (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in
+  the same popup. The Find Usages row action and editor command remain available.
+- The native **Back** button in a usages view restores the previous search
+  query, cached results, highlighted item, and search options. This also works
+  when entering usages from Everything. Clearing the usages input starts a
+  fresh symbol search instead.
+- **Right Arrow now moves the text cursor normally.** Preview has moved from
+  plain Right Arrow to **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux.
+  Preview keeps the popup focused and reuses the preview editor tab; **Enter**
+  still opens a result and closes the popup.
+- Previewable results, including recent history, have an **eye button**. Its
+  hover tooltip shows the platform's preview shortcut, and clicking it previews
+  that row without closing search. Folders, commands, and informational rows do
+  not offer preview.
+- Tab order and keyboard cycling now have six modes. Existing `usages` entries
+  in custom tab orders map to Symbols without adding a duplicate tab. Closing a
+  usages view with Remember Last Mode enabled reopens Symbols next time; legacy
+  remembered Usages values also open Symbols.
+
 ### Performance
 
 - File search in very large workspaces responds faster as you type. Ignore

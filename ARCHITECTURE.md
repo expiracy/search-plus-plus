@@ -66,7 +66,12 @@ closing the modal cancels active work and any pending debounce timer.
 
 File and folder searches use the same index matcher during startup and normal
 operation. They wait for the first usable snapshot when necessary. Text, symbol,
-usage, and command searches use the configured debounce delay on their individual tabs.
+usage, and command searches use the configured debounce delay. Usages are a
+nested view of Symbols rather than a separate top-level tab. Enter opens a
+symbol; Ctrl+Enter or Shift+F12 resolves its references. The parent search is
+snapshotted before the drill-down. Back cancels references and restores the
+query, displayed results, active item, and options; programmatic input changes
+do not restart that restored search.
 The Everything tab combines providers incrementally: files and folders use the
 index, text results stream, and symbols and commands start after their debounce
 delay. Section errors appear alongside results from the other providers.
@@ -77,7 +82,8 @@ with a link to the individual tab when more results are available.
 
 ## Result previews
 
-Right Arrow previews the active resource through `ResultPreview`, preserving
+Cmd+Right on macOS or Ctrl+Right on Windows/Linux previews the active resource
+through `ResultPreview`, preserving
 QuickPick focus and the match position. The matching text editor reveals the
 selected range with `TextEditorRevealType.AtTop`, including when that range
 is already visible. The controller tracks only tabs created
@@ -85,6 +91,9 @@ by preview requests. It replaces its previous clean tab before opening another,
 so tab reuse works with VS Code preview editors enabled or disabled. Existing
 resource tabs are reused across editor groups; pre-existing preview tabs, edited
 documents, pinned tabs, and previews explicitly kept open are preserved.
+The same preview operation handles eye-button actions on result and history
+rows, using the clicked row rather than the active row. Plain Right Arrow keeps
+its normal text-editing behavior.
 
 Preview requests run serially and skip queued work superseded by a newer request.
 Closing the popup cancels queued previews. Accepting a result waits for an
