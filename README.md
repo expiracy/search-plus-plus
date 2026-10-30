@@ -301,7 +301,8 @@ These are also callable from the command palette and can be used in custom keybi
 
 ## Settings
 
-All settings are under the `searchPlusPlus` namespace.
+Click the cog before the mode icons in the popup's title toolbar to open VS Code
+Settings filtered to search++. All settings are under the `searchPlusPlus` namespace.
 
 | Setting | Default | Description |
 |---------|---------|-------------|

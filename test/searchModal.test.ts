@@ -67,10 +67,29 @@ function type(value: string) {
   input.fire(value);
 }
 
+test('the settings cog closes search and opens settings filtered to search++', () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  const hidden = vi.spyOn(picker, 'hide');
+  modal.show(SearchMode.File);
+  type('file');
+  const settings = picker.buttons[0] as any;
+  expect(settings).toMatchObject({
+    iconPath: { id: 'gear' },
+    tooltip: 'Open search++ Settings',
+    location: vscode.QuickInputButtonLocation.Title,
+  });
+  expect(settings.toggle).toBeUndefined();
+  expect(command).not.toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+  button.fire(settings);
+  expect(hidden).toHaveBeenCalledOnce();
+  expect(requests[0].dispose).toHaveBeenCalledOnce();
+  expect(command).toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+});
+
 test('macOS search controls and empty-result hints show Option shortcuts', () => {
   vi.stubGlobal('process', { ...process, platform: 'darwin' });
   modal.show(SearchMode.File);
-  expect(picker.buttons.slice(7).map((item: any) => item.tooltip)).toEqual([
+  expect(picker.buttons.slice(8).map((item: any) => item.tooltip)).toEqual([
     'Exclude Git Ignored (Option+G)',
     'Exclude Search Ignored (Option+S)',
     'Case Sensitive (Option+C)',
@@ -86,7 +105,7 @@ test('macOS search controls and empty-result hints show Option shortcuts', () =>
 test('Windows search controls and empty-result hints show Alt shortcuts', () => {
   vi.stubGlobal('process', { ...process, platform: 'win32' });
   modal.show(SearchMode.File);
-  expect(picker.buttons.slice(7).map((item: any) => item.tooltip)).toEqual([
+  expect(picker.buttons.slice(8).map((item: any) => item.tooltip)).toEqual([
     'Exclude Git Ignored (Alt+G)',
     'Exclude Search Ignored (Alt+S)',
     'Case Sensitive (Alt+C)',
@@ -367,8 +386,8 @@ test('closing the popup forgets its reference target before a new symbol search'
 test('all seven mode icons stay in place through loading, usages, and mode changes', async () => {
   const modes = ['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Usages', 'Commands'];
   const checkModes = () => {
-    expect(picker.buttons.slice(0, 7).map((item: any) => item.tooltip)).toEqual(modes);
-    expect(picker.buttons.slice(0, 7).map((item: any) => item.iconPath.id)).toEqual(['search', 'file', 'folder', 'book', 'symbol-method', 'references', 'terminal']);
+    expect(picker.buttons.slice(1, 8).map((item: any) => item.tooltip)).toEqual(modes);
+    expect(picker.buttons.slice(1, 8).map((item: any) => item.iconPath.id)).toEqual(['search', 'file', 'folder', 'book', 'symbol-method', 'references', 'terminal']);
     expect(picker.buttons.some((item: any) => item.iconPath?.id.startsWith('arrow-'))).toBe(false);
   };
   modal.show(SearchMode.Symbol); type('greet'); checkModes();
@@ -613,7 +632,7 @@ test('an invalid stored mode falls back to Everything without restoring a usage 
 test('configured tab order controls buttons and keyboard cycling while retaining every mode', () => {
   vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'tabOrder' ? ['command', 'file'] : fallback } as any);
   modal.show();
-  expect(picker.buttons.slice(0, 7).map((item: any) => item.tooltip)).toEqual(['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols', 'Usages']);
+  expect(picker.buttons.slice(1, 8).map((item: any) => item.tooltip)).toEqual(['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols', 'Usages']);
   modal.prevTab();
   expect(picker.placeholder).toContain('Search files');
   modal.prevTab();
