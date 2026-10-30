@@ -88,7 +88,7 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown and clear navigation, mode commands, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
 }
@@ -280,19 +280,34 @@ async function verifyUsageNavigation(root: vscode.Uri): Promise<void> {
   const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
     { getRecentItems: () => [] } as any, new Map([SearchMode.Symbol, SearchMode.Usages].map(mode => [mode, makeProvider(mode)])), () => picker);
   try {
-    modal.show(SearchMode.Usages);
+    modal.show(SearchMode.Symbol);
     const symbols = nextEvent(requests.event, request => request.mode === SearchMode.Symbol && request.query === 'gre');
     picker.value = 'gre'; await symbols;
     picker.activeItems = [picker.items[0]];
+    const parentItems = [...picker.items];
+    const parentActive = [...picker.activeItems];
     const usages = nextEvent(requests.event, request => request.mode === SearchMode.Usages);
     modal.findUsages();
     const selected = await usages;
     assert.equal(picker.value, 'greet', 'nested usage lookup keeps its symbol visible in the input');
     assert.equal(selected.query, '', 'selected symbol name is context rather than a reference filter');
+    assert.ok(picker.buttons.includes(vscode.QuickInputButtons.Back), 'usages offers the native Back action');
+    const restored = nextEvent(picker.onDidChangeValue, value => value === 'gre');
+    await vscode.commands.executeCommand('workbench.action.quickInputBack');
+    await restored;
+    assert.equal(picker.value, 'gre', 'Back restores the parent search query');
+    assert.deepEqual(picker.items, parentItems, 'Back restores cached symbol results after native input events');
+    assert.deepEqual(picker.activeItems, parentActive, 'Back restores the selected symbol');
+    assert.equal(selected.disposed, true, 'Back cancels the reference lookup');
+    selected.publish([{ label: 'obsolete reference', mode: SearchMode.Usages }]);
+    assert.deepEqual(picker.items, parentItems, 'late usages cannot replace restored symbols');
+    const moreUsages = nextEvent(requests.event, request => request.mode === SearchMode.Usages);
+    modal.findUsages();
+    const nextLookup = await moreUsages;
     const cleared = nextEvent(picker.onDidChangeValue, value => value === '');
     picker.value = ''; await cleared;
-    assert.equal(selected.disposed, true, 'clearing cancels the reference lookup');
-    selected.publish([{ label: 'obsolete reference', mode: SearchMode.Usages }]);
+    assert.equal(nextLookup.disposed, true, 'clearing cancels the reference lookup');
+    nextLookup.publish([{ label: 'obsolete reference', mode: SearchMode.Usages }]);
     assert.ok(!picker.title?.includes('Usages of greet'), 'clearing leaves the nested symbol context');
     assert.ok(picker.items.some(item => item.label.includes('Search for a symbol')));
     const fresh = nextEvent(requests.event, request => request.mode === SearchMode.Symbol && request.query === 'other');

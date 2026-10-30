@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Install</a> ·
-  <a href="#seven-search-modes">Search modes</a> ·
+  <a href="#six-search-modes">Search modes</a> ·
   <a href="#keyboard-shortcuts">Shortcuts</a> ·
   <a href="#settings">Settings</a> ·
   <a href="CHANGELOG.md">Changelog</a>
@@ -33,11 +33,13 @@
   commands share one popup. Press **Tab** to change mode without losing your query.
 - **Everything at a glance.** The Everything tab groups the best matches from each
   source, so you can find a file, a line of text, or a command from one place.
-- **Browse results without leaving the popup.** Press **Right Arrow** to preview a
+- **Browse results without leaving the popup.** Press **Cmd+Right** on macOS or
+  **Ctrl+Right** on Windows/Linux, or click a result's eye button, to preview a
   result in a reusable editor tab. The matched line appears at the top, and the
   popup keeps focus.
-- **Find usages in the same popup.** Pick a symbol and press **Shift+F12** to list
-  its references. Type over the name to filter them by text or path.
+- **Find usages in the same popup.** Pick a symbol in Symbols and press
+  **Ctrl+Enter** or **Shift+F12** to list its references. Type over the name to
+  filter them by text or path, and use **Back** to restore your search.
 - **Fast on large workspaces.** File search uses an in-memory index with fzf
   matching, and text search streams results from ripgrep.
 - **Respects your ignore files.** `.gitignore`, `.searchignore`, and custom
@@ -49,13 +51,13 @@
    [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus),
    or run `code --install-extension expiracy.search-plus-plus`.
 2. Press **Shift+Shift** to open the search popup.
-3. Start typing. All seven mode icons stay visible; click one or press **Tab** to
+3. Start typing. All six mode icons stay visible; click one or press **Tab** to
    cycle between search modes.
 
 search++ requires VS Code 1.96 or a newer compatible release. See the
 [changelog](CHANGELOG.md) for release notes and upgrade changes.
 
-## Seven Search Modes
+## Six Search Modes
 
 | Mode | What it searches |
 |------|------------------|
@@ -63,8 +65,7 @@ search++ requires VS Code 1.96 or a newer compatible release. See the
 | **Files** | File names and paths across your workspace |
 | **Folders** | Folders containing searchable files |
 | **Text** | File contents (powered by ripgrep) |
-| **Symbols** | Functions, classes, variables via VS Code's language providers |
-| **Usages** | Find a symbol, then list its semantic references |
+| **Symbols** | Functions, classes and variables, with a drill-down to semantic usages |
 | **Commands** | All VS Code commands (built-in and from extensions) |
 
 <p align="center">
@@ -77,16 +78,17 @@ search++ requires VS Code 1.96 or a newer compatible release. See the
 | **Files**: fuzzy path matching | **Folders**: reveal a folder in the Explorer |
 | ![Text mode](media/text.png) | ![Symbols mode](media/symbols.png) |
 | **Text**: ripgrep matches with line previews | **Symbols**: from your language servers |
-| ![Usages mode](media/usages.png) | ![Commands mode](media/commands.png) |
-| **Usages**: semantic references to a symbol | **Commands**: every VS Code command |
+| ![Usages view](media/usages.png) | ![Commands mode](media/commands.png) |
+| **Usages drill-down**: semantic references to a symbol | **Commands**: every VS Code command |
 
 ## Features
 
 ### Find Usages
 
-Open **Usages**, type a symbol name, select the matching symbol, and press
-**Enter** to list its references. You can also select a symbol in **Symbols** or
-**Everything**, then press **Shift+F12** or click its **Find Usages** button.
+Open **Symbols**, type a name, and select the matching symbol. **Enter** opens
+its declaration. **Ctrl+Enter** (**Control+Return** on macOS) or **Shift+F12**
+lists its references in the same popup. From **Everything**, select a symbol
+and press **Shift+F12** or click its **Find Usages** button.
 
 <p align="center">
   <img src="media/usages-filter.png" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'" width="720">
@@ -94,14 +96,14 @@ Open **Usages**, type a symbol name, select the matching symbol, and press
 </p>
 
 The popup shows the selected symbol in its title and search box. This is one
-level deeper than choosing a symbol. **Clear the search box** to leave that lookup
-and search for another symbol. Clearing also removes a cached usage lookup when
-you switch modes.
+level deeper than choosing a symbol. **Back** restores the original query,
+results, highlighted item, and search options without rerunning the search.
+**Clear the search box** to start a fresh symbol search. Changing modes leaves
+the usages drill-down.
 
 To filter the current references, replace the symbol name directly with text or
-a filename. Select a result to jump to that exact reference. Clicking the
-**Usages** mode icon again returns to the original symbol query; returning to
-**Symbols** also restores that query.
+a filename. Press **Enter** to jump to that exact reference. When the parent
+search was in Symbols, clicking **Symbols** also restores it.
 
 From an editor, use **search++: Find Usages** in the command palette or context
 menu to find references to the symbol at the cursor. Without an editor symbol,
@@ -116,14 +118,19 @@ references.
 
 ### Preview a Result
 
-Press **Right Arrow** on a file, text, symbol, or usage result to preview its file
+Press **Cmd+Right** on macOS or **Ctrl+Right** on Windows/Linux on a file, text,
+symbol, or usage result to preview its file
 while the popup keeps focus. Text matches jump to their line and column, with the
 matched line at the top of the editor viewport where scrolling permits. Use the
-arrow keys to select another result and **Right Arrow** to preview it in the same
+Up/Down keys to select another result and the preview shortcut to view it in the same
 additional editor tab, including when VS Code's preview tabs are disabled.
 Existing tabs are reused. Files you edit, pin, or keep open are preserved.
 Press **Enter** to open the selected result with its matching line at the top.
 Folders, commands, and informational rows have no file preview.
+
+Each previewable result has an **eye button**, including recent history. Hover
+over it to see the preview shortcut, or click it to preview that row. Plain
+**Right Arrow** moves the cursor through the search textbox normally.
 
 ![Previewing a text match: the editor shows the matched line while the popup stays open](media/preview.png)
 
@@ -183,12 +190,12 @@ Enable `searchPlusPlus.rememberLastMode` to reopen the last mode used in this
 workspace, including after restarting VS Code. It is off by default. Commands
 such as **Search Files** still open their requested mode. Only the mode is saved;
 search text and nested usage lookups are cleared when the popup closes. Returning
-to Usages opens its symbol chooser.
+from a usages view opens the Symbols chooser.
 
 ### Search History
 
 Recently opened files and locations appear when the search input is empty,
-except in Usages mode. History is stored per workspace. Use the remove button to delete an entry;
+except in Symbols, which shows a search hint instead. History is stored per workspace. Use the remove button to delete an entry;
 deleted-file entries are pruned in the background when another file is added to
 history.
 
@@ -214,7 +221,10 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 |-------|-----------------|--------|---------|
 | **Shift+Shift** | **Shift+Shift** | Open search (Everything tab) | Global |
 | **Tab** | **Tab** | Next search mode | Popup open |
-| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
+| **Cmd+Right** | **Ctrl+Right** | Preview the selected file in one reusable tab | Popup open |
+| **Right Arrow** | **Right Arrow** | Move the cursor through the search text | Search input |
+| **Enter** | **Enter** | Open the selected result | Popup open |
+| **Control+Return** | **Ctrl+Enter** | Show usages of the selected symbol | Symbols tab |
 | **Shift+F12** | **Shift+F12** | Find usages of the selected symbol | Popup open |
 | **Option+C** | **Alt+C** | Toggle case sensitive | Popup open |
 | **Option+R** | **Alt+R** | Toggle regex | Popup open |
@@ -314,7 +324,7 @@ Exclusions, and Limits.
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
 | `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
-| `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "usages", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
+| `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
 | `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
@@ -323,7 +333,8 @@ Exclusions, and Limits.
 
 Use `searchPlusPlus.tabOrder` to reorder the mode buttons and keyboard Tab
 navigation together. Duplicate or unknown modes are ignored, and any missing
-modes are appended so all seven remain available. Changes apply to an open popup.
+modes are appended so all six remain available. Legacy `usages` entries map to
+Symbols; duplicates are removed. Changes apply to an open popup.
 
 The separate `searchPlusPlus.everywhere.sections` setting controls the order of
 result groups inside Everything. Its default is files, folders, symbols, text,

@@ -176,8 +176,14 @@
         "when": "searchPlusPlusModalOpen"
       },
       {
+        "command": "searchPlusPlus.findUsages",
+        "key": "ctrl+enter",
+        "when": "searchPlusPlusModalOpen && searchPlusPlusSymbolTab"
+      },
+      {
         "command": "searchPlusPlus.preview",
-        "key": "right",
+        "key": "ctrl+right",
+        "mac": "cmd+right",
         "when": "searchPlusPlusModalOpen"
       },
       {
@@ -281,6 +287,15 @@
                 "symbol",
                 "usages",
                 "command"
+              ],
+              "enumDescriptions": [
+                "Grouped search across Everything sections.",
+                "File names and paths.",
+                "Workspace folders.",
+                "Text content.",
+                "Symbols and their usages.",
+                "Legacy alias for Symbols; there is no separate Usages tab.",
+                "VS Code commands."
               ]
             },
             "uniqueItems": true,
@@ -290,10 +305,9 @@
               "folder",
               "text",
               "symbol",
-              "usages",
               "command"
             ],
-            "description": "Order of the search mode buttons and Tab navigation. Missing modes are appended automatically; every mode stays available."
+            "description": "Order of the six search mode buttons and Tab navigation. Missing modes are appended automatically. Legacy usages entries are treated as Symbols."
           },
           "searchPlusPlus.everywhere.sections": {
             "order": 2,
