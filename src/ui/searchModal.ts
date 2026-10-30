@@ -551,7 +551,7 @@ export class SearchModal implements vscode.Disposable {
     const settingsBtn: vscode.QuickInputButton = {
       iconPath: new vscode.ThemeIcon('gear'),
       tooltip: 'Open search++ Settings',
-      ...(this.modernButtons ? { location: vscode.QuickInputButtonLocation.Title } : {}),
+      ...(this.modernButtons ? { location: vscode.QuickInputButtonLocation.Inline } : {}),
     };
 
     // Tab buttons (title bar)
@@ -583,9 +583,9 @@ export class SearchModal implements vscode.Disposable {
       [SearchMode.Symbol]: symbolBtn, [SearchMode.Usages]: usagesBtn, [SearchMode.Command]: commandBtn,
     };
     qp.buttons = [
-      settingsBtn,
       ...this.tabOrder().map(mode => tabButtons[mode]),
       gitIgnoreBtn, searchIgnoreBtn, caseSensitiveBtn, regexBtn, wholeWordBtn, fuzzyBtn,
+      settingsBtn,
     ];
 
     this.buttonActions = new Map<vscode.QuickInputButton, () => void>([

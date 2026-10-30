@@ -9,7 +9,7 @@ test('VS Code 1.96 does not receive proposed button properties even when its enu
   const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any, { getRecentItems: () => [] } as any, new Map());
   try {
     modal.show();
-    expect(picker.buttons.slice(1, 8).map(button => button.tooltip)).toEqual(['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Usages', 'Commands']);
+    expect(picker.buttons.slice(0, 7).map(button => button.tooltip)).toEqual(['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Usages', 'Commands']);
     expect(picker.buttons.every(button => !('location' in button) && !('toggle' in button))).toBe(true);
   } finally { modal.dispose(); vi.restoreAllMocks(); }
 });
