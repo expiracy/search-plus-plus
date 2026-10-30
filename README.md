@@ -313,8 +313,14 @@ These are also callable from the command palette and can be used in custom keybi
 
 Click the cog at the far right of the popup's search row to open VS Code
 Settings filtered to search++. All settings are under the `searchPlusPlus` namespace.
-The Settings editor groups them into General, Shortcuts, Modes & Everything,
-Exclusions, and Limits.
+The Settings editor groups them by the object you want to configure:
+
+| Group | Settings |
+|-------|----------|
+| **Search window** | Remembered tab and tab order |
+| **Search results** | Everything result groups and ordering, result limits, and search delay |
+| **Keyboard shortcuts** | Shortcut preset |
+| **Workspace files** | Git-ignore and search-ignore rules, and excluded files or folders |
 
 | Setting | Default | Description |
 |---------|---------|-------------|

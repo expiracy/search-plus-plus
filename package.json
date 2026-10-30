@@ -237,7 +237,7 @@
     ],
     "configuration": [
       {
-        "title": "General",
+        "title": "Search window",
         "order": 1,
         "properties": {
           "searchPlusPlus.rememberLastMode": {
@@ -245,37 +245,9 @@
             "type": "boolean",
             "default": false,
             "description": "Remember the last search mode per workspace, including after restarting VS Code. Direct mode commands always open their requested mode."
-          }
-        }
-      },
-      {
-        "title": "Shortcuts",
-        "order": 2,
-        "properties": {
-          "searchPlusPlus.shortcutPreset": {
-            "order": 1,
-            "type": "string",
-            "enum": [
-              "none",
-              "vscode",
-              "intellij"
-            ],
-            "enumDescriptions": [
-              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
-              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
-              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
-            ],
-            "default": "none",
-            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
-          }
-        }
-      },
-      {
-        "title": "Modes & Everything",
-        "order": 3,
-        "properties": {
+          },
           "searchPlusPlus.tabOrder": {
-            "order": 1,
+            "order": 2,
             "type": "array",
             "items": {
               "type": "string",
@@ -308,9 +280,15 @@
               "command"
             ],
             "description": "Order of the six search mode buttons and Tab navigation. Missing modes are appended automatically. Legacy usages entries are treated as Symbols."
-          },
+          }
+        }
+      },
+      {
+        "title": "Search results",
+        "order": 2,
+        "properties": {
           "searchPlusPlus.everywhere.sections": {
-            "order": 2,
+            "order": 1,
             "type": "array",
             "items": {
               "type": "string",
@@ -332,6 +310,12 @@
             ],
             "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it."
           },
+          "searchPlusPlus.maxResults": {
+            "order": 2,
+            "type": "number",
+            "default": 200,
+            "description": "Maximum number of results to display per search mode"
+          },
           "searchPlusPlus.everywhere.resultLimit": {
             "order": 3,
             "type": "integer",
@@ -339,11 +323,39 @@
             "minimum": 1,
             "maximum": 200,
             "description": "Maximum results shown per section on the Everything tab"
+          },
+          "searchPlusPlus.debounceMs": {
+            "order": 4,
+            "type": "number",
+            "default": 300,
+            "description": "Debounce delay in milliseconds before triggering search"
           }
         }
       },
       {
-        "title": "Exclusions",
+        "title": "Keyboard shortcuts",
+        "order": 3,
+        "properties": {
+          "searchPlusPlus.shortcutPreset": {
+            "order": 1,
+            "type": "string",
+            "enum": [
+              "none",
+              "vscode",
+              "intellij"
+            ],
+            "enumDescriptions": [
+              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
+              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
+              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
+            ],
+            "default": "none",
+            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
+          }
+        }
+      },
+      {
+        "title": "Workspace files",
         "order": 4,
         "properties": {
           "searchPlusPlus.excludeGitIgnored": {
@@ -366,24 +378,6 @@
             },
             "default": [],
             "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
-          }
-        }
-      },
-      {
-        "title": "Limits",
-        "order": 5,
-        "properties": {
-          "searchPlusPlus.maxResults": {
-            "order": 1,
-            "type": "number",
-            "default": 200,
-            "description": "Maximum number of results to display per search mode"
-          },
-          "searchPlusPlus.debounceMs": {
-            "order": 2,
-            "type": "number",
-            "default": 300,
-            "description": "Debounce delay in milliseconds before triggering search"
           }
         }
       }

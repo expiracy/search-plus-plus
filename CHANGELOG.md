@@ -4,6 +4,11 @@
 
 ### Changed
 
+- Settings are grouped by the object being configured: **Search window**,
+  **Search results**, **Keyboard shortcuts**, and **Workspace files**. Tab order
+  lives with window behaviour, both result limits live with results, and ignore
+  rules live with workspace files. Existing setting keys and defaults are unchanged.
+
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
   In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
   (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in
