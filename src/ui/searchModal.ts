@@ -548,6 +548,12 @@ export class SearchModal implements vscode.Disposable {
   private optionButtons = new Set<vscode.QuickInputButton>();
 
   private rebuildButtons(qp: vscode.QuickPick<SearchResult>): void {
+    const settingsBtn: vscode.QuickInputButton = {
+      iconPath: new vscode.ThemeIcon('gear'),
+      tooltip: 'Open search++ Settings',
+      ...(this.modernButtons ? { location: vscode.QuickInputButtonLocation.Inline } : {}),
+    };
+
     // Tab buttons (title bar)
     const everywhereBtn = this.tabButton('search', TAB_NAMES[SearchMode.Everywhere], SearchMode.Everywhere);
     const fileBtn = this.tabButton('file', TAB_NAMES[SearchMode.File], SearchMode.File);
@@ -579,9 +585,14 @@ export class SearchModal implements vscode.Disposable {
     qp.buttons = [
       ...this.tabOrder().map(mode => tabButtons[mode]),
       gitIgnoreBtn, searchIgnoreBtn, caseSensitiveBtn, regexBtn, wholeWordBtn, fuzzyBtn,
+      settingsBtn,
     ];
 
     this.buttonActions = new Map<vscode.QuickInputButton, () => void>([
+      [settingsBtn, () => {
+        qp.hide();
+        void vscode.commands.executeCommand('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+      }],
       [everywhereBtn, () => this.switchTab(SearchMode.Everywhere)],
       [fileBtn, () => this.switchTab(SearchMode.File)],
       [folderBtn, () => this.switchTab(SearchMode.Folder)],

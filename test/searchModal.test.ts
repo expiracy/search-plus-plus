@@ -67,10 +67,30 @@ function type(value: string) {
   input.fire(value);
 }
 
+test('the settings cog at the end of the input row closes search and opens search++ settings', () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  const hidden = vi.spyOn(picker, 'hide');
+  modal.show(SearchMode.File);
+  type('file');
+  const settings = picker.buttons.find((item: any) => item.tooltip === 'Open search++ Settings') as any;
+  expect(settings).toMatchObject({
+    iconPath: { id: 'gear' },
+    tooltip: 'Open search++ Settings',
+    location: vscode.QuickInputButtonLocation.Inline,
+  });
+  expect(picker.buttons.at(-1)).toBe(settings);
+  expect(settings.toggle).toBeUndefined();
+  expect(command).not.toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+  button.fire(settings);
+  expect(hidden).toHaveBeenCalledOnce();
+  expect(requests[0].dispose).toHaveBeenCalledOnce();
+  expect(command).toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+});
+
 test('macOS search controls and empty-result hints show Option shortcuts', () => {
   vi.stubGlobal('process', { ...process, platform: 'darwin' });
   modal.show(SearchMode.File);
-  expect(picker.buttons.slice(7).map((item: any) => item.tooltip)).toEqual([
+  expect(picker.buttons.slice(7, -1).map((item: any) => item.tooltip)).toEqual([
     'Exclude Git Ignored (Option+G)',
     'Exclude Search Ignored (Option+S)',
     'Case Sensitive (Option+C)',
@@ -86,7 +106,7 @@ test('macOS search controls and empty-result hints show Option shortcuts', () =>
 test('Windows search controls and empty-result hints show Alt shortcuts', () => {
   vi.stubGlobal('process', { ...process, platform: 'win32' });
   modal.show(SearchMode.File);
-  expect(picker.buttons.slice(7).map((item: any) => item.tooltip)).toEqual([
+  expect(picker.buttons.slice(7, -1).map((item: any) => item.tooltip)).toEqual([
     'Exclude Git Ignored (Alt+G)',
     'Exclude Search Ignored (Alt+S)',
     'Case Sensitive (Alt+C)',
