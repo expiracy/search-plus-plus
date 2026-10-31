@@ -309,7 +309,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "**Drag rows** to arrange tabs and Everything result groups. Unchecked sources are hidden from the popup. Choose sources in `#searchPlusPlus.everythingTabSources#`."
+            "markdownDescription": "To rearrange tabs, remove groups, then re-add them in the correct order."
           },
           "searchPlusPlus.whenSearchOpens": {
             "order": 4,
@@ -416,7 +416,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "**Drag rows** to arrange tabs and Everything groups. Unchecked sources are hidden from the popup.",
+            "markdownDescription": "To rearrange tabs, remove groups, then re-add them in the correct order.",
             "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
           },
           "searchPlusPlus.tabs": {
@@ -443,7 +443,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "Tabs shown in the search popup. **Drag rows to reorder.** Remove a tab to hide it; choose **Add Item** to show it again. Keep at least one tab. Direct search commands can still open hidden tabs.",
+            "markdownDescription": "Tabs shown in the search popup. To rearrange tabs, remove them, then re-add them in the correct order. Remove a tab to hide it; choose **Add Item** to show it again. Keep at least one tab. Direct search commands can still open hidden tabs.",
             "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
           },
           "searchPlusPlus.defaultMode": {
@@ -662,7 +662,7 @@
               "Text",
               "Commands"
             ],
-            "markdownDescription": "Optional order of groups on the Everything tab. **Drag rows to reorder.** Use `#searchPlusPlus.everything.sources#` to show or hide sources. Missing sources appear last.",
+            "markdownDescription": "Optional order of groups on the Everything tab. To rearrange groups, remove them, then re-add them in the correct order. Use `#searchPlusPlus.everything.sources#` to show or hide sources. Missing sources appear last.",
             "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search popup. Tabs and Everything share these choices."
           },
           "searchPlusPlus.everywhere.sections": {

@@ -9,8 +9,9 @@
 - **Everything Tab Sources** is one checkbox list for both tabs and Everything sources.
   Unchecking Files, Folders, Text, Symbols, or Commands hides that type in both
   places. A separate **Show Everything Tab** switch controls the combined tab.
-- **Tab Order** supports dragging rows to arrange tabs and Everything groups
-  together. Unchecked sources are hidden from the popup. The default Everything
+- **Tab Order** arranges tabs and Everything groups together. To rearrange tabs,
+  remove groups, then re-add them in the correct order. Unchecked sources are
+  hidden from the popup. The default Everything
   groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
 - **When Search Opens** combines the opening choice and remembered-mode option
   in one dropdown, including **Last used tab**. The default remains Everything.

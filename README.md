@@ -195,8 +195,9 @@ Under **Search popup**:
   enabled searches available.
 - **Everything Tab Sources** has checkboxes for Files, Folders, Text, Symbols, and
   Commands. Unchecking a type hides both its tab and its results inside Everything.
-- **Tab Order** supports dragging rows to arrange tabs and Everything groups
-  together. Unchecked sources are hidden from the popup.
+- **Tab Order** arranges tabs and Everything groups together. To rearrange tabs,
+  remove groups, then re-add them in the correct order. Unchecked sources are hidden
+  from the popup.
 - **When Search Opens** chooses a fixed starting tab or **Last used tab**.
 - **Shortcut Preset** offers Default, VS Code, and IntelliJ, with an example and
   a link to view and customise the bindings in the native Keyboard Shortcuts editor.
@@ -357,7 +358,7 @@ ignore rules and excluded paths stay together under Search results:
 |---------|---------|-------------|
 | `searchPlusPlus.showEverythingTab` | `true` | Show the combined Everything tab |
 | `searchPlusPlus.everythingTabSources` | All checked | Sources included in Everything and shown as individual tabs |
-| `searchPlusPlus.tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Tab order, also used for Everything groups; drag rows to arrange |
+| `searchPlusPlus.tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Tab order, also used for Everything groups; remove groups and re-add them in the correct order |
 | `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
 | `searchPlusPlus.shortcutPreset` | `"none"` (Default) | Optional `vscode` or `intellij` opening shortcuts; the setting gives an example and links to individual bindings |
 | `searchPlusPlus.resultsPerSearchType` | `200` | Maximum results returned per source: Files, Folders, Text, Symbols, or Commands |
@@ -371,7 +372,8 @@ ignore rules and excluded paths stay together under Search results:
 
 **Everything Tab Sources** controls the same types in tabs and Everything. **Tab
 Order** controls mode buttons, keyboard Tab navigation, and Everything groups
-together. Drag its rows to arrange them; use the checkboxes to show or hide types.
+together. To rearrange tabs, remove groups, then re-add them in the correct order.
+Use the checkboxes to show or hide types.
 Missing order entries are appended automatically. Changes apply immediately.
 
 Earlier tab, source, order, and opening preferences carry over automatically in
