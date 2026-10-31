@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.1 — 2026-10-31
+
 ### Changed
 
 - **Cmd+Return** on macOS or **Ctrl+Enter** on Windows/Linux shows the selected
