@@ -111,9 +111,11 @@ async function verifySearchOrderPicker(): Promise<void> {
   const previous = config.inspect('searchOrder')?.workspaceValue;
   const picker = vscode.window.createQuickPick<SearchOrderItem>();
   const actions = new vscode.EventEmitter<vscode.QuickPickItemButtonEvent<SearchOrderItem>>();
+  const titleActions = new vscode.EventEmitter<vscode.QuickInputButton>();
   const controlled = new Proxy(picker, {
     get(target, property) {
       if (property === 'onDidTriggerItemButton') return actions.event;
+      if (property === 'onDidTriggerButton') return titleActions.event;
       const value = Reflect.get(target, property, target);
       return typeof value === 'function' ? value.bind(target) : value;
     },
@@ -136,8 +138,16 @@ async function verifySearchOrderPicker(): Promise<void> {
     await moved; await selected;
     assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('searchOrder'), ['Everything', 'Folders', 'Files', 'Text', 'Symbols', 'Commands'], 'native item arrows save the chosen Workspace order');
     assert.equal(picker.activeItems[0]?.mode, SearchMode.File, 'the moved row retains its native selection');
+    const up = picker.buttons.find(button => button.tooltip === 'Move selected search up');
+    assert.ok(up, 'an up button is present in the permanent toolbar');
+    assert.ok(picker.buttons.some(button => button.tooltip === 'Move selected search down'), 'a down button is present in the permanent toolbar');
+    const movedUp = nextEvent(vscode.workspace.onDidChangeConfiguration, event => event.affectsConfiguration('searchPlusPlus.searchOrder')
+      && vscode.workspace.getConfiguration('searchPlusPlus').get<string[]>('searchOrder')?.[1] === 'Files');
+    titleActions.fire(up);
+    await movedUp;
+    assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('searchOrder'), ['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Commands'], 'the toolbar arrow moves the selected row without hovering');
   } finally {
-    editor.dispose(); actions.dispose();
+    editor.dispose(); actions.dispose(); titleActions.dispose();
     await config.update('searchOrder', previous, vscode.ConfigurationTarget.Workspace);
   }
 }

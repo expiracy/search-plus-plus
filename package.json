@@ -313,7 +313,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "[Arrange with \u2191/\u2193 buttons](command:searchPlusPlus.arrangeSearchOrder) in a native list. Changes save automatically; the list title shows whether you are editing User or Workspace settings. This order is shared by tabs and Everything groups. Disabled searches keep their position; missing entries are appended automatically."
+            "markdownDescription": "**[Open search order with \u2191/\u2193 controls](command:searchPlusPlus.arrangeSearchOrder)**. Select a search in that list and use the always-visible arrows at the top. Changes save automatically to the User or Workspace scope shown in the title. This order controls tabs and Everything groups; disabled searches retain their position."
           },
           "searchPlusPlus.whenSearchOpens": {
             "order": 4,

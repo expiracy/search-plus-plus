@@ -18,6 +18,8 @@ export class SearchOrderPicker implements vscode.Disposable {
   private scopeButton: vscode.QuickInputButton = this.workspaceButton;
   private readonly up = { iconPath: new vscode.ThemeIcon('arrow-up'), tooltip: 'Move up' };
   private readonly down = { iconPath: new vscode.ThemeIcon('arrow-down'), tooltip: 'Move down' };
+  private readonly titleUp = { iconPath: new vscode.ThemeIcon('arrow-up'), tooltip: 'Move selected search up' };
+  private readonly titleDown = { iconPath: new vscode.ThemeIcon('arrow-down'), tooltip: 'Move selected search down' };
   private readonly done = { iconPath: new vscode.ThemeIcon('check'), tooltip: 'Done' };
 
   constructor(private readonly createPicker: () => vscode.QuickPick<SearchOrderItem> = () => vscode.window.createQuickPick<SearchOrderItem>()) {}
@@ -40,6 +42,7 @@ export class SearchOrderPicker implements vscode.Disposable {
     const picker = this.createPicker() as vscode.QuickPick<SearchOrderItem> & { sortByLabel: boolean };
     this.picker = picker;
     picker.enabled = true;
+    picker.ignoreFocusOut = true;
     picker.matchOnDescription = false;
     picker.matchOnDetail = false;
     picker.sortByLabel = false;
@@ -59,7 +62,11 @@ export class SearchOrderPicker implements vscode.Disposable {
       if (!direction || !picker.enabled || event.item.target !== this.target || !DEFAULT_TAB_ORDER.includes(event.item.mode)) return;
       this.move(picker, event.item.mode, direction, this.target);
     }), picker.onDidTriggerButton(async button => {
-      if (button === this.done) {
+      const direction = button === this.titleUp ? -1 : button === this.titleDown ? 1 : 0;
+      if (direction) {
+        const item = picker.activeItems[0];
+        if (picker.enabled && item?.target === this.target) this.move(picker, item.mode, direction, this.target);
+      } else if (button === this.done) {
         picker.enabled = false; await this.pending;
         if (this.picker === picker) picker.hide();
       } else if (button === this.scopeButton) {
@@ -81,9 +88,9 @@ export class SearchOrderPicker implements vscode.Disposable {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     const preferences = getSearchConfiguration(config, this.target === vscode.ConfigurationTarget.Global ? 'globalValue' : 'workspaceValue');
     picker.title = `Search order · ${this.target === vscode.ConfigurationTarget.Global ? 'User settings' : 'Workspace settings'}`;
-    picker.placeholder = 'Use the ↑ / ↓ buttons beside an item. Changes save automatically.';
+    picker.placeholder = 'Select a search, then use ↑ / ↓ at the top. Changes save automatically.';
     this.scopeButton = this.target === vscode.ConfigurationTarget.Global ? this.workspaceButton : this.userButton;
-    picker.buttons = this.hasWorkspace() ? [this.scopeButton, this.done] : [this.done];
+    picker.buttons = [this.titleUp, this.titleDown, ...(this.hasWorkspace() ? [this.scopeButton] : []), this.done];
     picker.items = preferences.order.map((mode, index) => ({
       mode, target: this.target, label: SEARCH_LABELS[mode],
       description: `${index + 1} of ${preferences.order.length}${preferences.tabs.includes(mode) ? '' : ' · Disabled'}`,

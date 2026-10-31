@@ -14,6 +14,8 @@
   save to the User or Workspace scope shown in the title. Disabled searches
   retain their position. The default Everything
   groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
+- The reorder list keeps **↑/↓ buttons visible in its toolbar** so a selected
+  search can be moved without discovering the row-hover actions.
 - **When Search Opens** combines the opening choice and remembered-mode option
   in one dropdown, including **Last used tab**. The default remains Everything.
   The last enabled search cannot be unchecked; direct commands can temporarily

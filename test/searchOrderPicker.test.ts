@@ -47,6 +47,17 @@ test('a down-arrow click moves the chosen search one position and saves User ord
   expect(update).toHaveBeenCalledWith('searchOrder', user.searchOrder, vscode.ConfigurationTarget.Global);
 });
 
+test('visible toolbar arrows move the selected search without hovering a row', async () => {
+  await editor.show();
+  const up = picker.buttons.find((button: any) => button.tooltip === 'Move selected search up');
+  const down = picker.buttons.find((button: any) => button.tooltip === 'Move selected search down');
+  expect(up).toBeDefined(); expect(down).toBeDefined();
+  picker.activeItems = [picker.items.find((item: any) => item.mode === SearchMode.File)];
+  titleButtons.fire(down);
+  await vi.waitFor(() => expect(user.searchOrder).toEqual(['Everything', 'Folders', 'Files', 'Text', 'Symbols', 'Commands']));
+  expect(picker.activeItems[0].mode).toBe(SearchMode.File);
+});
+
 test('rows at the boundaries only offer the arrow that can move them', async () => {
   await editor.show();
   expect(picker.items[0].buttons.map((button: any) => button.tooltip)).toEqual(['Move down']);

@@ -91,7 +91,8 @@ type without changing these preferences. Unavailable or unsaved opening choices
 fall back to the first available tab.
 
 The Search Order description links to a native QuickPick editor with per-row
-up/down buttons. `SearchOrderPicker` serializes edits at the selected User or
+up/down buttons and permanent toolbar arrows for the selected row.
+`SearchOrderPicker` serializes edits at the selected User or
 Workspace scope, reads the current order before each move, and retains the moved
 row's selection. The standard Settings editor stays open underneath it.
 
