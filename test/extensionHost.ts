@@ -78,6 +78,12 @@ export async function run(): Promise<void> {
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
     assert.ok(commands.includes('searchPlusPlus.preview'));
+    const discoverable = await vscode.commands.getCommands(true);
+    const hiddenConfigurationCommands = extension.packageJSON.contributes.menus.commandPalette
+      .filter((item: { command: string; when: string }) => item.when === 'false' && item.command.includes('configureWindow.'));
+    for (const item of hiddenConfigurationCommands) {
+      assert.ok(!discoverable.includes(item.command), `internal configuration action ${item.command} stays out of command search`);
+    }
     for (const command of ['searchPlusPlus.openFiles', 'searchPlusPlus.openText', 'searchPlusPlus.openSymbols', 'searchPlusPlus.openCommands']) {
       const activeEditor = vscode.window.tabGroups.activeTabGroup.activeTab;
       await vscode.commands.executeCommand(command);
@@ -87,7 +93,7 @@ export async function run(): Promise<void> {
       await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
     }
     await vscode.commands.executeCommand('searchPlusPlus.configureWindow');
-    await vscode.commands.executeCommand('searchPlusPlus.configureWindow.close');
+    await vscode.commands.executeCommand('_searchPlusPlus.configureWindow.close');
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {

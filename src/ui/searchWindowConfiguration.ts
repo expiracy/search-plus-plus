@@ -92,7 +92,7 @@ export class SearchWindowConfiguration implements vscode.TreeDataProvider<Window
       item.id = 'scope';
       item.description = this.target === vscode.ConfigurationTarget.Global ? 'User settings' : 'This workspace';
       item.iconPath = new vscode.ThemeIcon('settings');
-      item.command = { command: 'searchPlusPlus.configureWindow.scope', title: 'Choose where settings apply' };
+      item.command = { command: '_searchPlusPlus.configureWindow.scope', title: 'Choose where settings apply' };
       item.tooltip = 'User settings apply to all workspaces. Workspace settings override them for this project.';
       return item;
     }
@@ -101,7 +101,7 @@ export class SearchWindowConfiguration implements vscode.TreeDataProvider<Window
       item.id = 'opening';
       item.iconPath = new vscode.ThemeIcon('play');
       item.description = this.read('rememberLastMode', false) ? 'Last used tab' : tabs[this.openingTab()].label;
-      item.command = { command: 'searchPlusPlus.configureWindow.openingTab', title: 'Choose opening tab' };
+      item.command = { command: '_searchPlusPlus.configureWindow.openingTab', title: 'Choose opening tab' };
       return item;
     }
     if (node.kind !== 'tab') {
