@@ -19,7 +19,7 @@ body {
   font: 17px/1.65 var(--sans);
 }
 
-img { display: block; max-width: 100%; height: auto; }
+img, video { display: block; max-width: 100%; height: auto; }
 a { color: var(--blue); }
 a:hover { text-decoration: none; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }

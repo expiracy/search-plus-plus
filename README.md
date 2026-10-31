@@ -4,8 +4,8 @@
 
 <p align="center">
   <b>Search everything in VS Code from one popup.</b><br>
-  Press <kbd>Shift</kbd> <kbd>Shift</kbd> to find files, folders, text, symbols, usages, and commands.<br>
-  Inspired by Search Everywhere in JetBrains IDEs.
+  Double Shift. Find it. Open it.<br>
+  Files, folders, text, symbols, usages and commands, inspired by JetBrains Search Everywhere.
 </p>
 
 <p align="center">
@@ -23,257 +23,202 @@
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
-<p align="center">
-  <img src="media/demo.gif" alt="search++ demo: searching everything, files with a line number, text with previews, symbols, usages, and commands" width="900">
-</p>
+[![search++ walkthrough: Everything search, code preview, symbol usages, Back navigation and native settings](media/demo.gif)](media/demo.mp4)
 
-## Why search++
+[Watch the full walkthrough](media/demo.mp4). Recorded with search++ 3.1.1 on
+macOS. Direct mode shortcuts use the optional VS Code preset.
 
-- **One shortcut for every search.** Files, folders, text, symbols, usages, and
-  commands share one popup. Press **Tab** to change mode without losing your query.
-- **Everything at a glance.** The Everything tab groups the best matches from each
-  source, so you can find a file, a line of text, or a command from one place.
-- **Browse results without leaving the popup.** Press **Right Arrow**, or click
-  a result's eye button, to preview a result in a reusable editor tab. The matched
-  line appears at the top, and the
-  popup keeps focus.
-- **Find usages in the same popup.** Pick a symbol in Symbols and press
-  **Cmd+Return** on macOS or **Ctrl+Enter** on Windows/Linux to list its references.
-  **Shift+F12** also works inside the popup. Type over the name to
-  filter them by text or path, and use **Back** to restore your search.
-- **Fast on large workspaces.** File search uses an in-memory index with fzf
-  matching, and text search streams results from ripgrep.
-- **Respects your ignore files.** `.gitignore`, `.searchignore`, and custom
-  exclusion globs keep generated and vendored files out of your results.
+## Get started
 
-## Getting Started
-
-1. Install **search++** from the
-   [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus),
+1. [Install search++](https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus),
    or run `code --install-extension expiracy.search-plus-plus`.
-2. Press **Shift+Shift** to open the search popup.
-3. Start typing. All six mode icons stay visible; click one or press **Tab** to
-   cycle between search modes.
+2. Press **Shift** twice to open the search popup.
+3. Type a name or some code. Use **Tab** to change modes without losing your query.
+4. Press **Right Arrow** to preview a result, or **Return** on macOS / **Enter** on
+   Windows and Linux to open it.
 
-search++ requires VS Code 1.96 or a newer compatible release. See the
-[changelog](CHANGELOG.md) for release notes and upgrade changes.
+Requires **VS Code 1.96 or later**. The popup follows your VS Code theme and file
+icons. No setup or shortcut preset is required.
 
-## Six Search Modes
+## Six search modes
 
-| Mode | What it searches |
-|------|------------------|
-| **Everything** | Files, folders, text, symbols, and commands in grouped sections |
-| **Files** | File names and paths across your workspace |
-| **Folders** | Folders containing searchable files |
-| **Text** | File contents (powered by ripgrep) |
-| **Symbols** | Functions, classes and variables, with a drill-down to semantic usages |
-| **Commands** | All VS Code commands (built-in and from extensions) |
+Start in **Everything** when you know what you want but not where it lives.
+Switch to a specific tab to explore its full results.
 
-File rows show the filename with its parent folder alongside it and use VS Code's
-themed file icons where supported. Recent files use the same layout, with saved
-line locations shown as `file.ts:42`.
+| Mode | Find |
+|------|------|
+| **Everything** | Grouped matches from all enabled sources |
+| **Files** | Files by name or path, with fuzzy matching |
+| **Folders** | Folders to reveal in the Explorer |
+| **Text** | Matching lines inside files, powered by ripgrep |
+| **Symbols** | Functions, classes and variables from your language providers |
+| **Commands** | VS Code commands, including commands from extensions |
 
-<p align="center">
-  <img src="media/everywhere.png" alt="Everything mode showing grouped file, text, and symbol results for 'preview'" width="720">
-  <br><em>Everything: grouped results from every source</em>
-</p>
+The Everything tab shows a limited set of matches per group. Select a group's
+more-results row to open its full tab. You choose which sources appear and their
+order in [Settings](#settings).
 
-| ![Files mode](media/files.png) | ![Folders mode](media/folders.png) |
-|:---:|:---:|
-| **Files**: fuzzy path matching | **Folders**: reveal a folder in the Explorer |
-| ![Text mode](media/text.png) | ![Symbols mode](media/symbols.png) |
-| **Text**: ripgrep matches with line previews | **Symbols**: from your language servers |
-| ![Usages view](media/usages.png) | ![Commands mode](media/commands.png) |
-| **Usages drill-down**: semantic references to a symbol | **Commands**: every VS Code command |
+### Preview code without losing your place
 
-## Features
+Select a file, text match, symbol or usage and press **Right Arrow**, or click its
+**eye button**. The file opens in a reusable preview tab while the popup keeps
+focus. Text matches jump to the matching line and column.
 
-### Find Usages
+Use the arrow keys to choose another result and preview again. **Return** on
+macOS / **Enter** on Windows and Linux opens the result and closes search.
+Files you edit, pin or keep open are preserved. Folders and commands have no code
+preview.
 
-Open **Symbols**, type a name, and select the matching symbol. **Return** on macOS
-or **Enter** on Windows/Linux opens its declaration. **Cmd+Return** on macOS or
-**Ctrl+Enter** on Windows/Linux lists its references in the same
-popup. From **Everything**, select a symbol
-and use the same shortcut or click its **Find Usages** button. Hovering the button
-shows your platform's usages shortcut and **Shift+F12** as an alternative.
-In code editors, **Shift+F12** keeps VS Code's
-built-in Find All References action.
+### From a symbol to its usages, and back
 
-<p align="center">
-  <img src="media/usages-filter.png" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'" width="720">
-  <br><em>Type over the symbol name to filter its references</em>
-</p>
+1. Find a symbol in **Symbols** or **Everything**.
+2. Press **Cmd+Return** on macOS / **Ctrl+Enter** on Windows and Linux, or click
+   **Find Usages**. **Shift+F12** also works inside the popup.
+3. Replace the symbol name in the search box to filter references by code or path.
+4. Preview or open a reference, or select **Back** to restore the previous query,
+   results, selection and search options.
 
-The popup shows the selected symbol in its title and search box. This is one
-level deeper than choosing a symbol. **Back** restores the original query,
-results, highlighted item, and search options without rerunning the search.
-**Clear the search box** to start a fresh symbol search. Changing modes leaves
-the usages drill-down.
+**Return** on macOS / **Enter** on Windows and Linux opens a symbol's declaration.
+Clearing the usages search box starts a fresh symbol search. Changing tabs leaves
+the usages view.
 
-To filter the current references, replace the symbol name directly with text or
-a filename. Confirm the selected result to jump to that exact reference. When the parent
-search was in Symbols, clicking **Symbols** also restores it.
+You can also run **search++: Find Usages** from the editor context menu or command
+palette. **Shift+F12 in code editors keeps VS Code's built-in Find All References.**
 
-From an editor, use **search++: Find Usages** in the command palette or context
-menu to find references to the symbol at the cursor. Without an editor symbol,
-the command opens the symbol chooser.
+### Jump to a line or column
 
-References come from VS Code's language providers. Coverage depends on installed
-language extensions and their indexing state; some language services start when
-you open a source file. Declarations appear when the provider includes them.
-Empty reference lists, unmatched filters, and language-provider failures have
-separate messages. Git-ignore, search-ignore, and custom exclusions also apply to
-references.
+In **Files** or **Everything**, append a location to a filename:
 
-### Preview a Result
-
-Press **Right Arrow** on a file, text,
-symbol, or usage result to preview its file
-while the popup keeps focus. Text matches jump to their line and column, with the
-matched line at the top of the editor viewport where scrolling permits. Use the
-Up/Down keys to select another result and the preview shortcut to view it in the same
-additional editor tab, including when VS Code's preview tabs are disabled.
-Existing tabs are reused. Files you edit, pin, or keep open are preserved.
-Press **Return** on macOS or **Enter** on Windows/Linux to open the selected result
-with its matching line at the top.
-Folders, commands, and informational rows have no file preview.
-**Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux also preview results.
-
-Each previewable result has an **eye button**, including recent history. Hover
-over it to see the preview shortcut, or click it to preview that row.
-
-![Previewing a text match: the editor shows the matched line while the popup stays open](media/preview.png)
-
-### Go to Line and Column
-
-On the **Files** or **Everything** tab, append `:line` or `:line:column` to jump to
-a specific location. Line and column numbers start at 1:
-
-```
-searchModal.ts:42
-searchModal.ts:42:5
+```text
+checkout.ts:42
+checkout.ts:42:5
 ```
 
-The **search++: Autofill File Path** command can insert the selected file's path
-for a custom keybinding. The file remains
-searchable while you
-type a column, such as `file.ts:42:`. Only numeric line and column suffixes are
-interpreted as navigation.
+Line and column numbers start at 1. Preview or open the result to go there.
+With an empty search box, recently opened files and locations appear again;
+history is stored per workspace. Symbols shows a search hint instead.
 
-![Typing modal:222 in Files mode and previewing line 222 of searchModal.ts](media/go-to-line.png)
+## Keyboard shortcuts
 
-### Go to File
+These shortcuts work with the default configuration. Hover over row buttons and
+search options to see the shortcut for your operating system.
 
-Click the **Go to File** button on a file, text, symbol, usage, or recent-history
-row to open its file in the current editor group. Matches retain their line and
-column, including a location typed as `file:line:column`, and show the matching
-line at the top of the editor viewport where scrolling permits. Confirmed opens
-are added to recent history.
-On symbol rows, this action is labelled **Go to Symbol** and shows the platform's
-open key in its hover hint.
+| Action | macOS | Windows / Linux |
+|--------|-------|-----------------|
+| Open search | **Shift, Shift** | **Shift, Shift** |
+| Next enabled tab | **Tab** | **Tab** |
+| Preview selected result | **Right Arrow** | **Right Arrow** |
+| Preview, alternative | **Cmd+Right** | **Ctrl+Right** |
+| Open selected result | **Return** | **Enter** |
+| Show selected symbol's usages | **Cmd+Return** | **Ctrl+Enter** |
+| Show usages, inside the popup | **Shift+F12** | **Shift+F12** |
+| Case sensitive | **Option+C** | **Alt+C** |
+| Regex | **Option+R** | **Alt+R** |
+| Whole word | **Option+W** | **Alt+W** |
+| Fuzzy matching | **Option+F** | **Alt+F** |
+| Exclude git-ignored files | **Option+G** | **Alt+G** |
+| Exclude search-ignored files | **Option+S** | **Alt+S** |
 
-### Search Options
+Regex applies to text search. Fuzzy matching applies to paths, commands, symbol
+candidates and usage previews; text search uses literal text or a regex. Search
+options remain selected when changing modes.
 
-Toggle these while the search popup is open:
+### Optional shortcut presets
 
-| Toggle | macOS | Windows / Linux | Description |
-|--------|-------|-----------------|-------------|
-| Case Sensitive | **Option+C** | **Alt+C** | Match exact case |
-| Regex | **Option+R** | **Alt+R** | Use regular expressions for text search |
-| Match Whole Word | **Option+W** | **Alt+W** | Only match complete words |
-| Fuzzy Search | **Option+F** | **Alt+F** | Use fuzzy matching for paths, commands, and symbol candidates |
-| Exclude Git Ignored | **Option+G** | **Alt+G** | Hide files excluded by `.gitignore` |
-| Exclude Search Ignored | **Option+S** | **Alt+S** | Hide files excluded by `.searchignore` |
+In **Search popup → Shortcut Preset**, choose **VS Code** or **IntelliJ** to open
+individual modes directly. These presets redirect the keys below to search++.
+**Default** leaves those opening shortcuts alone. Your explicit custom
+keybindings take precedence.
 
-Regex applies to text search. Fuzzy matching applies to files, folders, commands,
-symbols, and usage previews; text search uses literal text or a regular
-expression. Match Whole Word uses literal matching for files, folders, commands,
-and usage previews, and filters symbol names returned by the language provider.
+| Mode | VS Code: macOS / Windows & Linux | IntelliJ: macOS / Windows & Linux |
+|------|----------------------------------|----------------------------------|
+| Files | Cmd+P / Ctrl+P | Cmd+Shift+O / Ctrl+Shift+N |
+| Symbols | Cmd+T / Ctrl+T | Cmd+O / Ctrl+N |
+| Text | Cmd+Shift+F / Ctrl+Shift+F | Cmd+Shift+F / Ctrl+Shift+F |
+| Commands | Cmd+Shift+P / Ctrl+Shift+P | Cmd+Shift+A / Ctrl+Shift+A |
 
-### Absolute Path Support
+For example, the VS Code preset makes **Cmd+P** on macOS / **Ctrl+P** on Windows
+and Linux open the Files tab. **F1** still opens the native Command Palette.
+The Symbols shortcut searches the workspace, rather than just the current file.
+Double Shift and the shortcuts inside the popup work with every preset.
 
-On the **Files**, **Folders**, or **Everything** tab, enter a full filesystem path
-such as `C:\Users\me\file.ts` or `/home/me/file.ts`. Select the result to open the
-file or reveal the folder in the Explorer.
+Select **View and customise applied shortcuts** below the preset to open VS Code's
+Keyboard Shortcuts editor filtered to search++. Other keymap extensions may claim
+the same keys; see [Custom keybindings](#custom-keybindings) for an override.
 
-### Configure the Search Popup
+## Settings
 
-Click the popup's cog, or run **search++: Open Settings** from the Command
-Palette, to open the normal VS Code Settings page filtered to search++.
+Click the **cog at the far right of the search row** to open the normal VS Code
+Settings page, filtered to search++. There are two groups:
 
-Under **Search popup**:
+| Group | What you configure |
+|-------|--------------------|
+| **Search popup** | Tabs and Everything sources, their order, the opening tab and shortcut presets |
+| **Search results** | Result limits, search delay, ignore files and excluded paths |
 
-- **Show Everything Tab** controls the combined tab while keeping the individual
-  enabled searches available.
-- **Everything Tab Sources** has checkboxes for Files, Folders, Text, Symbols, and
-  Commands. Unchecking a type hides both its tab and its results inside Everything.
-- **Tab Order** arranges tabs and Everything groups together. To rearrange tabs,
-  remove groups, then re-add them in the correct order. Unchecked sources are hidden
-  from the popup.
-- **When Search Opens** chooses a fixed starting tab or **Last used tab**.
-- **Shortcut Preset** offers Default, VS Code, and IntelliJ, with an example and
-  a link to view and customise the bindings in the native Keyboard Shortcuts editor.
+**Everything Tab Sources** controls both the individual source tabs and the
+groups inside Everything. Untick a source to hide both, and keep at least one
+source enabled. **Show Everything Tab** controls the combined tab itself.
 
-Use the Settings page's **User** or **Workspace** tabs to choose where these
-preferences apply. At least one search type stays enabled; unchecking the last
-one restores the previous selection. If an opening choice is unavailable, the
-first available tab opens. Direct search commands can still open a disabled type
-temporarily without changing the checkbox choices.
+**Tab Order** controls the tabs and Everything groups together. To rearrange tabs,
+remove groups, then re-add them in the correct order. Use the source checkboxes
+to show or hide types.
 
-### Remember Your Search Mode
+**When Search Opens → Last used tab** remembers your last available tab in this
+workspace, including after restarting VS Code. Search text and usage lookups are
+cleared when the popup closes. Direct search commands still open their named tab.
 
-Choose **Last used tab** in `searchPlusPlus.whenSearchOpens` to reopen the
-last-used available tab, including after restarting VS Code. The default is
-Everything. Commands such as **Search Files** still open their requested mode. Only the mode is saved;
-search text and nested usage lookups are cleared when the popup closes. Returning
-from a usages view opens the Symbols chooser.
+<details>
+<summary>All settings and defaults</summary>
 
-### Search History
+All keys use the `searchPlusPlus.` prefix. Workspace settings override User
+settings. Previous setting names migrate automatically in their original scope.
 
-Recently opened files and locations appear when the search input is empty,
-except in Symbols, which shows a search hint instead. History is stored per workspace. Use the remove button to delete an entry;
-deleted-file entries are pruned in the background when another file is added to
-history.
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `showEverythingTab` | `true` | Show the combined Everything tab |
+| `everythingTabSources` | All enabled | Show source tabs and their Everything groups |
+| `tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Order tabs and Everything groups |
+| `whenSearchOpens` | `"everywhere"` | Opening tab; use `"last"` to remember it |
+| `shortcutPreset` | `"none"` | Default, `"vscode"` or `"intellij"` opening shortcuts |
+| `resultsPerSearchType` | `200` | Maximum results returned per source |
+| `resultsPerEverythingGroup` | `20` | Maximum matches shown per Everything group (1–200) |
+| `searchDelay` | `300` | Typing delay in milliseconds for Text, Symbols and Commands tabs; Everything delays Symbols and Commands |
+| `gitIgnoreRules` | `true` | Hide `.gitignore` matches by default |
+| `searchIgnoreRules` | `true` | Hide `.searchignore` matches by default |
+| `excludedPaths` | `[]` | Glob patterns always excluded, even with ignore-file filters off |
 
-### Notebook Support
+</details>
 
-Text search includes cell source in Jupyter `.ipynb` notebooks. Selecting a match
-opens the notebook. Navigation to the exact matching cell is unsupported.
+### Keep unwanted files out of results
 
-## Search Coverage
+search++ respects `.gitignore` and `.searchignore`. Add a `.searchignore` file
+when you want to hide files from search without changing what Git tracks:
 
-search++ requires VS Code 1.96 or a newer compatible release. Folder search shows
-folders containing files included by the current filters; empty directories do
-not appear. Symbol and usage results depend on installed language extensions and their
-indexing state.
+```gitignore
+# Generated output and large data files
+docs/generated/
+data/**
+*.min.js
+```
 
-Text search requires a filesystem workspace and a ripgrep executable on the
-extension host. Filesystem workspaces can be searched on a remote extension host
-when ripgrep is available there. Text search in virtual workspaces is unsupported.
+Nested ignore files are supported, with patterns scoped to their directory.
+Changes reload automatically. The popup's ignore toggles temporarily include or
+exclude these files. **Excluded Paths** always applies, and Git's internal
+metadata stays excluded even when both ignore toggles are off.
 
-## Keyboard Shortcuts
+## Commands and custom keybindings
 
-| macOS | Windows / Linux | Action | Context |
-|-------|-----------------|--------|---------|
-| **Shift+Shift** | **Shift+Shift** | Open search (Everything tab) | Global |
-| **Tab** | **Tab** | Next search mode | Popup open |
-| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
-| **Cmd+Right** | **Ctrl+Right** | Preview (alternative shortcut) | Popup open |
-| **Return** | **Enter** | Open the selected result | Popup open |
-| **Cmd+Return** | **Ctrl+Enter** | Show usages of the selected symbol | Symbols or Everything |
-| **Shift+F12** | **Shift+F12** | Find usages of the selected symbol | Popup open |
-| **Option+C** | **Alt+C** | Toggle case sensitive | Popup open |
-| **Option+R** | **Alt+R** | Toggle regex | Popup open |
-| **Option+W** | **Alt+W** | Toggle match whole word | Popup open |
-| **Option+F** | **Alt+F** | Toggle fuzzy search | Popup open |
-| **Option+G** | **Alt+G** | Toggle exclude git ignored | Popup open |
-| **Option+S** | **Alt+S** | Toggle exclude search ignored | Popup open |
+Run **search++: Open Search**, **Search Files**, **Search Text**, **Search Symbols**
+or **Search Commands** from the Command Palette. **Find Usages**, **Open Settings**
+and **Reindex Workspace** are also available there. With the VS Code shortcut
+preset enabled, use **F1** to open the native palette.
 
-On macOS, **Cmd** is **⌘**, **Option** is **⌥**, and **Control** is **⌃**. The popup's shortcut hints
-use the platform's modifier names.
+### Custom keybindings
 
-Keymap extensions can claim the same shortcuts. If **Shift+F12** performs another
-action, add this override to **Preferences: Open Keyboard Shortcuts (JSON)**:
+Search for `search++` in **Preferences: Open Keyboard Shortcuts** to change an
+individual binding. User rules take precedence over extension presets and
+keymaps. For example, to keep Shift+F12 assigned to search++ only inside its popup:
 
 ```json
 {
@@ -283,204 +228,41 @@ action, add this override to **Preferences: Open Keyboard Shortcuts (JSON)**:
 }
 ```
 
-The rule applies only inside the search popup; the editor retains its built-in
-Shift+F12 action. See VS Code's
-[keyboard shortcut rules](https://code.visualstudio.com/docs/configure/keybindings#_keyboard-rules)
-for how user overrides take precedence.
+<details>
+<summary>Context keys for custom rules</summary>
 
-### Direct Search Shortcuts
-
-Choose `searchPlusPlus.shortcutPreset` to open individual modes directly. It
-defaults to **Default** (`none`). Selecting VS Code or IntelliJ redirects the
-keys below from their usual commands to search++. For example, the VS Code preset
-opens the Files tab with Cmd+P on macOS or Ctrl+P on Windows/Linux.
-
-| Mode | VS Code preset (macOS / Windows & Linux) | IntelliJ preset (macOS / Windows & Linux) |
-|------|-----------------------------------------|------------------------------------------|
-| Files | Cmd+P / Ctrl+P | Cmd+Shift+O / Ctrl+Shift+N |
-| Symbols | Cmd+T / Ctrl+T | Cmd+O / Ctrl+N |
-| Text | Cmd+Shift+F / Ctrl+Shift+F | Cmd+Shift+F / Ctrl+Shift+F |
-| Commands | Cmd+Shift+P / Ctrl+Shift+P | Cmd+Shift+A / Ctrl+Shift+A |
-
-With the VS Code preset, **F1** still opens the native Command Palette. The
-Symbols shortcut searches workspace symbols, rather than symbols only in the
-current file. **Double Shift** and shortcuts used inside the popup are independent
-of the preset. Switching back to **Default** disables the preset
-bindings and preserves your custom keybindings.
-
-Use **View and customise applied shortcuts** below the preset to open VS Code's
-native Keyboard Shortcuts editor filtered to this extension. You can also open
-**Preferences: Open Keyboard Shortcuts** and search for `search++`.
-
-Other keymap extensions can claim the same keys, including Shift+Shift. Explicit
-user bindings take precedence. For example, an IntelliJ keymap user can bind
-**Search Files** to Cmd+Shift+O on macOS or Ctrl+Shift+N on Windows/Linux using
-`searchPlusPlus.openFiles` in their own `keybindings.json`. See VS Code's
-[keybinding rules](https://code.visualstudio.com/docs/configure/keybindings#_keyboard-rules).
-
-## Commands
-
-These commands are available from the command palette: **Cmd+Shift+P** on macOS
-or **Ctrl+Shift+P** on Windows/Linux.
-
-**Search**
-
-| Command | Description |
-|---------|-------------|
-| `search++: Open Search` | Open the search popup (Everything tab) |
-| `search++: Search Files` | Open directly to the Files tab |
-| `search++: Search Text` | Open directly to the Text tab |
-| `search++: Search Symbols` | Open directly to the Symbols tab |
-| `search++: Search Commands` | Open directly to the Commands tab |
-| `search++: Find Usages` | Find references to a selected symbol or the symbol at the editor cursor |
-| `search++: Reindex Workspace` | Rebuild the file index |
-
-**Toggles and Navigation**
-
-These are also callable from the command palette and can be used in custom keybindings:
-
-| Command | Description |
-|---------|-------------|
-| `search++: Toggle Case Sensitive` | Toggle case-sensitive matching |
-| `search++: Toggle Regex` | Toggle regular expression matching |
-| `search++: Toggle Only Git Trackable` | Toggle git-ignored file exclusion |
-| `search++: Toggle Exclude Search Ignored` | Toggle `.searchignore` file exclusion |
-| `search++: Toggle Fuzzy Search` | Toggle fuzzy matching |
-| `search++: Toggle Match Whole Word` | Toggle whole-word matching |
-| `search++: Next Tab` | Switch to the next tab |
-| `search++: Previous Tab` | Switch to the previous tab |
-| `search++: Preview Selected Result` | Preview the active result while keeping search focused |
-| `search++: Autofill File Path` | Autofill the selected file's path |
-| `search++: Open Settings` | Open the normal VS Code Settings page filtered to search++ |
-
-## Settings
-
-Click the cog at the far right of the popup's search row to open the normal
-VS Code Settings page directly, filtered to search++. All settings are under
-the `searchPlusPlus` namespace.
-The Settings editor has two groups. Everything is part of the search popup;
-ignore rules and excluded paths stay together under Search results:
-
-| Group | Settings |
-|-------|----------|
-| **Search popup** | Show Everything Tab, Everything Tab Sources, Tab Order, When Search Opens, and Shortcut Preset |
-| **Search results** | Results per Search Type, Results per Everything Group, Search Delay, Git Ignore Rules, Search Ignore Rules, and Excluded Paths |
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `searchPlusPlus.showEverythingTab` | `true` | Show the combined Everything tab |
-| `searchPlusPlus.everythingTabSources` | All checked | Sources included in Everything and shown as individual tabs |
-| `searchPlusPlus.tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Tab order, also used for Everything groups; remove groups and re-add them in the correct order |
-| `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
-| `searchPlusPlus.shortcutPreset` | `"none"` (Default) | Optional `vscode` or `intellij` opening shortcuts; the setting gives an example and links to individual bindings |
-| `searchPlusPlus.resultsPerSearchType` | `200` | Maximum results returned per source: Files, Folders, Text, Symbols, or Commands |
-| `searchPlusPlus.resultsPerEverythingGroup` | `20` | Maximum results displayed per Everything group (1-200) |
-| `searchPlusPlus.searchDelay` | `300` | Typing delay in milliseconds for Text, Symbols, and Commands tabs and delayed Everything groups |
-| `searchPlusPlus.gitIgnoreRules` | `true` | Hide files matched by `.gitignore` by default |
-| `searchPlusPlus.searchIgnoreRules` | `true` | Hide files matched by `.searchignore` by default |
-| `searchPlusPlus.excludedPaths` | `[]` | Glob patterns always excluded, including when ignore-file filters are off |
-
-### Tabs and Result Groups
-
-**Everything Tab Sources** controls the same types in tabs and Everything. **Tab
-Order** controls mode buttons, keyboard Tab navigation, and Everything groups
-together. To rearrange tabs, remove groups, then re-add them in the correct order.
-Use the checkboxes to show or hide types.
-Missing order entries are appended automatically. Changes apply immediately.
-
-Earlier tab, source, order, and opening preferences carry over automatically in
-their original User or Workspace scope. At the same scope, a type previously
-disabled in either the tab or source controls stays disabled; tab order takes
-precedence when the old orders disagree. Explicit choices in the new shared
-controls take precedence. Invalid empty selections retain one usable search type.
-Legacy `usages` entries map to Symbols without adding a duplicate tab. Workspace
-preferences still override User settings. VS Code controls the native Command
-Palette order independently.
-
-Previous `enabledSearches`, `searchOrder`, `maxResults`, `everywhere.resultLimit`,
-`debounceMs`, `excludeGitIgnored`, `excludeSearchIgnored`, and `excludePaths` values
-carry over to their clearer names automatically. Ignore-rule changes apply
-immediately without restarting the extension.
-
-### `.searchignore`
-
-Create a `.searchignore` file in your workspace to exclude files and folders from search results without modifying `.gitignore`. The file uses identical syntax to `.gitignore`.
-
-```
-# Hide generated docs from search
-docs/
-*.pdf
-
-# Hide large data files
-data/**
-*.csv
-```
-
-Nested `.searchignore` files are supported. Patterns are scoped to the directory
-containing the file, just like `.gitignore`. Changes reload the rules and rebuild
-the index automatically; a manual reindex is unnecessary.
-
-Toggle this filter on or off with **Option+S** on macOS or **Alt+S** on
-Windows/Linux while the search popup is open.
-
-### How Exclusions Layer
-
-Exclusions are applied additively from three sources:
-
-1. **Git ignored** -- `.gitignore` rules (**Option+G** on macOS, **Alt+G** on Windows/Linux)
-2. **Search ignored** -- `.searchignore` rules (**Option+S** on macOS, **Alt+S** on Windows/Linux)
-3. **Custom patterns** -- `searchPlusPlus.excludedPaths` (always applied)
-
-Rules apply within each workspace root. Git's internal metadata is excluded from
-workspace indexing and text searches, including when both toggles are off.
-
-## Status Bar
-
-The status bar shows the current state of the file index. Click it at any time to trigger a manual reindex.
-
-| State | Icon | Meaning |
-|-------|------|---------|
-| Building | Spinner | A workspace snapshot is being built; the previous snapshot remains usable during rebuilds |
-| Ready | Search | Index is ready; tooltip shows the file count |
-| Stale | Warning | Bulk or directory changes detected; an automatic rescan is scheduled |
-| Error | Error | Index build failed |
-
-## Custom Keybindings
-
-The extension sets context keys you can use in custom `keybindings.json` `when` clauses:
-
-| Context Key | When it is `true` |
-|-------------|-------------------|
+| Context key | True when |
+|-------------|-----------|
 | `searchPlusPlusModalOpen` | The search popup is open |
-| `searchPlusPlusFileTab` | The Files tab or Everything tab is active |
-| `searchPlusPlusEverythingTab` | The Everything tab is active |
-| `searchPlusPlusSymbolTab` | The Symbols tab is active |
-| `searchPlusPlusSymbolSelected` | A current symbol result is selected in Symbols or Everything |
+| `searchPlusPlusFileTab` | Files or Everything is active |
+| `searchPlusPlusEverythingTab` | Everything is active |
+| `searchPlusPlusSymbolTab` | Symbols is active |
+| `searchPlusPlusSymbolSelected` | A symbol result is selected in Symbols or Everything |
 
-Example for Windows/Linux (use `cmd+shift+f` for the key on macOS):
+The commands **Next Tab**, **Previous Tab**, **Preview Selected Result**,
+**Autofill File Path** and the search-option toggles can also be bound in the
+Keyboard Shortcuts editor. See VS Code's
+[keybinding rules](https://code.visualstudio.com/docs/configure/keybindings#_keyboard-rules)
+for rule syntax and precedence.
 
-```json
-{
-  "key": "ctrl+shift+f",
-  "command": "searchPlusPlus.openText",
-  "when": "!searchPlusPlusModalOpen"
-}
-```
+</details>
 
-## How It Works
+## Search coverage
 
-- **File and folder search** uses an in-memory index built on activation, kept up to date by a file system watcher. Fuzzy matching is powered by [fzf](https://github.com/junegunn/fzf).
-- **Text search** spawns [ripgrep](https://github.com/BurntSushi/ripgrep) with streaming JSON output for fast content search.
-- **Symbol search** delegates to VS Code's workspace symbol providers, so results depend on your installed language extensions.
-- **Usages** resolve semantic references for a selected symbol through VS Code’s language providers.
-- **Command search** indexes all registered VS Code commands (built-in and from extensions).
+- **Files and folders:** an in-memory index with fzf matching, updated by a file
+  watcher. Folder search includes folders with searchable files; empty folders
+  do not appear. Click the index status in the status bar to reindex manually.
+- **Text:** ripgrep searches file contents. This requires a filesystem workspace
+  and ripgrep on the extension host, including for remote workspaces. Virtual
+  workspace text search is unsupported.
+- **Symbols and usages:** results come from installed language providers and
+  depend on their indexing state. Open a source file if its language service has
+  not started. Ignore rules and exclusions also apply to references.
+- **Notebooks:** text search includes Jupyter cell source. Opening a result opens
+  the notebook; jumping to the exact matching cell is unsupported.
 
-See the [architecture documentation](ARCHITECTURE.md) for component responsibilities,
-request flow, indexing, and backend behavior.
+## Help and development
 
-## Contributing
-
-Bug reports and pull requests are welcome on
-[GitHub](https://github.com/expiracy/search-plus-plus). See the
-[contributing guide](CONTRIBUTING.md) for local development, validation, and
-Marketplace releases.
+[Report a bug or request a feature](https://github.com/expiracy/search-plus-plus/issues) ·
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) ·
+[Architecture](ARCHITECTURE.md) · [Support search++](https://ko-fi.com/expiracy)
