@@ -122,6 +122,10 @@
       {
         "command": "searchPlusPlus.preview",
         "title": "search++: Preview Selected Result"
+      },
+      {
+        "command": "searchPlusPlus.configure",
+        "title": "search++: Open Settings"
       }
     ],
     "keybindings": [
@@ -237,23 +241,102 @@
     ],
     "configuration": [
       {
-        "title": "General",
+        "title": "Search popup",
         "order": 1,
         "properties": {
-          "searchPlusPlus.rememberLastMode": {
+          "searchPlusPlus.showEverythingTab": {
             "order": 1,
             "type": "boolean",
-            "default": false,
-            "description": "Remember the last search mode per workspace, including after restarting VS Code. Direct mode commands always open their requested mode."
-          }
-        }
-      },
-      {
-        "title": "Shortcuts",
-        "order": 2,
-        "properties": {
+            "default": true,
+            "description": "Show the combined Everything tab. Turning this off leaves the individual source tabs available."
+          },
+          "searchPlusPlus.everythingTabSources": {
+            "order": 2,
+            "type": "object",
+            "properties": {
+              "Files": {
+                "type": "boolean",
+                "default": true
+              },
+              "Folders": {
+                "type": "boolean",
+                "default": true
+              },
+              "Text": {
+                "type": "boolean",
+                "default": true
+              },
+              "Symbols": {
+                "type": "boolean",
+                "default": true
+              },
+              "Commands": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "Files": true,
+              "Folders": true,
+              "Text": true,
+              "Symbols": true,
+              "Commands": true
+            },
+            "description": "Choose the search types available in the popup. Each checked type appears as its own tab and as a group in Everything. Unchecking hides both. Keep at least one type checked."
+          },
+          "searchPlusPlus.tabOrder": {
+            "order": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Everything",
+                "Files",
+                "Folders",
+                "Text",
+                "Symbols",
+                "Commands"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 1,
+            "default": [
+              "Everything",
+              "Files",
+              "Folders",
+              "Text",
+              "Symbols",
+              "Commands"
+            ],
+            "markdownDescription": "To rearrange tabs, remove groups, then re-add them in the correct order."
+          },
+          "searchPlusPlus.whenSearchOpens": {
+            "order": 4,
+            "type": "string",
+            "enum": [
+              "everywhere",
+              "last",
+              "file",
+              "folder",
+              "text",
+              "symbol",
+              "command"
+            ],
+            "enumItemLabels": [
+              "Everything",
+              "Last used tab",
+              "Files",
+              "Folders",
+              "Text",
+              "Symbols",
+              "Commands"
+            ],
+            "default": "everywhere",
+            "description": "Choose the tab shown when opening search++. Last used tab remembers your last tab in this workspace. If that tab is hidden, the first visible tab opens."
+          },
           "searchPlusPlus.shortcutPreset": {
-            "order": 1,
+            "order": 5,
             "type": "string",
             "enum": [
               "none",
@@ -261,21 +344,148 @@
               "intellij"
             ],
             "enumDescriptions": [
-              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
-              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
-              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
+              "Use the default search++ shortcuts, including Double Shift.",
+              "Use VS Code's search shortcuts to open search++ tabs. For example, Cmd+P on macOS or Ctrl+P on Windows/Linux opens Files.",
+              "Use IntelliJ-style search shortcuts. For example, Cmd+Shift+O on macOS or Ctrl+Shift+N on Windows/Linux opens Files."
             ],
             "default": "none",
-            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
-          }
-        }
-      },
-      {
-        "title": "Modes & Everything",
-        "order": 3,
-        "properties": {
-          "searchPlusPlus.tabOrder": {
-            "order": 1,
+            "markdownDescription": "Choose shortcuts for opening search++. For example, **VS Code** makes `Cmd+P` (macOS) or `Ctrl+P` (Windows/Linux) open the Files tab instead of Quick Open.\n\n[View and customise applied shortcuts](command:workbench.action.openGlobalKeybindings?%5B%22%40ext%3Aexpiracy.search-plus-plus%22%5D).",
+            "enumItemLabels": [
+              "Default",
+              "VS Code",
+              "IntelliJ"
+            ]
+          },
+          "searchPlusPlus.enabledSearches": {
+            "order": 95,
+            "type": "object",
+            "properties": {
+              "Files": {
+                "type": "boolean",
+                "default": true
+              },
+              "Folders": {
+                "type": "boolean",
+                "default": true
+              },
+              "Text": {
+                "type": "boolean",
+                "default": true
+              },
+              "Symbols": {
+                "type": "boolean",
+                "default": true
+              },
+              "Commands": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "Files": true,
+              "Folders": true,
+              "Text": true,
+              "Symbols": true,
+              "Commands": true
+            },
+            "description": "Choose what you can search. Each enabled type appears as a tab and inside Everything. Keep at least one search type enabled.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.searchOrder": {
+            "order": 96,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Everything",
+                "Files",
+                "Folders",
+                "Text",
+                "Symbols",
+                "Commands"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 1,
+            "default": [
+              "Everything",
+              "Files",
+              "Folders",
+              "Text",
+              "Symbols",
+              "Commands"
+            ],
+            "markdownDescription": "To rearrange tabs, remove groups, then re-add them in the correct order.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.tabs": {
+            "order": 97,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Everything",
+                "Files",
+                "Folders",
+                "Text",
+                "Symbols",
+                "Commands"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 1,
+            "default": [
+              "Everything",
+              "Files",
+              "Folders",
+              "Text",
+              "Symbols",
+              "Commands"
+            ],
+            "markdownDescription": "Tabs shown in the search popup. To rearrange tabs, remove them, then re-add them in the correct order. Remove a tab to hide it; choose **Add Item** to show it again. Keep at least one tab. Direct search commands can still open hidden tabs.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.defaultMode": {
+            "order": 98,
+            "type": "string",
+            "enum": [
+              "everywhere",
+              "file",
+              "folder",
+              "text",
+              "symbol",
+              "command"
+            ],
+            "enumDescriptions": [
+              "Everything tab",
+              "Files tab",
+              "Folders tab",
+              "Text tab",
+              "Symbols tab",
+              "Commands tab"
+            ],
+            "default": "everywhere",
+            "description": "Opening tab when Remember Last Mode is off. If hidden, the first visible tab opens. Direct search commands still open their requested tab.",
+            "enumItemLabels": [
+              "Everything",
+              "Files",
+              "Folders",
+              "Text",
+              "Symbols",
+              "Commands"
+            ],
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.whenSearchOpens#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.rememberLastMode": {
+            "order": 99,
+            "type": "boolean",
+            "default": false,
+            "description": "Reopen the last-used tab when it is visible. Otherwise use Default Mode. Direct search commands open their requested tab.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.whenSearchOpens#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.visibleTabs": {
+            "order": 100,
             "type": "array",
             "items": {
               "type": "string",
@@ -285,20 +495,11 @@
                 "folder",
                 "text",
                 "symbol",
-                "usages",
                 "command"
-              ],
-              "enumDescriptions": [
-                "Grouped search across Everything sections.",
-                "File names and paths.",
-                "Workspace folders.",
-                "Text content.",
-                "Symbols and their usages.",
-                "Legacy alias for Symbols; there is no separate Usages tab.",
-                "VS Code commands."
               ]
             },
             "uniqueItems": true,
+            "minItems": 1,
             "default": [
               "everywhere",
               "file",
@@ -307,10 +508,165 @@
               "symbol",
               "command"
             ],
-            "description": "Order of the six search mode buttons and Tab navigation. Missing modes are appended automatically. Legacy usages entries are treated as Symbols."
+            "description": "Tabs shown in the popup. Keep at least one tab visible. Direct search commands can still open hidden tabs.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
+          }
+        }
+      },
+      {
+        "title": "Search results",
+        "order": 2,
+        "properties": {
+          "searchPlusPlus.resultsPerSearchType": {
+            "order": 1,
+            "type": "number",
+            "default": 200,
+            "markdownDescription": "Maximum results returned for each search type: Files, Folders, Text, Symbols or Commands. On Everything, each group also has its own display limit: `#searchPlusPlus.resultsPerEverythingGroup#`."
+          },
+          "searchPlusPlus.resultsPerEverythingGroup": {
+            "order": 2,
+            "type": "integer",
+            "default": 20,
+            "minimum": 1,
+            "maximum": 200,
+            "markdownDescription": "Maximum results displayed per source group on the Everything tab. Use the more-results row to open the full source tab. A group cannot show more than `#searchPlusPlus.resultsPerSearchType#`."
+          },
+          "searchPlusPlus.searchDelay": {
+            "order": 3,
+            "type": "number",
+            "default": 300,
+            "description": "Delay after typing, in milliseconds, for the Text, Symbols and Commands tabs. Symbols and Commands inside Everything use the same delay; Files, Folders and Everything text results start immediately."
+          },
+          "searchPlusPlus.gitIgnoreRules": {
+            "order": 4,
+            "type": "boolean",
+            "default": true,
+            "description": "Hide files and folders matched by .gitignore by default. The Gitignore toggle in the search popup can temporarily include them."
+          },
+          "searchPlusPlus.searchIgnoreRules": {
+            "order": 5,
+            "type": "boolean",
+            "default": true,
+            "description": "Hide files and folders matched by .searchignore by default. The Search-ignore toggle in the search popup can temporarily include them."
+          },
+          "searchPlusPlus.excludedPaths": {
+            "order": 6,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Always hide matching files and folders using glob patterns, for example **/dist/** or **/*.min.js. These exclusions also apply when ignore-file filters are switched off."
+          },
+          "searchPlusPlus.excludeGitIgnored": {
+            "order": 96,
+            "type": "boolean",
+            "default": true,
+            "description": "Hide files and folders matched by .gitignore by default. The Gitignore toggle in the search popup can temporarily include them.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.gitIgnoreRules#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.excludeSearchIgnored": {
+            "order": 97,
+            "type": "boolean",
+            "default": true,
+            "description": "Hide files and folders matched by .searchignore by default. The Search-ignore toggle in the search popup can temporarily include them.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.searchIgnoreRules#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.excludePaths": {
+            "order": 98,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Always hide matching files and folders using glob patterns, for example **/dist/** or **/*.min.js. These exclusions also apply when ignore-file filters are switched off.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.excludedPaths#`. Existing choices are converted automatically."
+          },
+          "searchPlusPlus.maxResults": {
+            "order": 99,
+            "type": "number",
+            "default": 200,
+            "description": "Maximum number of results to display per search mode",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.resultsPerSearchType#`. Existing values are converted automatically."
+          },
+          "searchPlusPlus.everywhere.resultLimit": {
+            "order": 100,
+            "type": "integer",
+            "default": 20,
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Maximum results shown per section on the Everything tab",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.resultsPerEverythingGroup#`. Existing values are converted automatically."
+          },
+          "searchPlusPlus.debounceMs": {
+            "order": 101,
+            "type": "number",
+            "default": 300,
+            "description": "Debounce delay in milliseconds before triggering search",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.searchDelay#`. Existing values are converted automatically."
+          },
+          "searchPlusPlus.everything.sources": {
+            "order": 102,
+            "type": "object",
+            "properties": {
+              "Files": {
+                "type": "boolean",
+                "default": true
+              },
+              "Folders": {
+                "type": "boolean",
+                "default": true
+              },
+              "Symbols": {
+                "type": "boolean",
+                "default": true
+              },
+              "Text": {
+                "type": "boolean",
+                "default": true
+              },
+              "Commands": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "Files": true,
+              "Folders": true,
+              "Symbols": true,
+              "Text": true,
+              "Commands": true
+            },
+            "description": "Choose which sources appear on the Everything tab. Tick a source to include it; untick it to hide it.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search popup. Tabs and Everything share these choices."
+          },
+          "searchPlusPlus.everything.order": {
+            "order": 103,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Files",
+                "Folders",
+                "Symbols",
+                "Text",
+                "Commands"
+              ]
+            },
+            "uniqueItems": true,
+            "default": [
+              "Files",
+              "Folders",
+              "Symbols",
+              "Text",
+              "Commands"
+            ],
+            "markdownDescription": "Optional order of groups on the Everything tab. To rearrange groups, remove them, then re-add them in the correct order. Use `#searchPlusPlus.everything.sources#` to show or hide sources. Missing sources appear last.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search popup. Tabs and Everything share these choices."
           },
           "searchPlusPlus.everywhere.sections": {
-            "order": 2,
+            "order": 104,
             "type": "array",
             "items": {
               "type": "string",
@@ -330,60 +686,8 @@
               "text",
               "commands"
             ],
-            "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it."
-          },
-          "searchPlusPlus.everywhere.resultLimit": {
-            "order": 3,
-            "type": "integer",
-            "default": 20,
-            "minimum": 1,
-            "maximum": 200,
-            "description": "Maximum results shown per section on the Everything tab"
-          }
-        }
-      },
-      {
-        "title": "Exclusions",
-        "order": 4,
-        "properties": {
-          "searchPlusPlus.excludeGitIgnored": {
-            "order": 1,
-            "type": "boolean",
-            "default": true,
-            "description": "Exclude git-ignored files and folders from search results by default"
-          },
-          "searchPlusPlus.excludeSearchIgnored": {
-            "order": 2,
-            "type": "boolean",
-            "default": true,
-            "description": "Exclude files matching .searchignore patterns from search results by default"
-          },
-          "searchPlusPlus.excludePaths": {
-            "order": 3,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": [],
-            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
-          }
-        }
-      },
-      {
-        "title": "Limits",
-        "order": 5,
-        "properties": {
-          "searchPlusPlus.maxResults": {
-            "order": 1,
-            "type": "number",
-            "default": 200,
-            "description": "Maximum number of results to display per search mode"
-          },
-          "searchPlusPlus.debounceMs": {
-            "order": 2,
-            "type": "number",
-            "default": 300,
-            "description": "Debounce delay in milliseconds before triggering search"
+            "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search popup. Tabs and Everything share these choices."
           }
         }
       }

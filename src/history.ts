@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SearchMode, type SearchResult } from './providers/types';
+import { filePresentation } from './filePresentation';
 
 const RECENT_FILES_KEY = 'searchPlusPlus.recentFiles';
 const MAX_RECENT = 20;
@@ -61,20 +62,15 @@ export class SearchHistory {
     const entries = this.getRecentEntries();
     return entries.map((entry) => {
       const uri = vscode.Uri.file(entry.fsPath);
-      const fileName = entry.relativePath.split('/').pop() || entry.relativePath;
-      const description = entry.lineNumber !== undefined
-        ? `${entry.relativePath}:${entry.lineNumber + 1}`
-        : entry.relativePath;
+      const presentation = filePresentation(entry.relativePath, uri);
 
       return {
-        label: `$(history) ${fileName}`,
-        description,
+        ...presentation,
+        label: entry.lineNumber !== undefined ? `${presentation.label}:${entry.lineNumber + 1}` : presentation.label,
         mode: entry.lineNumber !== undefined ? SearchMode.Text : SearchMode.File,
         uri,
         lineNumber: entry.lineNumber,
         column: entry.column,
-        iconPath: vscode.ThemeIcon.File,
-        resourceUri: uri,
         alwaysShow: true,
       };
     });

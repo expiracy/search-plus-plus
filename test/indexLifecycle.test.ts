@@ -79,6 +79,7 @@ describe('workspace discovery', () => {
 
   test('cached searches never expose git metadata or custom-excluded notebooks when toggles change', async () => {
     vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+      inspect: (_key: string) => undefined,
       get: (_key: string, fallback: unknown) => _key === 'excludePaths' ? ['private/'] : fallback,
     } as any);
     vi.spyOn(vscode.workspace, 'findFiles').mockImplementation(async (pattern: string) => pattern === '**/*'
@@ -114,7 +115,12 @@ describe('workspace discovery', () => {
         excludeGitIgnored: true, excludeSearchIgnored: true,
       }, resolve);
     });
-    expect(results.map(r => r.description)).toEqual(['src/index.ts']);
+    expect(results).toMatchObject([{
+      label: 'index.ts', description: 'src',
+      uri: vscode.Uri.file('/workspace/src/index.ts'),
+      resourceUri: vscode.Uri.file('/workspace/src/index.ts'),
+      iconPath: vscode.ThemeIcon.File,
+    }]);
   });
 
   test('deleting a directory removes all indexed descendants', async () => {

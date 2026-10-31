@@ -10,7 +10,10 @@ import { SearchModal } from '../src/ui/searchModal';
 import { ResultPreview } from '../src/ui/resultPreview';
 import { SymbolProvider } from '../src/providers/symbolProvider';
 import { FolderProvider } from '../src/providers/folderProvider';
-import { SearchMode, type SearchOptions, type SearchResult, type SearchProvider } from '../src/providers/types';
+import { EverywhereProvider } from '../src/providers/everywhereProvider';
+import { migrateSearchSettings } from '../src/settingsMigration';
+import { getSearchTabs } from '../src/searchModes';
+import { SearchMode, getMaxResults, type SearchOptions, type SearchResult, type SearchProvider } from '../src/providers/types';
 
 const options: SearchOptions = {
   fuzzySearch: false, caseSensitive: false, useRegex: false, matchWholeWord: false,
@@ -39,9 +42,10 @@ export async function run(): Promise<void> {
     const files = new FileProvider(index);
     const folders = new FolderProvider(index);
     const fuzzy = await collect<SearchResult>((publish, fail) => files.search('idx', { ...options, fuzzySearch: true }, publish, fail));
-    assert.ok(fuzzy.some(result => result.description === 'src/index.ts'));
+    assert.ok(fuzzy.some(result => result.uri?.path.endsWith('/src/index.ts') && result.description === 'src'
+      && result.resourceUri?.toString() === result.uri.toString()));
     assert.equal((await collect<SearchResult>((publish, fail) => files.search('output', options, publish, fail))).length, 0);
-    assert.ok((await collect<SearchResult>((publish, fail) => files.search('output', { ...options, excludeGitIgnored: false }, publish, fail))).some(result => result.description === 'build/output.js'));
+    assert.ok((await collect<SearchResult>((publish, fail) => files.search('output', { ...options, excludeGitIgnored: false }, publish, fail))).some(result => result.uri?.path.endsWith('/build/output.js')));
     assert.equal((await collect<SearchResult>((publish, fail) => files.search('guide.pdf', options, publish, fail))).length, 0);
     assert.ok((await collect<SearchResult>((publish, fail) => files.search('guide.pdf', { ...options, excludeSearchIgnored: false }, publish, fail))).length > 0);
     assert.ok((await collect<SearchResult>((publish, fail) => folders.search('scmp', { ...options, fuzzySearch: true }, publish, fail))).some(result => result.description === 'src/components'));
@@ -74,6 +78,8 @@ export async function run(): Promise<void> {
     await verifyUsageNavigation(root);
     await verifyResultPreview(root);
     await verifyRowNavigation(root);
+    await verifyWindowPreferences();
+    await verifyEverythingPreferences();
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
     assert.ok(commands.includes('searchPlusPlus.preview'));
@@ -85,12 +91,106 @@ export async function run(): Promise<void> {
       await vscode.commands.executeCommand('searchPlusPlus.prevTab');
       await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
     }
+    await vscode.commands.executeCommand('searchPlusPlus.configure');
+    assert.equal(vscode.window.tabGroups.activeTabGroup.activeTab?.label, 'Settings', 'configuration opens the normal VS Code Settings page');
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, normal VS Code Settings page, persisted opening tab and visibility with hidden direct-command access, shared search checkboxes and ordering, preference migration and last-enabled guard, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
+}
+
+async function verifyEverythingPreferences(): Promise<void> {
+  const config = vscode.workspace.getConfiguration('searchPlusPlus');
+  const keys = ['everywhere.sections', 'everythingTabSources', 'tabOrder', 'showEverythingTab', 'whenSearchOpens',
+    'maxResults', 'everywhere.resultLimit', 'debounceMs', 'resultsPerSearchType', 'resultsPerEverythingGroup', 'searchDelay',
+    'excludeGitIgnored', 'excludeSearchIgnored', 'excludePaths', 'gitIgnoreRules', 'searchIgnoreRules', 'excludedPaths'];
+  const previous = keys.map(key => config.inspect(key)?.workspaceValue);
+  const section = (mode: SearchMode): SearchProvider => ({ mode, search(_query, _options, publish) {
+    publish([{ label: mode, mode }]); return { dispose() {} };
+  } });
+  const disabled = { search() { throw new Error('An unchecked Everything source was searched'); } };
+  const provider = new EverywhereProvider(disabled as any, section(SearchMode.Folder) as any,
+    section(SearchMode.Text) as any, disabled as any, disabled as any);
+  try {
+    await config.update('everywhere.sections', ['text', 'folders'], vscode.ConfigurationTarget.Workspace);
+    await config.update('maxResults', 3, vscode.ConfigurationTarget.Workspace);
+    await config.update('everywhere.resultLimit', 2, vscode.ConfigurationTarget.Workspace);
+    await config.update('debounceMs', 0, vscode.ConfigurationTarget.Workspace);
+    await config.update('excludeGitIgnored', false, vscode.ConfigurationTarget.Workspace);
+    await config.update('excludePaths', ['**/not-a-real-fixture/**'], vscode.ConfigurationTarget.Workspace);
+    await migrateSearchSettings();
+    const migrated = vscode.workspace.getConfiguration('searchPlusPlus');
+    assert.equal(getMaxResults(), 3, 'the renamed result limit retains its value in provider reads');
+    assert.equal(migrated.get('resultsPerEverythingGroup'), 2, 'the per-group result limit carries over');
+    assert.equal(migrated.get('searchDelay'), 0, 'renaming preserves an immediate search delay');
+    assert.equal(migrated.get('gitIgnoreRules'), false, 'renaming preserves unchecked ignore rules');
+    assert.deepEqual(migrated.get('excludedPaths'), ['**/not-a-real-fixture/**'], 'excluded paths carry over unchanged');
+    assert.equal(migrated.inspect('everywhere.sections')?.workspaceValue, undefined, 'the old editable array is removed after conversion');
+    assert.deepEqual(migrated.get('everythingTabSources'), { Files: false, Folders: true, Symbols: false, Text: true, Commands: false }, 'checkboxes reflect the previous source selection');
+    assert.deepEqual(getSearchTabs(migrated), [SearchMode.Everywhere, SearchMode.Text, SearchMode.Folder], 'the same choices control the available tabs');
+    const results = await collect<SearchResult>((publish) => provider.search('match', options, publish));
+    assert.deepEqual(results.map(result => result.belongsToSection), ['text', 'folders'], 'checkbox choices and independent order apply through real VS Code configuration');
+    await config.update('tabOrder', ['Folders', 'Everything', 'Text', 'Files', 'Symbols', 'Commands'], vscode.ConfigurationTarget.Workspace);
+    const reordered = await collect<SearchResult>((publish) => provider.search('match', options, publish));
+    assert.deepEqual(reordered.map(result => result.belongsToSection), ['folders', 'text'], 'reordering preserves the checked sources');
+    assert.deepEqual(getSearchTabs(vscode.workspace.getConfiguration('searchPlusPlus')), [SearchMode.Folder, SearchMode.Everywhere, SearchMode.Text], 'the same order controls tabs and Everything groups');
+    await config.update('showEverythingTab', false, vscode.ConfigurationTarget.Workspace);
+    assert.deepEqual(getSearchTabs(vscode.workspace.getConfiguration('searchPlusPlus')), [SearchMode.Folder, SearchMode.Text], 'hiding Everything keeps its individual search types enabled');
+    const repaired = nextEvent(vscode.workspace.onDidChangeConfiguration, event => event.affectsConfiguration('searchPlusPlus.everythingTabSources')
+      && Object.values(vscode.workspace.getConfiguration('searchPlusPlus').get<Record<string, boolean>>('everythingTabSources') ?? {}).some(Boolean));
+    await config.update('everythingTabSources', { Files: false, Folders: false, Symbols: false, Text: false, Commands: false }, vscode.ConfigurationTarget.Workspace);
+    await repaired;
+    assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('everythingTabSources'), migrated.get('everythingTabSources'), 'the last-enabled guard restores the previous checkbox selection');
+  } finally {
+    for (const [index, key] of keys.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);
+  }
+}
+
+async function verifyWindowPreferences(): Promise<void> {
+  const config = vscode.workspace.getConfiguration('searchPlusPlus');
+  const settings = ['everythingTabSources', 'tabOrder', 'showEverythingTab', 'whenSearchOpens'];
+  const previous = settings.map(key => config.inspect(key)?.workspaceValue);
+  let picker: vscode.QuickPick<SearchResult>;
+  const remembered = new Map<string, unknown>();
+  const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
+    { getRecentItems: () => [] } as any, new Map(), () => picker = vscode.window.createQuickPick<SearchResult>(), {
+      get: (key: string) => remembered.get(key), update: async (key: string, value: unknown) => { remembered.set(key, value); },
+    } as any);
+  const hide = async () => {
+    const hidden = nextEvent(picker.onDidHide, () => true);
+    await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    await hidden;
+  };
+  try {
+    await config.update('everythingTabSources', { Files: true, Folders: false, Text: true, Symbols: false, Commands: false }, vscode.ConfigurationTarget.Workspace);
+    await config.update('tabOrder', ['Text', 'Files', 'Everything', 'Folders', 'Symbols', 'Commands'], vscode.ConfigurationTarget.Workspace);
+    await config.update('showEverythingTab', false, vscode.ConfigurationTarget.Workspace);
+    await config.update('whenSearchOpens', 'file', vscode.ConfigurationTarget.Workspace);
+    modal.show();
+    assert.ok(picker!.placeholder?.startsWith('Search files...'), 'the persisted opening choice applies to the native popup');
+    assert.deepEqual(picker!.buttons.slice(0, 2).map(button => button.tooltip), ['Text', 'Files']);
+    assert.ok(!picker!.buttons.some(button => button.tooltip === 'Symbols'), 'hidden tabs have no mode button');
+    modal.nextTab();
+    assert.equal(picker!.placeholder, 'Search text content...', 'keyboard cycling skips hidden tabs');
+    await hide();
+    modal.show(SearchMode.Symbol);
+    assert.ok(picker!.placeholder?.startsWith('Search symbols...'), 'a direct command can still reach a hidden tab');
+    modal.nextTab();
+    assert.ok(!picker!.buttons.some(button => button.tooltip === 'Symbols'), 'the temporary hidden tab disappears after leaving it');
+    await hide();
+    assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('everythingTabSources'), { Files: true, Folders: false, Text: true, Symbols: false, Commands: false }, 'temporary access preserves the shared checkbox selection');
+    await config.update('whenSearchOpens', 'last', vscode.ConfigurationTarget.Workspace);
+    modal.show(SearchMode.Text); await hide();
+    assert.equal(remembered.get('searchPlusPlus.lastSearchMode'), SearchMode.Text, 'Last used tab saves the mode after native hide events');
+    modal.show();
+    assert.equal(picker!.placeholder, 'Search text content...', 'the opening dropdown restores the remembered mode');
+    await hide();
+  } finally {
+    modal.dispose();
+    for (const [index, key] of settings.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);
+  }
 }
 
 async function verifyTypeScriptUsages(root: vscode.Uri, rules: GitIgnoreManager): Promise<void> {
@@ -238,7 +338,7 @@ async function verifyRowNavigation(root: vscode.Uri): Promise<void> {
         && event.selections[0].active.isEqual(position));
       const item = picker.items[0];
       await verifyLineAtTop(target, position.line, async () => {
-        if (useButton) actions.fire({ item, button: item.buttons!.find(button => button.tooltip === 'Go to File')! });
+        if (useButton) actions.fire({ item, button: item.buttons!.find(button => button.tooltip === 'Go to File (Enter)')! });
         else accept.fire();
         await opened;
       });

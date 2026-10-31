@@ -90,6 +90,7 @@ export const TextEditorRevealType = { InCenter: 1, AtTop: 3 };
 export const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
 export const QuickInputButtonLocation = { Title: 1, Inline: 2, Input: 3 };
 export const QuickInputButtons = { Back: { iconPath: new ThemeIcon('arrow-left'), tooltip: 'Back' } };
+export const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
 export const SymbolKind = {
   File: 0, Module: 1, Namespace: 2, Package: 3, Class: 4,
   Method: 5, Property: 6, Field: 7, Constructor: 8, Enum: 9,
@@ -114,6 +115,7 @@ export const workspace = {
   workspaceFolders: undefined as any,
   getConfiguration: (_section?: string) => ({
     get: <T>(_key: string, defaultVal: T): T => defaultVal,
+    inspect: (_key: string) => undefined,
   }),
   asRelativePath: (pathOrUri: any): string => {
     const p = typeof pathOrUri === 'string'
@@ -240,6 +242,7 @@ export const workspace = {
 // --- window ---
 const defaultTabGroup = { viewColumn: 1, tabs: [] as any[] };
 export const window = {
+  showInformationMessage: async (_message: string) => undefined,
   visibleTextEditors: [] as any[],
   tabGroups: { all: [defaultTabGroup], activeTabGroup: defaultTabGroup, onDidChangeTabs: (_listener: (event: any) => void) => ({ dispose() {} }), close: async (..._args: any[]) => true },
   activeTextEditor: undefined,

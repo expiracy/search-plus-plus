@@ -4,8 +4,12 @@ import { IndexManager } from './index/indexManager';
 import { SearchHistory } from './history';
 import { SearchMode } from './providers/types';
 import { createProviders } from './providers/createProviders';
+import { migrateSearchSettings } from './settingsMigration';
+import { registerSearchTypeValidation } from './settingsGuard';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  try { await migrateSearchSettings(); }
+  catch (error) { console.warn('search++ could not convert older search settings; they remain supported.', error); }
   const indexManager = new IndexManager(context);
 
   // Build file index asynchronously — don't block activation
@@ -16,9 +20,11 @@ export function activate(context: vscode.ExtensionContext) {
   const modal = new SearchModal(indexManager, history, providers.providers, undefined, context.workspaceState);
 
   context.subscriptions.push(
+    registerSearchTypeValidation(),
     indexManager,
     modal,
     providers,
+    vscode.commands.registerCommand('searchPlusPlus.configure', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:expiracy.search-plus-plus')),
     vscode.commands.registerCommand('searchPlusPlus.open', () => modal.show()),
     vscode.commands.registerCommand('searchPlusPlus.openFiles', () => modal.show(SearchMode.File)),
     vscode.commands.registerCommand('searchPlusPlus.openText', () => modal.show(SearchMode.Text)),

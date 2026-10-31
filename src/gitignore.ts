@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import ignore, { type Ignore } from 'ignore';
+import { getResultSetting } from './resultSettings';
 
 interface ScopedRules {
   root: string;
@@ -36,7 +37,7 @@ export class GitIgnoreManager implements vscode.Disposable {
       this.loadIgnoreFiles('**/.gitignore', folders),
       this.loadIgnoreFiles('**/.searchignore', folders),
     ]);
-    const custom = vscode.workspace.getConfiguration('searchPlusPlus').get<string[]>('excludePaths', []);
+    const custom = getResultSetting<string[]>(vscode.workspace.getConfiguration('searchPlusPlus'), 'excludedPaths', []);
     if (this.disposed) return;
 
     // Publish a complete policy; searches never see half-loaded rules.
@@ -80,7 +81,7 @@ export class GitIgnoreManager implements vscode.Disposable {
       this.watchers.push(watcher);
     }
     this.watchers.push(vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('searchPlusPlus.excludePaths')) void this.reload();
+      if (e.affectsConfiguration('searchPlusPlus.excludedPaths') || e.affectsConfiguration('searchPlusPlus.excludePaths')) void this.reload();
     }));
   }
 

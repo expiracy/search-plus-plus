@@ -5,7 +5,9 @@ import { FolderProvider } from './folderProvider';
 import { TextProvider } from './textProvider';
 import { CommandProvider } from './commandProvider';
 import { SymbolProvider } from './symbolProvider';
-import { debounce, getEnabledSections } from '../utils';
+import { debounce } from '../utils';
+import { getSearchConfiguration } from '../searchModes';
+import { getResultSetting } from '../resultSettings';
 
 export class EverywhereProvider implements SearchProvider {
   readonly mode = SearchMode.Everywhere;
@@ -24,13 +26,13 @@ export class EverywhereProvider implements SearchProvider {
     onResults: (results: SearchResult[]) => void,
   ): vscode.Disposable {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    const debounceMs = config.get<number>('debounceMs', 200);
-    const sections = getEnabledSections(config.get('everywhere.sections'));
+    const debounceMs = getResultSetting(config, 'searchDelay', 200);
+    const sections = getEverythingSections(config);
     if (!sections.length) {
       onResults([]);
       return { dispose() {} };
     }
-    const limit = Math.max(1, Math.floor(config.get<number>('everywhere.resultLimit', DEFAULT_EVERYWHERE_LIMIT)));
+    const limit = Math.max(1, Math.floor(getResultSetting(config, 'resultsPerEverythingGroup', DEFAULT_EVERYWHERE_LIMIT)));
     const enabledSections = new Set(sections);
 
     const resultStore: Record<ResultSection, SearchResult[]> = {
@@ -207,4 +209,16 @@ export class EverywhereProvider implements SearchProvider {
       },
     };
   }
+}
+
+function getEverythingSections(config: vscode.WorkspaceConfiguration): ResultSection[] {
+  const { enabled, order } = getSearchConfiguration(config);
+  const sections = new Map<SearchMode, ResultSection>([
+    [SearchMode.File, ResultSection.Files], [SearchMode.Folder, ResultSection.Folders],
+    [SearchMode.Text, ResultSection.Text], [SearchMode.Symbol, ResultSection.Symbols], [SearchMode.Command, ResultSection.Commands],
+  ]);
+  return order.flatMap(mode => {
+    const section = sections.get(mode);
+    return section && enabled.includes(mode) ? [section] : [];
+  });
 }

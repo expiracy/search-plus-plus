@@ -68,6 +68,10 @@ search++ requires VS Code 1.96 or a newer compatible release. See the
 | **Symbols** | Functions, classes and variables, with a drill-down to semantic usages |
 | **Commands** | All VS Code commands (built-in and from extensions) |
 
+File rows show the filename with its parent folder alongside it and use VS Code's
+themed file icons where supported. Recent files use the same layout, with saved
+line locations shown as `file.ts:42`.
+
 <p align="center">
   <img src="media/everywhere.png" alt="Everything mode showing grouped file, text, and symbol results for 'preview'" width="720">
   <br><em>Everything: grouped results from every source</em>
@@ -184,11 +188,35 @@ On the **Files**, **Folders**, or **Everything** tab, enter a full filesystem pa
 such as `C:\Users\me\file.ts` or `/home/me/file.ts`. Select the result to open the
 file or reveal the folder in the Explorer.
 
+### Configure the Search Popup
+
+Click the popup's cog, or run **search++: Open Settings** from the Command
+Palette, to open the normal VS Code Settings page filtered to search++.
+
+Under **Search popup**:
+
+- **Show Everything Tab** controls the combined tab while keeping the individual
+  enabled searches available.
+- **Everything Tab Sources** has checkboxes for Files, Folders, Text, Symbols, and
+  Commands. Unchecking a type hides both its tab and its results inside Everything.
+- **Tab Order** arranges tabs and Everything groups together. To rearrange tabs,
+  remove groups, then re-add them in the correct order. Unchecked sources are hidden
+  from the popup.
+- **When Search Opens** chooses a fixed starting tab or **Last used tab**.
+- **Shortcut Preset** offers Default, VS Code, and IntelliJ, with an example and
+  a link to view and customise the bindings in the native Keyboard Shortcuts editor.
+
+Use the Settings page's **User** or **Workspace** tabs to choose where these
+preferences apply. At least one search type stays enabled; unchecking the last
+one restores the previous selection. If an opening choice is unavailable, the
+first available tab opens. Direct search commands can still open a disabled type
+temporarily without changing the checkbox choices.
+
 ### Remember Your Search Mode
 
-Enable `searchPlusPlus.rememberLastMode` to reopen the last mode used in this
-workspace, including after restarting VS Code. It is off by default. Commands
-such as **Search Files** still open their requested mode. Only the mode is saved;
+Choose **Last used tab** in `searchPlusPlus.whenSearchOpens` to reopen the
+last-used available tab, including after restarting VS Code. The default is
+Everything. Commands such as **Search Files** still open their requested mode. Only the mode is saved;
 search text and nested usage lookups are cleared when the popup closes. Returning
 from a usages view opens the Symbols chooser.
 
@@ -255,7 +283,9 @@ for how user overrides take precedence.
 ### Direct Search Shortcuts
 
 Choose `searchPlusPlus.shortcutPreset` to open individual modes directly. It
-defaults to `none`, which keeps your existing shortcuts. Both presets are opt-in.
+defaults to **Default** (`none`). Selecting VS Code or IntelliJ redirects the
+keys below from their usual commands to search++. For example, the VS Code preset
+opens the Files tab with Cmd+P on macOS or Ctrl+P on Windows/Linux.
 
 | Mode | VS Code preset (macOS / Windows & Linux) | IntelliJ preset (macOS / Windows & Linux) |
 |------|-----------------------------------------|------------------------------------------|
@@ -266,8 +296,13 @@ defaults to `none`, which keeps your existing shortcuts. Both presets are opt-in
 
 With the VS Code preset, **F1** still opens the native Command Palette. The
 Symbols shortcut searches workspace symbols, rather than symbols only in the
-current file. To change individual shortcuts, open **Preferences: Open Keyboard
-Shortcuts** and search for `search++`.
+current file. **Double Shift** and shortcuts used inside the popup are independent
+of the preset. Switching back to **Default** disables the preset
+bindings and preserves your custom keybindings.
+
+Use **View and customise applied shortcuts** below the preset to open VS Code's
+native Keyboard Shortcuts editor filtered to this extension. You can also open
+**Preferences: Open Keyboard Shortcuts** and search for `search++`.
 
 Other keymap extensions can claim the same keys, including Shift+Shift. Explicit
 user bindings take precedence. For example, an IntelliJ keymap user can bind
@@ -308,38 +343,56 @@ These are also callable from the command palette and can be used in custom keybi
 | `search++: Previous Tab` | Switch to the previous tab |
 | `search++: Preview Selected Result` | Preview the active result while keeping search focused |
 | `search++: Autofill File Path` | Autofill the selected file's path |
+| `search++: Open Settings` | Open the normal VS Code Settings page filtered to search++ |
 
 ## Settings
 
-Click the cog at the far right of the popup's search row to open VS Code
-Settings filtered to search++. All settings are under the `searchPlusPlus` namespace.
-The Settings editor groups them into General, Shortcuts, Modes & Everything,
-Exclusions, and Limits.
+Click the cog at the far right of the popup's search row to open the normal
+VS Code Settings page directly, filtered to search++. All settings are under
+the `searchPlusPlus` namespace.
+The Settings editor has two groups. Everything is part of the search popup;
+ignore rules and excluded paths stay together under Search results:
+
+| Group | Settings |
+|-------|----------|
+| **Search popup** | Show Everything Tab, Everything Tab Sources, Tab Order, When Search Opens, and Shortcut Preset |
+| **Search results** | Results per Search Type, Results per Everything Group, Search Delay, Git Ignore Rules, Search Ignore Rules, and Excluded Paths |
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `searchPlusPlus.excludeGitIgnored` | `true` | Exclude git-ignored files by default |
-| `searchPlusPlus.excludeSearchIgnored` | `true` | Exclude files matching `.searchignore` patterns by default |
-| `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
-| `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
-| `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
-| `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
-| `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
-| `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
-| `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
-| `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
+| `searchPlusPlus.showEverythingTab` | `true` | Show the combined Everything tab |
+| `searchPlusPlus.everythingTabSources` | All checked | Sources included in Everything and shown as individual tabs |
+| `searchPlusPlus.tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Tab order, also used for Everything groups; remove groups and re-add them in the correct order |
+| `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
+| `searchPlusPlus.shortcutPreset` | `"none"` (Default) | Optional `vscode` or `intellij` opening shortcuts; the setting gives an example and links to individual bindings |
+| `searchPlusPlus.resultsPerSearchType` | `200` | Maximum results returned per source: Files, Folders, Text, Symbols, or Commands |
+| `searchPlusPlus.resultsPerEverythingGroup` | `20` | Maximum results displayed per Everything group (1-200) |
+| `searchPlusPlus.searchDelay` | `300` | Typing delay in milliseconds for Text, Symbols, and Commands tabs and delayed Everything groups |
+| `searchPlusPlus.gitIgnoreRules` | `true` | Hide files matched by `.gitignore` by default |
+| `searchPlusPlus.searchIgnoreRules` | `true` | Hide files matched by `.searchignore` by default |
+| `searchPlusPlus.excludedPaths` | `[]` | Glob patterns always excluded, including when ignore-file filters are off |
 
-### Search Order
+### Tabs and Result Groups
 
-Use `searchPlusPlus.tabOrder` to reorder the mode buttons and keyboard Tab
-navigation together. Duplicate or unknown modes are ignored, and any missing
-modes are appended so all six remain available. Legacy `usages` entries map to
-Symbols; duplicates are removed. Changes apply to an open popup.
+**Everything Tab Sources** controls the same types in tabs and Everything. **Tab
+Order** controls mode buttons, keyboard Tab navigation, and Everything groups
+together. To rearrange tabs, remove groups, then re-add them in the correct order.
+Use the checkboxes to show or hide types.
+Missing order entries are appended automatically. Changes apply immediately.
 
-The separate `searchPlusPlus.everywhere.sections` setting controls the order of
-result groups inside Everything. Its default is files, folders, symbols, text,
-then commands; your explicit custom order is preserved. VS Code controls the
-native Command Palette order independently.
+Earlier tab, source, order, and opening preferences carry over automatically in
+their original User or Workspace scope. At the same scope, a type previously
+disabled in either the tab or source controls stays disabled; tab order takes
+precedence when the old orders disagree. Explicit choices in the new shared
+controls take precedence. Invalid empty selections retain one usable search type.
+Legacy `usages` entries map to Symbols without adding a duplicate tab. Workspace
+preferences still override User settings. VS Code controls the native Command
+Palette order independently.
+
+Previous `enabledSearches`, `searchOrder`, `maxResults`, `everywhere.resultLimit`,
+`debounceMs`, `excludeGitIgnored`, `excludeSearchIgnored`, and `excludePaths` values
+carry over to their clearer names automatically. Ignore-rule changes apply
+immediately without restarting the extension.
 
 ### `.searchignore`
 
@@ -368,7 +421,7 @@ Exclusions are applied additively from three sources:
 
 1. **Git ignored** -- `.gitignore` rules (**Option+G** on macOS, **Alt+G** on Windows/Linux)
 2. **Search ignored** -- `.searchignore` rules (**Option+S** on macOS, **Alt+S** on Windows/Linux)
-3. **Custom patterns** -- `searchPlusPlus.excludePaths` (always applied)
+3. **Custom patterns** -- `searchPlusPlus.excludedPaths` (always applied)
 
 Rules apply within each workspace root. Git's internal metadata is excluded from
 workspace indexing and text searches, including when both toggles are off.

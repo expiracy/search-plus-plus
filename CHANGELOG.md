@@ -4,6 +4,37 @@
 
 ### Changed
 
+- File results use VS Code's file-icon theme where supported and show the filename
+  once, with the parent folder beside it. Recent files and absolute paths use the same
+  layout; recent locations retain their line numbers. The Files title uses a
+  compact result count.
+- The popup's cog opens the normal VS Code Settings page directly, filtered to
+  search++. The **search++: Open Settings** command opens the same page.
+- **Everything Tab Sources** is one checkbox list for both tabs and Everything sources.
+  Unchecking Files, Folders, Text, Symbols, or Commands hides that type in both
+  places. A separate **Show Everything Tab** switch controls the combined tab.
+- **Tab Order** arranges tabs and Everything groups together. To rearrange tabs,
+  remove groups, then re-add them in the correct order. Unchecked sources are
+  hidden from the popup. The default Everything
+  groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
+- **When Search Opens** combines the opening choice and remembered-mode option
+  in one dropdown, including **Last used tab**. The default remains Everything.
+  The last enabled search cannot be unchecked; direct commands can temporarily
+  open other search types without changing these preferences.
+- Older tab, source, order, and opening preferences are converted at their User
+  or Workspace scope. At the same scope, disabled choices stay disabled and tab
+  order wins if the previous orders disagree. New shared preferences take priority.
+- Result settings use plain names: **Results per Search Type**, **Results per
+  Everything Group**, **Search Delay**, **Git Ignore Rules**, **Search Ignore
+  Rules**, and **Excluded Paths**. Descriptions explain scope and units. Earlier
+  values carry over automatically, and ignore-rule changes apply immediately.
+- Ignore rules and excluded paths now live under **Search results**, alongside
+  result limits and search delay. The two settings categories are
+  **Search popup** (including the shortcut preset) and **Search results**.
+  Existing setting keys remain compatible.
+- **Shortcut Preset** offers **Default**, **VS Code**, and **IntelliJ**, with
+  short examples of the keys each preset uses. **View and customise applied
+  shortcuts** opens VS Code's Keyboard Shortcuts editor filtered to search++.
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
   In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
   (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in
@@ -20,9 +51,11 @@
   hover tooltip shows the platform's preview shortcut, and clicking it previews
   that row without closing search. Folders, commands, and informational rows do
   not offer preview.
+- **Go to File** shows **Enter** in its tooltip on every platform. The eye button
+  shows **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux.
 - Tab order and keyboard cycling now have six modes. Existing `usages` entries
   in custom tab orders map to Symbols without adding a duplicate tab. Closing a
-  usages view with Remember Last Mode enabled reopens Symbols next time; legacy
+  usages view with Last used tab selected reopens Symbols next time; legacy
   remembered Usages values also open Symbols.
 
 ### Performance

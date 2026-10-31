@@ -12,6 +12,7 @@ let accept: InstanceType<typeof vscode.EventEmitter<void>>;
 let state: InstanceType<typeof vscode.EventEmitter<string>>;
 let itemButton: InstanceType<typeof vscode.EventEmitter<any>>;
 let button: InstanceType<typeof vscode.EventEmitter<any>>;
+let configurationChanged: InstanceType<typeof vscode.EventEmitter<any>>;
 let hide: InstanceType<typeof vscode.EventEmitter<void>>;
 let workspaceState: { get: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
 let history: { getRecentItems: () => any[]; addOpened: ReturnType<typeof vi.fn> };
@@ -25,6 +26,8 @@ beforeEach(() => {
   hide = new vscode.EventEmitter();
   itemButton = new vscode.EventEmitter();
   button = new vscode.EventEmitter();
+  configurationChanged = new vscode.EventEmitter();
+  vi.spyOn(vscode.workspace, 'onDidChangeConfiguration').mockImplementation(listener => configurationChanged.event(listener));
   picker = {
     ...vscode.window.createQuickPick(),
     onDidChangeValue: input.event,
@@ -57,6 +60,7 @@ afterEach(() => {
   vscode.window.activeTextEditor = undefined;
   picker.hide();
   modal.dispose();
+  configurationChanged.dispose();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -67,7 +71,7 @@ function type(value: string) {
   input.fire(value);
 }
 
-test('the settings cog at the end of the input row closes search and opens search++ settings', () => {
+test('the settings cog at the end of the input row closes search and opens VS Code Settings directly', () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
   const hidden = vi.spyOn(picker, 'hide');
   modal.show(SearchMode.File);
@@ -85,6 +89,20 @@ test('the settings cog at the end of the input row closes search and opens searc
   expect(hidden).toHaveBeenCalledOnce();
   expect(requests[0].dispose).toHaveBeenCalledOnce();
   expect(command).toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+});
+
+test('saved ignore-rule defaults apply immediately without restarting the extension', () => {
+  const settings: Record<string, unknown> = { gitIgnoreRules: false, searchIgnoreRules: false };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+    get: (key: string, fallback: unknown) => settings[key] ?? fallback,
+    inspect: (key: string) => ({ globalValue: settings[key] }),
+  } as any);
+  configurationChanged.fire({ affectsConfiguration: (name: string) => ['searchPlusPlus.gitIgnoreRules', 'searchPlusPlus.searchIgnoreRules'].includes(name) });
+  modal.show(SearchMode.File); type('rules');
+  expect(requests[0].options).toMatchObject({ excludeGitIgnored: false, excludeSearchIgnored: false });
+  settings.gitIgnoreRules = true;
+  configurationChanged.fire({ affectsConfiguration: (name: string) => name === 'searchPlusPlus.gitIgnoreRules' });
+  expect(requests.at(-1)?.options).toMatchObject({ excludeGitIgnored: true, excludeSearchIgnored: false });
 });
 
 test('macOS search controls and empty-result hints show Option shortcuts', () => {
@@ -165,6 +183,26 @@ test('accepting a text result reveals the matching line at the top of the editor
   accept.fire(); await vi.runAllTimersAsync();
   const position = new vscode.Position(100, 3);
   expect(revealRange).toHaveBeenCalledWith(new vscode.Selection(position, position), vscode.TextEditorRevealType.AtTop);
+});
+
+test('absolute file results show the parent folder and retain their navigation target', async () => {
+  vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.File } as any);
+  modal.show(SearchMode.File);
+  type('/workspace/src/file.ts');
+  await vi.runAllTimersAsync();
+  expect(picker.items).toMatchObject([{
+    label: 'file.ts', description: '/workspace/src',
+    uri: vscode.Uri.file('/workspace/src/file.ts'),
+    resourceUri: vscode.Uri.file('/workspace/src/file.ts'),
+  }]);
+});
+
+test('an absolute drive root keeps a visible name', async () => {
+  vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.Directory } as any);
+  modal.show(SearchMode.File);
+  type('C:\\');
+  await vi.runAllTimersAsync();
+  expect(picker.items).toMatchObject([{ label: 'C:\\', iconPath: vscode.ThemeIcon.Folder, isFolder: true }]);
 });
 
 test('a late absolute path lookup cannot replace a newer query', async () => {
@@ -264,7 +302,7 @@ test('Go to File opens a positioned result in the current group with one operati
   const uri = vscode.Uri.file('/workspace/greet.ts');
   requests[0].publish([{ label: 'greet', mode: SearchMode.Symbol, uri, lineNumber: 12, column: 9 }]);
   const item: any = picker.items[0];
-  const action = item.buttons.find((button: any) => button.tooltip === 'Go to File');
+  const action = item.buttons.find((button: any) => button.tooltip === 'Go to File (Enter)');
   expect(action?.iconPath.id).toBe('go-to-file');
   itemButton.fire({ item, button: action });
   await vi.runAllTimersAsync();
@@ -282,7 +320,7 @@ test('Go to File reveals a text match at the top of the opened editor', async ()
   modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
   requests[0].publish([{ label: 'needle', mode: SearchMode.Text, uri, lineNumber: 100, column: 3 }]);
   const item: any = picker.items[0];
-  itemButton.fire({ item, button: item.buttons.find((button: any) => button.tooltip === 'Go to File') });
+  itemButton.fire({ item, button: item.buttons.find((button: any) => button.tooltip === 'Go to File (Enter)') });
   await vi.runAllTimersAsync();
   const position = new vscode.Position(100, 3);
   expect(revealRange).toHaveBeenCalledWith(new vscode.Selection(position, position), vscode.TextEditorRevealType.AtTop);
@@ -675,7 +713,7 @@ test('streaming Everything results preserve the selected symbol when text has th
 
 test('remembering a mode is opt-in and restores the last closed mode in the workspace', () => {
   let remember = false;
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? remember : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? remember : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? remember : fallback } as any);
   modal.show(SearchMode.Text);
   picker.hide();
   expect(workspaceState.update).not.toHaveBeenCalled();
@@ -690,8 +728,20 @@ test('remembering a mode is opt-in and restores the last closed mode in the work
   expect(picker.placeholder).toBe('Search text content...');
 });
 
+test('the Last used tab dropdown choice remembers and reopens the last search', () => {
+  const settings: Record<string, unknown> = { whenSearchOpens: 'last' };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+    get: (key: string, fallback: unknown) => settings[key] ?? fallback,
+    inspect: (key: string) => ({ globalValue: settings[key] }),
+  } as any);
+  modal.show(SearchMode.File); picker.hide();
+  expect(workspaceState.update).toHaveBeenCalledWith('searchPlusPlus.lastSearchMode', 'file');
+  modal.show();
+  expect(picker.placeholder).toContain('Search files...');
+});
+
 test('closing usages remembers the combined Symbols tab without a reference target', async () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? true : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
   const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
   requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
@@ -704,7 +754,7 @@ test('closing usages remembers the combined Symbols tab without a reference targ
 
 
 test('an explicitly requested mode overrides a valid mode stored by a previous session', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? true : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   workspaceState.get.mockReturnValue(SearchMode.Symbol);
   modal.show();
   expect(picker.placeholder).toContain('Search symbols');
@@ -713,9 +763,52 @@ test('an explicitly requested mode overrides a valid mode stored by a previous s
   expect(picker.placeholder).toContain('Search files');
 });
 
+test('the chosen opening tab and visible tab order apply while direct commands remain available', () => {
+  const settings: Record<string, unknown> = { defaultMode: 'file', visibleTabs: ['file', 'text'] };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: settings[key] }), get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
+  modal.show();
+  expect(picker.placeholder).toContain('Search files...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search text content...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search files...');
+  picker.hide();
+  modal.show(SearchMode.Command);
+  expect(picker.placeholder).toBe('Search commands...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search files...');
+  expect(picker.buttons.some((item: any) => item.tooltip === 'Commands')).toBe(false);
+});
+
+test('the single Tabs list controls popup buttons and cycling with readable names', () => {
+  const settings: Record<string, unknown> = { tabs: ['Text', 'Files'], defaultMode: 'file' };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+    get: (key: string, fallback: unknown) => settings[key] ?? fallback,
+    inspect: (key: string) => ({ globalValue: settings[key] }),
+  } as any);
+  modal.show();
+  expect(picker.buttons.slice(0, 2).map((item: any) => item.tooltip)).toEqual(['Text', 'Files']);
+  expect(picker.placeholder).toContain('Search files...');
+  modal.nextTab();
+  expect(picker.placeholder).toBe('Search text content...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search files...');
+});
+
+test('hidden remembered and default tabs fall back to the first visible tab', () => {
+  const settings: Record<string, unknown> = {
+    rememberLastMode: true, defaultMode: 'command', tabOrder: ['text', 'file'], visibleTabs: ['file', 'text'],
+  };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: settings[key] }), get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
+  workspaceState.get.mockReturnValue(SearchMode.Symbol);
+  modal.show();
+  expect(picker.placeholder).toBe('Search text content...');
+  expect(picker.buttons.slice(0, 2).map((item: any) => item.tooltip)).toEqual(['Text', 'Files']);
+});
+
 
 test('invalid stored modes fall back to Everything and legacy Usages opens Symbols', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? true : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   workspaceState.get.mockReturnValue('removed-mode');
   modal.show();
   expect(picker.placeholder).toBe('Search everywhere...');
@@ -728,7 +821,7 @@ test('invalid stored modes fall back to Everything and legacy Usages opens Symbo
 });
 
 test('configured tab order controls buttons and keyboard cycling while retaining every mode', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'tabOrder' ? ['command', 'file'] : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'tabOrder' ? ['command', 'file'] : undefined }), get: (key: string, fallback: unknown) => key === 'tabOrder' ? ['command', 'file'] : fallback } as any);
   modal.show();
   expect(picker.buttons.slice(0, 6).map((item: any) => item.tooltip)).toEqual(['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols']);
   modal.prevTab();
