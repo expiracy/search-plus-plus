@@ -67,7 +67,7 @@ function type(value: string) {
   input.fire(value);
 }
 
-test('the settings cog at the end of the input row closes search and opens native configuration', () => {
+test('the settings cog at the end of the input row closes search and opens VS Code Settings directly', () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
   const hidden = vi.spyOn(picker, 'hide');
   modal.show(SearchMode.File);
@@ -80,11 +80,11 @@ test('the settings cog at the end of the input row closes search and opens nativ
   });
   expect(picker.buttons.at(-1)).toBe(settings);
   expect(settings.toggle).toBeUndefined();
-  expect(command).not.toHaveBeenCalledWith('searchPlusPlus.configure');
+  expect(command).not.toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
   button.fire(settings);
   expect(hidden).toHaveBeenCalledOnce();
   expect(requests[0].dispose).toHaveBeenCalledOnce();
-  expect(command).toHaveBeenCalledWith('searchPlusPlus.configure');
+  expect(command).toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
 });
 
 test('macOS search controls and empty-result hints show Option shortcuts', () => {

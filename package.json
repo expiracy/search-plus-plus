@@ -125,39 +125,7 @@
       },
       {
         "command": "searchPlusPlus.configure",
-        "title": "search++: Configure"
-      },
-      {
-        "command": "searchPlusPlus.configureWindow",
-        "title": "search++: Configure Search Window"
-      },
-      {
-        "command": "_searchPlusPlus.configureWindow.openingTab",
-        "title": "Choose opening tab"
-      },
-      {
-        "command": "_searchPlusPlus.configureWindow.scope",
-        "title": "Change where settings apply",
-        "icon": "$(globe)"
-      },
-      {
-        "command": "_searchPlusPlus.configureWindow.moveTab",
-        "title": "Move tab..."
-      },
-      {
-        "command": "_searchPlusPlus.configureWindow.reset",
-        "title": "Reset search window settings",
-        "icon": "$(debug-restart)"
-      },
-      {
-        "command": "_searchPlusPlus.configureWindow.close",
-        "title": "Done",
-        "icon": "$(check)"
-      },
-      {
-        "command": "_searchPlusPlus.configureWindow.preview",
-        "title": "Try search",
-        "icon": "$(search)"
+        "title": "search++: Open Settings"
       }
     ],
     "keybindings": [
@@ -280,7 +248,7 @@
             "order": 1,
             "type": "boolean",
             "default": false,
-            "description": "Reopen the last visible tab used in this workspace. Otherwise use Default Mode. Choose this in search++: Configure Search Window."
+            "description": "Reopen the last-used tab when it is visible. Otherwise use Default Mode. Direct search commands open their requested tab."
           },
           "searchPlusPlus.defaultMode": {
             "order": 2,
@@ -328,7 +296,7 @@
               "symbol",
               "command"
             ],
-            "description": "Tabs shown in search. Use the checkboxes in search++: Configure Search Window. Direct search commands can still open hidden tabs."
+            "description": "Tabs shown in the popup. Keep at least one tab visible. Direct search commands can still open hidden tabs."
           },
           "searchPlusPlus.tabOrder": {
             "order": 4,
@@ -363,7 +331,7 @@
               "symbol",
               "command"
             ],
-            "description": "Order of search tabs. Drag tabs in search++: Configure Search Window. Missing modes are appended; legacy usages entries map to Symbols."
+            "description": "Order of search tabs and Tab navigation. Missing modes are appended; legacy usages entries map to Symbols."
           }
         }
       },
@@ -466,66 +434,6 @@
           "command": "searchPlusPlus.findUsages",
           "when": "editorTextFocus",
           "group": "navigation@1"
-        }
-      ],
-      "commandPalette": [
-        {
-          "command": "_searchPlusPlus.configureWindow.openingTab",
-          "when": "false"
-        },
-        {
-          "command": "_searchPlusPlus.configureWindow.scope",
-          "when": "false"
-        },
-        {
-          "command": "_searchPlusPlus.configureWindow.moveTab",
-          "when": "false"
-        },
-        {
-          "command": "_searchPlusPlus.configureWindow.reset",
-          "when": "false"
-        },
-        {
-          "command": "_searchPlusPlus.configureWindow.close",
-          "when": "false"
-        },
-        {
-          "command": "_searchPlusPlus.configureWindow.preview",
-          "when": "false"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "_searchPlusPlus.configureWindow.preview",
-          "when": "view == searchPlusPlus.searchWindow",
-          "group": "navigation@1"
-        },
-        {
-          "command": "_searchPlusPlus.configureWindow.close",
-          "when": "view == searchPlusPlus.searchWindow",
-          "group": "navigation@2"
-        },
-        {
-          "command": "_searchPlusPlus.configureWindow.reset",
-          "when": "view == searchPlusPlus.searchWindow",
-          "group": "configuration@1"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "_searchPlusPlus.configureWindow.moveTab",
-          "when": "view == searchPlusPlus.searchWindow && viewItem == searchPlusPlus.windowTab",
-          "group": "navigation@1"
-        }
-      ]
-    },
-    "views": {
-      "explorer": [
-        {
-          "id": "searchPlusPlus.searchWindow",
-          "name": "Search window",
-          "contextualTitle": "search++",
-          "when": "searchPlusPlus.configuringWindow"
         }
       ]
     }

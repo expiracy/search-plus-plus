@@ -626,7 +626,7 @@ export class SearchModal implements vscode.Disposable {
       [vscode.QuickInputButtons.Back, () => this.restoreParentSearch()],
       [settingsBtn, () => {
         qp.hide();
-        void vscode.commands.executeCommand('searchPlusPlus.configure');
+        void vscode.commands.executeCommand('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
       }],
       [everywhereBtn, () => this.switchTab(SearchMode.Everywhere)],
       [fileBtn, () => this.switchTab(SearchMode.File)],

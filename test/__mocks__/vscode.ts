@@ -90,15 +90,6 @@ export const TextEditorRevealType = { InCenter: 1, AtTop: 3 };
 export const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
 export const QuickInputButtonLocation = { Title: 1, Inline: 2, Input: 3 };
 export const QuickInputButtons = { Back: { iconPath: new ThemeIcon('arrow-left'), tooltip: 'Back' } };
-export const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
-export const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 };
-export const TreeItemCheckboxState = { Unchecked: 0, Checked: 1 };
-export class TreeItem { constructor(public label: string, public collapsibleState = 0) {} }
-export class DataTransferItem {
-  constructor(public value: unknown) {}
-  async asString() { return typeof this.value === 'string' ? this.value : JSON.stringify(this.value); }
-}
-export class DataTransfer extends Map<string, DataTransferItem> {}
 export const SymbolKind = {
   File: 0, Module: 1, Namespace: 2, Package: 3, Class: 4,
   Method: 5, Property: 6, Field: 7, Constructor: 8, Enum: 9,
@@ -123,8 +114,6 @@ export const workspace = {
   workspaceFolders: undefined as any,
   getConfiguration: (_section?: string) => ({
     get: <T>(_key: string, defaultVal: T): T => defaultVal,
-    inspect: (_key: string) => undefined,
-    update: async (_key: string, _value: unknown, _target?: number) => {},
   }),
   asRelativePath: (pathOrUri: any): string => {
     const p = typeof pathOrUri === 'string'
@@ -251,15 +240,6 @@ export const workspace = {
 // --- window ---
 const defaultTabGroup = { viewColumn: 1, tabs: [] as any[] };
 export const window = {
-  showQuickPick: async (_items: any[], _options?: any) => undefined as any,
-  showInformationMessage: async (_message: string) => undefined,
-  showErrorMessage: async (_message: string) => undefined,
-  createTreeView: (_id: string, _options: any) => ({
-    title: '', description: '', message: '',
-    onDidChangeCheckboxState: (_listener: (event: any) => void) => ({ dispose() {} }),
-    reveal: async (_element: any, _options?: any) => {},
-    dispose() {},
-  }),
   visibleTextEditors: [] as any[],
   tabGroups: { all: [defaultTabGroup], activeTabGroup: defaultTabGroup, onDidChangeTabs: (_listener: (event: any) => void) => ({ dispose() {} }), close: async (..._args: any[]) => true },
   activeTextEditor: undefined,

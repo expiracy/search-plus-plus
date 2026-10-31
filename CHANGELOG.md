@@ -4,13 +4,8 @@
 
 ### Changed
 
-- The popup's cog opens a native configuration menu for **Search window**,
-  **Search results**, **Keyboard shortcuts**, and **All settings**.
-- **Search window** has a native sidebar configurator: drag tabs into order,
-  check which tabs are visible, and choose a fixed opening tab or **Last used
-  tab**. It supports User and Workspace settings, a keyboard position picker,
-  a **Try search** action, and reset for the selected scope. Changes save
-  automatically.
+- The popup's cog opens the normal VS Code Settings page directly, filtered to
+  search++. The **search++: Open Settings** command opens the same page.
 - New `searchPlusPlus.defaultMode` and `searchPlusPlus.visibleTabs` settings
   default to Everything and all six tabs, preserving the existing opening
   behaviour. At least one tab remains visible. Direct search commands can open
