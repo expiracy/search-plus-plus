@@ -48,7 +48,7 @@ const TAB_NAMES: Record<SearchMode, string> = {
 
 const goToFileButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('go-to-file'),
-  tooltip: 'Go to File',
+  tooltip: 'Go to File (Enter)',
 };
 
 const findUsagesButton: vscode.QuickInputButton = {

@@ -10,7 +10,7 @@
   Unchecking Files, Folders, Text, Symbols, or Commands hides that type in both
   places. A separate **Show Everything Tab** switch controls the combined tab.
 - **Tab Order** supports dragging rows to arrange tabs and Everything groups
-  together. Disabled searches retain their position. The default Everything
+  together. Unchecked sources are hidden from the popup. The default Everything
   groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
 - **When Search Opens** combines the opening choice and remembered-mode option
   in one dropdown, including **Last used tab**. The default remains Everything.
@@ -27,11 +27,9 @@
   result limits and search delay. The two settings categories are
   **Search popup** (including the shortcut preset) and **Search results**.
   Existing setting keys remain compatible.
-- **Shortcut Preset** now lists the exact keys for macOS and Windows/Linux and
-  explains which search++ tabs they open. Descriptions explain how to disable a
-  preset, preserve custom bindings, and resolve keymap conflicts. A direct link
-  opens VS Code's Keyboard Shortcuts editor filtered to search++. Double Shift
-  and shortcuts inside the popup remain independent of the preset.
+- **Shortcut Preset** offers **Default**, **VS Code**, and **IntelliJ**, with
+  short examples of the keys each preset uses. **View and customise applied
+  shortcuts** opens VS Code's Keyboard Shortcuts editor filtered to search++.
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
   In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
   (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in
@@ -48,6 +46,8 @@
   hover tooltip shows the platform's preview shortcut, and clicking it previews
   that row without closing search. Folders, commands, and informational rows do
   not offer preview.
+- **Go to File** shows **Enter** in its tooltip on every platform. The eye button
+  shows **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux.
 - Tab order and keyboard cycling now have six modes. Existing `usages` entries
   in custom tab orders map to Symbols without adding a duplicate tab. Closing a
   usages view with Last used tab selected reopens Symbols next time; legacy

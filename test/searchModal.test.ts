@@ -282,7 +282,7 @@ test('Go to File opens a positioned result in the current group with one operati
   const uri = vscode.Uri.file('/workspace/greet.ts');
   requests[0].publish([{ label: 'greet', mode: SearchMode.Symbol, uri, lineNumber: 12, column: 9 }]);
   const item: any = picker.items[0];
-  const action = item.buttons.find((button: any) => button.tooltip === 'Go to File');
+  const action = item.buttons.find((button: any) => button.tooltip === 'Go to File (Enter)');
   expect(action?.iconPath.id).toBe('go-to-file');
   itemButton.fire({ item, button: action });
   await vi.runAllTimersAsync();
@@ -300,7 +300,7 @@ test('Go to File reveals a text match at the top of the opened editor', async ()
   modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
   requests[0].publish([{ label: 'needle', mode: SearchMode.Text, uri, lineNumber: 100, column: 3 }]);
   const item: any = picker.items[0];
-  itemButton.fire({ item, button: item.buttons.find((button: any) => button.tooltip === 'Go to File') });
+  itemButton.fire({ item, button: item.buttons.find((button: any) => button.tooltip === 'Go to File (Enter)') });
   await vi.runAllTimersAsync();
   const position = new vscode.Position(100, 3);
   expect(revealRange).toHaveBeenCalledWith(new vscode.Selection(position, position), vscode.TextEditorRevealType.AtTop);

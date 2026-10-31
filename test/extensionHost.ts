@@ -337,7 +337,7 @@ async function verifyRowNavigation(root: vscode.Uri): Promise<void> {
         && event.selections[0].active.isEqual(position));
       const item = picker.items[0];
       await verifyLineAtTop(target, position.line, async () => {
-        if (useButton) actions.fire({ item, button: item.buttons!.find(button => button.tooltip === 'Go to File')! });
+        if (useButton) actions.fire({ item, button: item.buttons!.find(button => button.tooltip === 'Go to File (Enter)')! });
         else accept.fire();
         await opened;
       });

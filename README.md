@@ -196,10 +196,10 @@ Under **Search popup**:
 - **Everything Tab Sources** has checkboxes for Files, Folders, Text, Symbols, and
   Commands. Unchecking a type hides both its tab and its results inside Everything.
 - **Tab Order** supports dragging rows to arrange tabs and Everything groups
-  together. Disabled searches keep their saved position and are skipped.
+  together. Unchecked sources are hidden from the popup.
 - **When Search Opens** chooses a fixed starting tab or **Last used tab**.
-- **Shortcut Preset** shows the exact VS Code and IntelliJ-style keys for macOS
-  and Windows/Linux, and links to the native Keyboard Shortcuts editor.
+- **Shortcut Preset** offers Default, VS Code, and IntelliJ, with an example and
+  a link to view and customise the bindings in the native Keyboard Shortcuts editor.
 
 Use the Settings page's **User** or **Workspace** tabs to choose where these
 preferences apply. At least one search type stays enabled; unchecking the last
@@ -278,9 +278,9 @@ for how user overrides take precedence.
 ### Direct Search Shortcuts
 
 Choose `searchPlusPlus.shortcutPreset` to open individual modes directly. It
-defaults to **Keep existing shortcuts** (`none`), which adds no preset bindings.
-The setting shows the exact keys below before you choose a preset. Both presets
-redirect these keys from their usual commands to search++.
+defaults to **Default** (`none`). Selecting VS Code or IntelliJ redirects the
+keys below from their usual commands to search++. For example, the VS Code preset
+opens the Files tab with Cmd+P on macOS or Ctrl+P on Windows/Linux.
 
 | Mode | VS Code preset (macOS / Windows & Linux) | IntelliJ preset (macOS / Windows & Linux) |
 |------|-----------------------------------------|------------------------------------------|
@@ -292,10 +292,10 @@ redirect these keys from their usual commands to search++.
 With the VS Code preset, **F1** still opens the native Command Palette. The
 Symbols shortcut searches workspace symbols, rather than symbols only in the
 current file. **Double Shift** and shortcuts used inside the popup are independent
-of the preset. Switching back to **Keep existing shortcuts** disables the preset
+of the preset. Switching back to **Default** disables the preset
 bindings and preserves your custom keybindings.
 
-Use **Edit individual search++ shortcuts** below the preset to open VS Code's
+Use **View and customise applied shortcuts** below the preset to open VS Code's
 native Keyboard Shortcuts editor filtered to this extension. You can also open
 **Preferences: Open Keyboard Shortcuts** and search for `search++`.
 
@@ -359,7 +359,7 @@ ignore rules and excluded paths stay together under Search results:
 | `searchPlusPlus.everythingTabSources` | All checked | Sources included in Everything and shown as individual tabs |
 | `searchPlusPlus.tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Tab order, also used for Everything groups; drag rows to arrange |
 | `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
-| `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` opening shortcuts; the setting lists every key and links to individual bindings |
+| `searchPlusPlus.shortcutPreset` | `"none"` (Default) | Optional `vscode` or `intellij` opening shortcuts; the setting gives an example and links to individual bindings |
 | `searchPlusPlus.resultsPerSearchType` | `200` | Maximum results returned per source: Files, Folders, Text, Symbols, or Commands |
 | `searchPlusPlus.resultsPerEverythingGroup` | `20` | Maximum results displayed per Everything group (1-200) |
 | `searchPlusPlus.searchDelay` | `300` | Typing delay in milliseconds for Text, Symbols, and Commands tabs and delayed Everything groups |

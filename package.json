@@ -309,7 +309,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "**Drag rows** to set the tab order. Everything uses the same order for its result groups. Use `#searchPlusPlus.everythingTabSources#` to show or hide sources. Unselected sources keep their positions; missing tabs are appended automatically."
+            "markdownDescription": "**Drag rows** to arrange tabs and Everything result groups. Unchecked sources are hidden from the popup. Choose sources in `#searchPlusPlus.everythingTabSources#`."
           },
           "searchPlusPlus.whenSearchOpens": {
             "order": 4,
@@ -344,14 +344,14 @@
               "intellij"
             ],
             "enumDescriptions": [
-              "Add no preset shortcuts. Your custom keybindings, Double Shift, and shortcuts inside the popup stay available. Switching back to this option disables the preset bindings.",
-              "Open search++ instead of VS Code search: Files with Cmd+P / Ctrl+P; workspace Symbols with Cmd+T / Ctrl+T; Text with Cmd+Shift+F / Ctrl+Shift+F; Commands with Cmd+Shift+P / Ctrl+Shift+P. Keys are macOS / Windows & Linux.",
-              "Open search++ with IntelliJ-style keys: Files with Cmd+Shift+O / Ctrl+Shift+N; workspace Symbols with Cmd+O / Ctrl+N; Text with Cmd+Shift+F / Ctrl+Shift+F; Commands with Cmd+Shift+A / Ctrl+Shift+A. Keys are macOS / Windows & Linux."
+              "Use the default search++ shortcuts, including Double Shift.",
+              "Use VS Code's search shortcuts to open search++ tabs. For example, Cmd+P on macOS or Ctrl+P on Windows/Linux opens Files.",
+              "Use IntelliJ-style search shortcuts. For example, Cmd+Shift+O on macOS or Ctrl+Shift+N on Windows/Linux opens Files."
             ],
             "default": "none",
-            "markdownDescription": "Redirect the shortcuts below to search++. Each shortcut opens the named tab. Keys are shown as **macOS / Windows & Linux**.\n\n- **Files:** VS Code `Cmd+P` / `Ctrl+P`; IntelliJ `Cmd+Shift+O` / `Ctrl+Shift+N`.\n- **Workspace symbols:** VS Code `Cmd+T` / `Ctrl+T`; IntelliJ `Cmd+O` / `Ctrl+N`.\n- **Text:** Both presets use `Cmd+Shift+F` / `Ctrl+Shift+F`.\n- **Commands:** VS Code `Cmd+Shift+P` / `Ctrl+Shift+P`; IntelliJ `Cmd+Shift+A` / `Ctrl+Shift+A`.\n\n**Keep existing shortcuts** adds no preset bindings; choosing it again disables the preset. Your custom keybindings are kept. **Double Shift** and shortcuts inside the popup are independent of this setting. **F1** still opens VS Code's Command Palette.\n\n[Edit individual search++ shortcuts](command:workbench.action.openGlobalKeybindings?%5B%22%40ext%3Aexpiracy.search-plus-plus%22%5D). User keybindings take priority over presets. Keymap extensions may claim the same keys; use the Keyboard Shortcuts editor to resolve conflicts.",
+            "markdownDescription": "Choose shortcuts for opening search++. For example, **VS Code** makes `Cmd+P` (macOS) or `Ctrl+P` (Windows/Linux) open the Files tab instead of Quick Open.\n\n[View and customise applied shortcuts](command:workbench.action.openGlobalKeybindings?%5B%22%40ext%3Aexpiracy.search-plus-plus%22%5D).",
             "enumItemLabels": [
-              "Keep existing shortcuts",
+              "Default",
               "VS Code",
               "IntelliJ"
             ]
@@ -416,7 +416,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "**Drag rows** to arrange tabs and Everything groups. Disabled searches keep their position and are skipped. Missing entries are appended automatically.",
+            "markdownDescription": "**Drag rows** to arrange tabs and Everything groups. Unchecked sources are hidden from the popup.",
             "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
           },
           "searchPlusPlus.tabs": {
