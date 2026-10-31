@@ -126,10 +126,6 @@
       {
         "command": "searchPlusPlus.configure",
         "title": "search++: Open Settings"
-      },
-      {
-        "command": "searchPlusPlus.arrangeSearchOrder",
-        "title": "search++: Arrange Search Order"
       }
     ],
     "keybindings": [
@@ -313,7 +309,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "**[Open search order with \u2191/\u2193 controls](command:searchPlusPlus.arrangeSearchOrder)**. Select a search in that list and use the always-visible arrows at the top. Changes save automatically to the User or Workspace scope shown in the title. This order controls tabs and Everything groups; disabled searches retain their position."
+            "markdownDescription": "**Drag rows** to arrange tabs and Everything groups. Disabled searches keep their position and are skipped. Missing entries are appended automatically."
           },
           "searchPlusPlus.whenSearchOpens": {
             "order": 4,

@@ -195,9 +195,8 @@ Under **Search window**:
   Commands. Unchecking a type hides both its tab and its results inside Everything.
 - **Show Everything Tab** controls the combined tab while keeping the individual
   enabled searches available.
-- **Search Order** has an **Open search order with ↑/↓ controls** link. It opens a native
-  list for arranging tabs and Everything groups together, without editing names.
-  Disabled searches keep their saved position and are skipped.
+- **Search Order** supports dragging rows to arrange tabs and Everything groups
+  together. Disabled searches keep their saved position and are skipped.
 - **When Search Opens** chooses a fixed starting tab or **Last used tab**.
 - **Shortcut Preset** chooses optional VS Code or IntelliJ-style shortcuts.
 
@@ -206,12 +205,6 @@ preferences apply. At least one search type stays enabled; unchecking the last
 one restores the previous selection. If an opening choice is unavailable, the
 first available tab opens. Direct search commands can still open a disabled type
 temporarily without changing the checkbox choices.
-
-In the order list, select a search and use the always-visible **↑/↓ buttons at the
-top**. Row-hover arrows are also available. Changes save
-automatically. The title shows **User settings** or **Workspace settings**; the
-scope button switches between them. Use **Done** or Escape to return to Settings.
-You can also open it directly with **search++: Arrange Search Order**.
 
 ### Remember Your Search Mode
 
@@ -338,7 +331,6 @@ These are also callable from the command palette and can be used in custom keybi
 | `search++: Preview Selected Result` | Preview the active result while keeping search focused |
 | `search++: Autofill File Path` | Autofill the selected file's path |
 | `search++: Open Settings` | Open the normal VS Code Settings page filtered to search++ |
-| `search++: Arrange Search Order` | Move searches up or down in a native list |
 
 ## Settings
 
@@ -360,7 +352,7 @@ The Settings editor groups them by the object you want to configure:
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
 | `searchPlusPlus.enabledSearches` | All checked | Shared checkboxes controlling tabs and their sources in Everything |
 | `searchPlusPlus.showEverythingTab` | `true` | Show the combined Everything tab |
-| `searchPlusPlus.searchOrder` | Everything, Files, Folders, Text, Symbols, Commands | Shared tab and Everything-group order; use the Open search order with ↑/↓ controls link |
+| `searchPlusPlus.searchOrder` | Everything, Files, Folders, Text, Symbols, Commands | Shared tab and Everything-group order; drag rows to arrange |
 | `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
@@ -370,7 +362,7 @@ The Settings editor groups them by the object you want to configure:
 
 **Enabled Searches** controls the same types in tabs and Everything. **Search
 Order** controls mode buttons, keyboard Tab navigation, and Everything groups
-together. Use **Open search order with ↑/↓ controls** to move items; use the checkboxes to show or hide types.
+together. Drag its rows to arrange them; use the checkboxes to show or hide types.
 Missing order entries are appended automatically. Changes apply immediately.
 
 Earlier tab, source, order, and opening preferences carry over automatically in
