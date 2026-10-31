@@ -49,6 +49,10 @@ still run validation automatically.
 To publish a release:
 
 1. Merge the changes you want to release into `master`.
+   Add a matching version section to `CHANGELOG.md` describing what users will
+   receive, for example `## 3.1.0 — 2026-10-31`. The workflow requires non-empty
+   notes for the chosen version and uses them for the GitHub release. The same
+   changelog is included in the VSIX and checked before publishing.
 2. Open **Actions → Release search++ → Run workflow** and select **master**.
 3. Enter the new stable version, such as `3.1.0`, without a `v` prefix. It must be
    newer than the version in `package.json`.
@@ -56,7 +60,8 @@ To publish a release:
    checks and VS Code smoke tests, and packages a VSIX with your chosen version.
 5. After validation, it commits the version to `master`, creates the matching
    `vX.Y.Z` tag, publishes that validated VSIX to the Marketplace, creates a GitHub
-   release with the VSIX attached, and deploys the site from the release tag.
+   release with the changelog notes and VSIX attached, and deploys the site from
+   the release tag.
 
 The publishing job needs the existing `VSCE_PAT` repository secret and write
 access for `GITHUB_TOKEN` to record the release commit and tag. Only the Marketplace
