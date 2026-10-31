@@ -6,7 +6,7 @@ import { isAbsolutePath } from '../utils';
 import { SearchSession } from '../searchSession';
 import { ResultPreview } from './resultPreview';
 import { buildTitle, parseLineCol } from './searchModel';
-import { getSearchTabs, getTabMode } from '../searchModes';
+import { getSearchConfiguration, getSearchTabs, getTabMode } from '../searchModes';
 
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
 interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.QuickPick<T> {
@@ -124,7 +124,8 @@ export class SearchModal implements vscode.Disposable {
     this.excludeGitIgnored = config.get<boolean>('excludeGitIgnored', true);
     this.excludeSearchIgnored = config.get<boolean>('excludeSearchIgnored', true);
     this.configurationListener = vscode.workspace.onDidChangeConfiguration(event => {
-      if ((event.affectsConfiguration('searchPlusPlus.tabs') || event.affectsConfiguration('searchPlusPlus.tabOrder') || event.affectsConfiguration('searchPlusPlus.visibleTabs')) && this.activeQuickPick) this.rebuildButtons(this.activeQuickPick);
+      if (['enabledSearches', 'showEverythingTab', 'searchOrder', 'tabs', 'tabOrder', 'visibleTabs', 'everywhere.sections', 'everything.sources', 'everything.order']
+        .some(key => event.affectsConfiguration(`searchPlusPlus.${key}`)) && this.activeQuickPick) this.rebuildButtons(this.activeQuickPick);
     });
   }
 
@@ -245,11 +246,12 @@ export class SearchModal implements vscode.Disposable {
     const qp = this.createPicker() as SortableQuickPick<SearchResult>;
     this.activeQuickPick = qp;
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    const savedMode = config.get<boolean>('rememberLastMode', false)
+    const preferences = getSearchConfiguration(config);
+    const savedMode = preferences.opening === 'last'
       ? this.workspaceState?.get<unknown>('searchPlusPlus.lastSearchMode') : undefined;
-    const visibleTabs = getSearchTabs(config);
+    const visibleTabs = preferences.tabs;
     const savedTab = getTabMode(savedMode as SearchMode);
-    const defaultTab = getTabMode(config.get<SearchMode>('defaultMode', SearchMode.Everywhere));
+    const defaultTab = preferences.opening === 'last' ? visibleTabs[0] : preferences.opening;
     this.activeTab = initialMode ?? (visibleTabs.includes(savedTab) ? savedTab
       : visibleTabs.includes(defaultTab) ? defaultTab : visibleTabs[0]);
     qp.placeholder = this.placeholder();
@@ -466,7 +468,7 @@ export class SearchModal implements vscode.Disposable {
 
     // Cleanup on hide
     const hideDisposable = qp.onDidHide(() => {
-      if (vscode.workspace.getConfiguration('searchPlusPlus').get<boolean>('rememberLastMode', false)) {
+      if (getSearchConfiguration(vscode.workspace.getConfiguration('searchPlusPlus')).opening === 'last') {
         void this.workspaceState?.update('searchPlusPlus.lastSearchMode', getTabMode(this.activeTab)).then(undefined, () => {});
       }
       clearBusyTimer();

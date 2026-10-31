@@ -82,22 +82,21 @@ with a link to the individual tab when more results are available.
 
 The popup's cog opens VS Code's normal Settings page filtered to search++.
 Its settings are grouped into Search window (including shortcut presets) and
-Search results; VS Code manages their User and Workspace scopes. At least one tab
-remains available. A single native Tabs list controls visibility and order;
-`getSearchTabs` resolves it alongside legacy preferences in scope order, with the
-new list taking precedence at the same scope. Normal opening prefers a visible
-remembered tab, then the
-configured opening tab, then the first visible tab. Direct mode commands can
-temporarily show a hidden tab without changing the saved visibility list.
+Search results; VS Code manages their User and Workspace scopes.
+`getSearchConfiguration` resolves shared search-type checkboxes, one order,
+the Everything-tab switch, and the opening choice in scope order. Both the modal
+and `EverywhereProvider` consume this model. Unchecked types have no normal tab
+or Everything provider request. Direct mode commands can temporarily open another
+type without changing these preferences. Unavailable or unsaved opening choices
+fall back to the first available tab.
 
-Everything sources use a native boolean-object checkbox control, with an
-independent list for ordering. `EverywhereProvider` resolves each preference
-against the legacy section list in scope order. Unchecked sources do not start
-their providers; disabling every source settles the request with an empty result.
-Activation converts the older section list into checkbox values and a full order
-at the same User or Workspace scope. Existing new preferences are kept, and the
-old value is only removed after the replacements have been saved. Failed writes
-leave the older setting available to the compatibility reader.
+Activation plans migration of the older preferences for all scopes before making
+changes, saves their shared replacements, and only then removes old values.
+The compatibility reader remains available after failed writes. A configuration
+listener restores the previous checkbox choice if the last search is unchecked;
+it also protects workspaces whose remaining type was inherited from User settings.
+The reader retains a usable type for invalid configurations while that correction
+is pending.
 
 ## Result previews
 

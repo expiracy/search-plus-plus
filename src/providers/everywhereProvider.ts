@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
-import { ResultSection, SearchMode, DEFAULT_EVERYWHERE_LIMIT, DEFAULT_SECTIONS, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { ResultSection, SearchMode, DEFAULT_EVERYWHERE_LIMIT, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { FileProvider } from './fileProvider';
 import { FolderProvider } from './folderProvider';
 import { TextProvider } from './textProvider';
 import { CommandProvider } from './commandProvider';
 import { SymbolProvider } from './symbolProvider';
-import { debounce, getEnabledSections } from '../utils';
+import { debounce } from '../utils';
+import { getSearchConfiguration } from '../searchModes';
 
 export class EverywhereProvider implements SearchProvider {
   readonly mode = SearchMode.Everywhere;
@@ -210,21 +211,13 @@ export class EverywhereProvider implements SearchProvider {
 }
 
 function getEverythingSections(config: vscode.WorkspaceConfiguration): ResultSection[] {
-  const oldSetting = config.inspect('everywhere.sections');
-  const useNewSetting = (key: string): boolean => {
-    const setting = config.inspect(key);
-    for (const scope of ['workspaceFolderValue', 'workspaceValue', 'globalValue'] as const) {
-      if (setting?.[scope] !== undefined) return true;
-      if (oldSetting?.[scope] !== undefined) return false;
-    }
-    return true;
-  };
-  const legacy = getEnabledSections(config.get('everywhere.sections'));
-  const rawOrder = useNewSetting('everything.order') ? config.get('everything.order') : legacy;
-  const ordered = getEnabledSections(Array.isArray(rawOrder)
-    ? rawOrder.map(name => typeof name === 'string' ? name.toLowerCase() : name) : undefined);
-  const order = [...new Set([...ordered, ...DEFAULT_SECTIONS])];
-  if (!useNewSetting('everything.sources')) return order.filter(section => legacy.includes(section));
-  const sources = config.get<Record<string, boolean>>('everything.sources', {});
-  return order.filter(section => sources?.[section[0].toUpperCase() + section.slice(1)] !== false);
+  const { enabled, order } = getSearchConfiguration(config);
+  const sections = new Map<SearchMode, ResultSection>([
+    [SearchMode.File, ResultSection.Files], [SearchMode.Folder, ResultSection.Folders],
+    [SearchMode.Text, ResultSection.Text], [SearchMode.Symbol, ResultSection.Symbols], [SearchMode.Command, ResultSection.Commands],
+  ]);
+  return order.flatMap(mode => {
+    const section = sections.get(mode);
+    return section && enabled.includes(mode) ? [section] : [];
+  });
 }

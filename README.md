@@ -189,27 +189,28 @@ file or reveal the folder in the Explorer.
 Click the popup's cog, or run **search++: Open Settings** from the Command
 Palette, to open the normal VS Code Settings page filtered to search++.
 
-Under **Search window**, **Tabs** is one list with readable tab names:
+Under **Search window**:
 
-- **Drag rows** to change their order.
-- **Remove a row** to hide that tab.
-- **Add Item** offers the available tabs so you can show one again.
+- **Enabled Searches** has checkboxes for Files, Folders, Text, Symbols, and
+  Commands. Unchecking a type hides both its tab and its results inside Everything.
+- **Show Everything Tab** controls the combined tab while keeping the individual
+  enabled searches available.
+- **Search Order** supports dragging rows to arrange tabs and Everything groups
+  together. Disabled searches keep their saved position and are skipped.
+- **When Search Opens** chooses a fixed starting tab or **Last used tab**.
+- **Shortcut Preset** chooses optional VS Code or IntelliJ-style shortcuts.
 
-Set **Default Mode** to choose the opening tab, or enable **Remember Last Mode**
-to continue with the last-used tab. **Shortcut Preset** is in the same group for
-choosing optional VS Code or IntelliJ-style shortcuts. Use the Settings page's
-**User** or **Workspace** tabs to choose where these settings apply.
-
-At least one tab stays available. If the opening tab is hidden, the first visible
-tab opens instead. Direct search commands can still open hidden tabs, which appear
-temporarily while that search mode is active.
+Use the Settings page's **User** or **Workspace** tabs to choose where these
+preferences apply. At least one search type stays enabled; unchecking the last
+one restores the previous selection. If an opening choice is unavailable, the
+first available tab opens. Direct search commands can still open a disabled type
+temporarily without changing the checkbox choices.
 
 ### Remember Your Search Mode
 
-Enable `searchPlusPlus.rememberLastMode` in VS Code Settings to reopen the
-last-used tab when it is visible, including after restarting VS Code.
-It is off by default. Otherwise, `searchPlusPlus.defaultMode` chooses the opening tab. Commands
-such as **Search Files** still open their requested mode. Only the mode is saved;
+Choose **Last used tab** in `searchPlusPlus.whenSearchOpens` to reopen the
+last-used available tab, including after restarting VS Code. The default is
+Everything. Commands such as **Search Files** still open their requested mode. Only the mode is saved;
 search text and nested usage lookups are cleared when the popup closes. Returning
 from a usages view opens the Symbols chooser.
 
@@ -340,8 +341,8 @@ The Settings editor groups them by the object you want to configure:
 
 | Group | Settings |
 |-------|----------|
-| **Search window** | Tabs (order and visibility), opening tab, remembered tab, and shortcut preset |
-| **Search results** | Everything source checkboxes and group order, ignore rules, excluded paths, result limits, and search delay |
+| **Search window** | Shared search-type checkboxes, Everything tab, shared order, opening choice, and shortcut preset |
+| **Search results** | Ignore rules, excluded paths, result limits, and search delay |
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -349,40 +350,29 @@ The Settings editor groups them by the object you want to configure:
 | `searchPlusPlus.excludeSearchIgnored` | `true` | Exclude files matching `.searchignore` patterns by default |
 | `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
-| `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
-| `searchPlusPlus.defaultMode` | `"everywhere"` | Opening tab when remembering the last tab is off |
-| `searchPlusPlus.tabs` | Everything, Files, Folders, Text, Symbols, Commands | One ordered list of visible tabs; drag to reorder, remove to hide, Add Item to show |
+| `searchPlusPlus.enabledSearches` | All checked | Shared checkboxes controlling tabs and their sources in Everything |
+| `searchPlusPlus.showEverythingTab` | `true` | Show the combined Everything tab |
+| `searchPlusPlus.searchOrder` | Everything, Files, Folders, Text, Symbols, Commands | Shared tab and Everything-group order; drag rows to arrange |
+| `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
-| `searchPlusPlus.everything.sources` | All checked | Native checkboxes for Files, Folders, Symbols, Text, and Commands on the Everything tab |
-| `searchPlusPlus.everything.order` | Files, Folders, Symbols, Text, Commands | Optional group order; drag rows to arrange sources without changing their enabled state |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
 
 ### Tabs and Result Groups
 
-The **Tabs** list controls both mode-button order and keyboard Tab navigation.
-Drag its rows in the normal Settings page to reorder them. Removing a row hides
-that tab; **Add Item** shows it again. Changes apply immediately.
+**Enabled Searches** controls the same types in tabs and Everything. **Search
+Order** controls mode buttons, keyboard Tab navigation, and Everything groups
+together. Drag its rows to arrange them; use the checkboxes to show or hide types.
+Missing order entries are appended automatically. Changes apply immediately.
 
-Existing `searchPlusPlus.tabOrder` and `searchPlusPlus.visibleTabs` configurations
-remain supported. **Tabs** replaces them when configured at the same scope;
-workspace preferences still take precedence over User settings. The older controls
-are deprecated and only appear in the Settings page if already configured.
-Legacy `usages` entries map to Symbols without adding a duplicate tab.
-
-Under **Search results**, **Everything: Sources** provides a checkbox for Files,
-Folders, Symbols, Text, and Commands. Tick a source to show its results and untick
-it to hide them. You can turn every source off.
-
-**Everything: Order** is optional: drag its rows to change the group order.
-Showing and hiding sources uses the checkboxes, so you do not need to delete,
-edit, or re-add a name to toggle its results. Sources missing from the order list
-appear at the end. The default stays Files, Folders, Symbols, Text, then Commands.
-
-Existing `searchPlusPlus.everywhere.sections` selections and custom order carry
-over automatically in their original User or Workspace scope. Choices already
-made with the new controls are kept. Workspace settings still override User
-settings. VS Code controls the native Command Palette order independently.
+Earlier tab, source, order, and opening preferences carry over automatically in
+their original User or Workspace scope. At the same scope, a type previously
+disabled in either the tab or source controls stays disabled; tab order takes
+precedence when the old orders disagree. Explicit choices in the new shared
+controls take precedence. Invalid empty selections retain one usable search type.
+Legacy `usages` entries map to Symbols without adding a duplicate tab. Workspace
+preferences still override User settings. VS Code controls the native Command
+Palette order independently.
 
 ### `.searchignore`
 

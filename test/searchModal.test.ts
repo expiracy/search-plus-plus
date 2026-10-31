@@ -675,7 +675,7 @@ test('streaming Everything results preserve the selected symbol when text has th
 
 test('remembering a mode is opt-in and restores the last closed mode in the workspace', () => {
   let remember = false;
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? remember : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? remember : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? remember : fallback } as any);
   modal.show(SearchMode.Text);
   picker.hide();
   expect(workspaceState.update).not.toHaveBeenCalled();
@@ -690,8 +690,20 @@ test('remembering a mode is opt-in and restores the last closed mode in the work
   expect(picker.placeholder).toBe('Search text content...');
 });
 
+test('the Last used tab dropdown choice remembers and reopens the last search', () => {
+  const settings: Record<string, unknown> = { whenSearchOpens: 'last' };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+    get: (key: string, fallback: unknown) => settings[key] ?? fallback,
+    inspect: (key: string) => ({ globalValue: settings[key] }),
+  } as any);
+  modal.show(SearchMode.File); picker.hide();
+  expect(workspaceState.update).toHaveBeenCalledWith('searchPlusPlus.lastSearchMode', 'file');
+  modal.show();
+  expect(picker.placeholder).toContain('Search files...');
+});
+
 test('closing usages remembers the combined Symbols tab without a reference target', async () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? true : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
   const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
   requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
@@ -704,7 +716,7 @@ test('closing usages remembers the combined Symbols tab without a reference targ
 
 
 test('an explicitly requested mode overrides a valid mode stored by a previous session', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? true : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   workspaceState.get.mockReturnValue(SearchMode.Symbol);
   modal.show();
   expect(picker.placeholder).toContain('Search symbols');
@@ -758,7 +770,7 @@ test('hidden remembered and default tabs fall back to the first visible tab', ()
 
 
 test('invalid stored modes fall back to Everything and legacy Usages opens Symbols', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'rememberLastMode' ? true : undefined }), get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   workspaceState.get.mockReturnValue('removed-mode');
   modal.show();
   expect(picker.placeholder).toBe('Search everywhere...');

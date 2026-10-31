@@ -6,22 +6,21 @@
 
 - The popup's cog opens the normal VS Code Settings page directly, filtered to
   search++. The **search++: Open Settings** command opens the same page.
-- **Everything: Sources** uses native checkboxes for Files, Folders, Symbols,
-  Text, and Commands. Showing or hiding a group takes one click. **Everything:
-  Order** separately supports drag-to-reorder with readable names; changing order
-  does not enable or disable sources. Existing `everywhere.sections` preferences
-  carry over automatically in their original User or Workspace scope, preserving
-  selections and custom order.
-- **Tabs** is one native list of readable tab names. Drag rows to reorder them,
-  remove a row to hide a tab, and use **Add Item** to show one again. The new
-  `searchPlusPlus.tabs` setting controls order and visibility together; existing
-  `tabOrder` and `visibleTabs` settings remain supported for compatibility.
-- `searchPlusPlus.defaultMode` chooses the opening tab. Opening-tab and shortcut
-  dropdowns use readable labels. Defaults remain Everything and all six tabs.
-  At least one tab stays available. Direct search commands can open hidden tabs
-  temporarily; remembered hidden tabs fall back to a visible tab.
+- **Enabled Searches** is one checkbox list for both tabs and Everything sources.
+  Unchecking Files, Folders, Text, Symbols, or Commands hides that type in both
+  places. A separate **Show Everything Tab** switch controls the combined tab.
+- **Search Order** supports dragging rows to arrange tabs and Everything groups
+  together. Disabled searches retain their position. The default Everything
+  groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
+- **When Search Opens** combines the opening choice and remembered-mode option
+  in one dropdown, including **Last used tab**. The default remains Everything.
+  The last enabled search cannot be unchecked; direct commands can temporarily
+  open other search types without changing these preferences.
+- Older tab, source, order, and opening preferences are converted at their User
+  or Workspace scope. At the same scope, disabled choices stay disabled and tab
+  order wins if the previous orders disagree. New shared preferences take priority.
 - Ignore rules and excluded paths now live under **Search results**, alongside
-  result groups, limits, and search delay. The two settings categories are
+  result limits and search delay. The two settings categories are
   **Search window** (including the shortcut preset) and **Search results**.
   Existing setting keys remain compatible.
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
@@ -42,7 +41,7 @@
   not offer preview.
 - Tab order and keyboard cycling now have six modes. Existing `usages` entries
   in custom tab orders map to Symbols without adding a duplicate tab. Closing a
-  usages view with Remember Last Mode enabled reopens Symbols next time; legacy
+  usages view with Last used tab selected reopens Symbols next time; legacy
   remembered Usages values also open Symbols.
 
 ### Performance

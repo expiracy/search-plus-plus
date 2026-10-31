@@ -242,6 +242,7 @@ export const workspace = {
 // --- window ---
 const defaultTabGroup = { viewColumn: 1, tabs: [] as any[] };
 export const window = {
+  showInformationMessage: async (_message: string) => undefined,
   visibleTextEditors: [] as any[],
   tabGroups: { all: [defaultTabGroup], activeTabGroup: defaultTabGroup, onDidChangeTabs: (_listener: (event: any) => void) => ({ dispose() {} }), close: async (..._args: any[]) => true },
   activeTextEditor: undefined,
