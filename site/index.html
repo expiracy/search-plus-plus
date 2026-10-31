@@ -95,7 +95,7 @@
           <a class="zoom" href="media/text.png"><img class="shot" src="media/text.png" width="1445" height="818" loading="lazy" alt="Text tab showing matches with line previews"></a>
         </div>
         <div class="panel" role="tabpanel" id="panel-symbols" aria-labelledby="tab-symbols" hidden>
-          <p>Classes, functions, and variables from your installed language extensions.</p>
+          <p>Classes, functions, and variables from your installed language extensions. Show usages with <kbd>Cmd</kbd>+<kbd>Return</kbd> on Mac or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> on Windows/Linux. <kbd>Shift</kbd>+<kbd>F12</kbd> also works inside the popup.</p>
           <a class="zoom" href="media/symbols.png"><img class="shot" src="media/symbols.png" width="1445" height="818" loading="lazy" alt="Symbols tab listing classes, methods, and variables"></a>
         </div>
         <div class="panel" role="tabpanel" id="panel-usages" aria-labelledby="tab-usages" hidden>
@@ -124,7 +124,7 @@
           <p>
             Press <kbd>→</kbd> on a result to show it in the editor while the popup
             stays open. The editor scrolls to the matching line. Previews reuse one
-            editor tab, and <kbd>Enter</kbd> opens the result normally.
+            editor tab. <kbd>Return</kbd> on Mac or <kbd>Enter</kbd> on Windows/Linux opens the result normally.
           </p>
           <a class="zoom" href="media/preview.png"><img class="shot" src="media/preview.png" width="1600" height="1000" loading="lazy" alt="Previewing a text match: the editor shows the matched line while the popup stays open"></a>
         </div>
@@ -199,7 +199,8 @@
         copy.textContent = 'Copied';
       } catch {
         getSelection().selectAllChildren(command);
-        copy.textContent = 'Press Ctrl+C';
+        const modifier = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') ? 'Cmd' : 'Ctrl';
+        copy.textContent = `Press ${modifier}+C`;
       }
       setTimeout(() => { copy.textContent = 'Copy'; }, 1600);
     });

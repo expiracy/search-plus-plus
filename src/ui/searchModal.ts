@@ -9,6 +9,7 @@ import { buildTitle, parseLineCol } from './searchModel';
 import { getSearchConfiguration, getSearchTabs, getTabMode } from '../searchModes';
 import { getResultSetting } from '../resultSettings';
 import { filePresentation } from '../filePresentation';
+import { shortcutLabels } from './shortcutLabels';
 
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
 interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.QuickPick<T> {
@@ -32,7 +33,7 @@ const PLACEHOLDERS: Record<SearchMode, string> = {
   [SearchMode.File]: 'Search files... (append :line:col to jump)',
   [SearchMode.Folder]: 'Search folders...',
   [SearchMode.Text]: 'Search text content...',
-  [SearchMode.Symbol]: 'Search symbols... (Enter to open, Shift+Enter for usages)',
+  [SearchMode.Symbol]: 'Search symbols...',
   [SearchMode.Command]: 'Search commands...',
   [SearchMode.Usages]: 'Search symbols to find usages...',
 };
@@ -49,14 +50,17 @@ const TAB_NAMES: Record<SearchMode, string> = {
 
 const goToFileButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('go-to-file'),
-  tooltip: 'Go to File (Enter)',
+  get tooltip() { return `Go to File (${shortcutLabels().enter})`; },
 };
 
-const goToSymbolButton: vscode.QuickInputButton = { ...goToFileButton, tooltip: 'Go to Symbol (Enter)' };
+const goToSymbolButton: vscode.QuickInputButton = {
+  iconPath: goToFileButton.iconPath,
+  get tooltip() { return `Go to Symbol (${shortcutLabels().enter})`; },
+};
 
 const findUsagesButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('references'),
-  tooltip: 'Find Usages (Shift+Enter or Shift+F12)',
+  get tooltip() { return `Find Usages (${shortcutLabels().usages} or Shift+F12)`; },
 };
 
 const removeFromHistoryButton: vscode.QuickInputButton = {
@@ -69,7 +73,7 @@ export class SearchModal implements vscode.Disposable {
   private preview = new ResultPreview();
   private readonly previewButton: vscode.QuickInputButton = {
     iconPath: new vscode.ThemeIcon('eye'),
-    tooltip: 'Preview (Ctrl+Enter)',
+    get tooltip() { return `Preview (${shortcutLabels().preview})`; },
   };
   private modernButtons: boolean;
   private readonly configurationListener: vscode.Disposable;
@@ -112,7 +116,7 @@ export class SearchModal implements vscode.Disposable {
   private gotoColumn?: number;
 
   private get altKey(): string {
-    return process.platform === 'darwin' ? 'Option' : 'Alt';
+    return shortcutLabels().alt;
   }
 
   constructor(
@@ -285,7 +289,7 @@ export class SearchModal implements vscode.Disposable {
     const buildEmptyQueryItems = (): SearchResult[] => {
       if (this.activeTab === SearchMode.Symbol) return [{
         label: '$(symbol-method) Search for a symbol',
-        description: 'Enter opens the symbol; Shift+Enter or Shift+F12 shows usages',
+        description: `${shortcutLabels().enter} opens the symbol; ${shortcutLabels().usages} or Shift+F12 shows usages`,
         mode: SearchMode.Symbol,
         alwaysShow: true,
       }];
@@ -882,8 +886,12 @@ export class SearchModal implements vscode.Disposable {
   }
 
   private placeholder(): string {
-    return this.activeTab === SearchMode.Usages && this.usageTarget
-      ? `Filter usages of ${this.usageTarget.name} by text or path...` : PLACEHOLDERS[this.activeTab];
+    if (this.activeTab === SearchMode.Usages && this.usageTarget) return `Filter usages of ${this.usageTarget.name} by text or path...`;
+    if (this.activeTab === SearchMode.Symbol) {
+      const keys = shortcutLabels();
+      return `Search symbols... (${keys.enter} to open, ${keys.usages} for usages)`;
+    }
+    return PLACEHOLDERS[this.activeTab];
   }
 
   private clearUsageTarget(): void {
