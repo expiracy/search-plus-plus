@@ -33,12 +33,13 @@
   commands share one popup. Press **Tab** to change mode without losing your query.
 - **Everything at a glance.** The Everything tab groups the best matches from each
   source, so you can find a file, a line of text, or a command from one place.
-- **Browse results without leaving the popup.** Press **Ctrl+Enter**, or click
+- **Browse results without leaving the popup.** Press **Right Arrow**, or click
   a result's eye button, to preview a result in a reusable editor tab. The matched
   line appears at the top, and the
   popup keeps focus.
 - **Find usages in the same popup.** Pick a symbol in Symbols and press
-  **Shift+Enter** or **Shift+F12** to list its references. Type over the name to
+  **Cmd+Return** on macOS or **Ctrl+Enter** on Windows/Linux to list its references.
+  **Shift+F12** also works inside the popup. Type over the name to
   filter them by text or path, and use **Back** to restore your search.
 - **Fast on large workspaces.** File search uses an in-memory index with fzf
   matching, and text search streams results from ripgrep.
@@ -89,11 +90,13 @@ line locations shown as `file.ts:42`.
 
 ### Find Usages
 
-Open **Symbols**, type a name, and select the matching symbol. **Enter** opens
-its declaration. **Shift+Enter** or **Shift+F12** lists its references in the same
+Open **Symbols**, type a name, and select the matching symbol. **Return** on macOS
+or **Enter** on Windows/Linux opens its declaration. **Cmd+Return** on macOS or
+**Ctrl+Enter** on Windows/Linux lists its references in the same
 popup. From **Everything**, select a symbol
-and press either shortcut or click its **Find Usages** button. Hovering the button
-shows both usages shortcuts. In code editors, **Shift+F12** keeps VS Code's
+and use the same shortcut or click its **Find Usages** button. Hovering the button
+shows your platform's usages shortcut and **Shift+F12** as an alternative.
+In code editors, **Shift+F12** keeps VS Code's
 built-in Find All References action.
 
 <p align="center">
@@ -108,7 +111,7 @@ results, highlighted item, and search options without rerunning the search.
 the usages drill-down.
 
 To filter the current references, replace the symbol name directly with text or
-a filename. Press **Enter** to jump to that exact reference. When the parent
+a filename. Confirm the selected result to jump to that exact reference. When the parent
 search was in Symbols, clicking **Symbols** also restores it.
 
 From an editor, use **search++: Find Usages** in the command palette or context
@@ -124,20 +127,20 @@ references.
 
 ### Preview a Result
 
-Press **Ctrl+Enter** (**Control+Return** on macOS) on a file, text,
+Press **Right Arrow** on a file, text,
 symbol, or usage result to preview its file
 while the popup keeps focus. Text matches jump to their line and column, with the
 matched line at the top of the editor viewport where scrolling permits. Use the
 Up/Down keys to select another result and the preview shortcut to view it in the same
 additional editor tab, including when VS Code's preview tabs are disabled.
 Existing tabs are reused. Files you edit, pin, or keep open are preserved.
-Press **Enter** to open the selected result with its matching line at the top.
+Press **Return** on macOS or **Enter** on Windows/Linux to open the selected result
+with its matching line at the top.
 Folders, commands, and informational rows have no file preview.
 **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux also preview results.
 
 Each previewable result has an **eye button**, including recent history. Hover
-over it to see the preview shortcut, or click it to preview that row. Plain
-**Right Arrow** moves the cursor through the search textbox normally.
+over it to see the preview shortcut, or click it to preview that row.
 
 ![Previewing a text match: the editor shows the matched line while the popup stays open](media/preview.png)
 
@@ -152,7 +155,7 @@ searchModal.ts:42:5
 ```
 
 The **search++: Autofill File Path** command can insert the selected file's path
-for a custom keybinding. Ctrl+Enter is reserved for preview. The file remains
+for a custom keybinding. The file remains
 searchable while you
 type a column, such as `file.ts:42:`. Only numeric line and column suffixes are
 interpreted as navigation.
@@ -166,7 +169,8 @@ row to open its file in the current editor group. Matches retain their line and
 column, including a location typed as `file:line:column`, and show the matching
 line at the top of the editor viewport where scrolling permits. Confirmed opens
 are added to recent history.
-On symbol rows, this action is labelled **Go to Symbol (Enter)**.
+On symbol rows, this action is labelled **Go to Symbol** and shows the platform's
+open key in its hover hint.
 
 ### Search Options
 
@@ -253,11 +257,10 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 |-------|-----------------|--------|---------|
 | **Shift+Shift** | **Shift+Shift** | Open search (Everything tab) | Global |
 | **Tab** | **Tab** | Next search mode | Popup open |
-| **Control+Return** | **Ctrl+Enter** | Preview the selected file in one reusable tab | Popup open |
+| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
 | **Cmd+Right** | **Ctrl+Right** | Preview (alternative shortcut) | Popup open |
-| **Right Arrow** | **Right Arrow** | Move the cursor through the search text | Search input |
-| **Enter** | **Enter** | Open the selected result | Popup open |
-| **Shift+Enter** | **Shift+Enter** | Show usages of the selected symbol | Symbols or Everything |
+| **Return** | **Enter** | Open the selected result | Popup open |
+| **Cmd+Return** | **Ctrl+Enter** | Show usages of the selected symbol | Symbols or Everything |
 | **Shift+F12** | **Shift+F12** | Find usages of the selected symbol | Popup open |
 | **Option+C** | **Alt+C** | Toggle case sensitive | Popup open |
 | **Option+R** | **Alt+R** | Toggle regex | Popup open |
@@ -266,7 +269,7 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 | **Option+G** | **Alt+G** | Toggle exclude git ignored | Popup open |
 | **Option+S** | **Alt+S** | Toggle exclude search ignored | Popup open |
 
-On macOS, **Option** is **⌥** and **Control** is **⌃**. The popup's shortcut hints
+On macOS, **Cmd** is **⌘**, **Option** is **⌥**, and **Control** is **⌃**. The popup's shortcut hints
 use the platform's modifier names.
 
 Keymap extensions can claim the same shortcuts. If **Shift+F12** performs another
@@ -454,7 +457,7 @@ The extension sets context keys you can use in custom `keybindings.json` `when` 
 | `searchPlusPlusSymbolTab` | The Symbols tab is active |
 | `searchPlusPlusSymbolSelected` | A current symbol result is selected in Symbols or Everything |
 
-Example:
+Example for Windows/Linux (use `cmd+shift+f` for the key on macOS):
 
 ```json
 {

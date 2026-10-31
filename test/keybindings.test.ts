@@ -6,23 +6,22 @@ test('plain Tab cycles popup modes without Shift+Tab or Ctrl+Tab bindings', () =
   expect(bindings.filter(binding => ['searchPlusPlus.nextTab', 'searchPlusPlus.prevTab'].includes(binding.command)).map(binding => binding.key)).toEqual(['tab']);
 });
 
-test('Cmd/Ctrl+Right previews results while plain Right remains available for editing', () => {
+test('Right Arrow previews results, with Cmd/Ctrl+Right retained as an alternative', () => {
   expect(manifest.contributes.keybindings.find(binding => binding.command === 'searchPlusPlus.preview' && binding.key === 'ctrl+right')).toMatchObject({ key: 'ctrl+right', mac: 'cmd+right', when: 'searchPlusPlusModalOpen' });
-  expect(manifest.contributes.keybindings.some(binding => binding.key === 'right')).toBe(false);
+  expect(manifest.contributes.keybindings).toContainEqual({command: 'searchPlusPlus.preview', key: 'right', when: 'searchPlusPlusModalOpen && inQuickOpen'});
   expect(manifest.contributes.commands.some(command => command.command === 'searchPlusPlus.preview')).toBe(true);
 });
 
-test('Shift+Enter shows usages for symbols in Symbols and Everything', () => {
+test('Cmd/Ctrl+Enter shows usages for symbols in Symbols and Everything', () => {
   expect(manifest.contributes.keybindings).toContainEqual({
-    command: 'searchPlusPlus.findUsages', key: 'shift+enter',
+    command: 'searchPlusPlus.findUsages', key: 'ctrl+enter', mac: 'cmd+enter',
     when: 'searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)',
   });
+  expect(manifest.contributes.keybindings.some(binding => binding.key === 'shift+enter')).toBe(false);
 });
 
-test('Ctrl+Enter only previews throughout the popup, including Files and Symbols', () => {
-  expect(manifest.contributes.keybindings.filter(binding => binding.key === 'ctrl+enter')).toEqual([{
-    command: 'searchPlusPlus.preview', key: 'ctrl+enter', when: 'searchPlusPlusModalOpen && inQuickOpen',
-  }]);
+test('Ctrl+Enter does not conflict with preview or path autofill', () => {
+  expect(manifest.contributes.keybindings.some(binding => binding.key === 'ctrl+enter' && binding.command === 'searchPlusPlus.preview')).toBe(false);
   expect(manifest.contributes.keybindings.some(binding => binding.command === 'searchPlusPlus.autofillPath')).toBe(false);
 });
 

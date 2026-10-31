@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Changed
+
+- **Cmd+Return** on macOS or **Ctrl+Enter** on Windows/Linux shows the selected
+  symbol's usages in Symbols or Everything. Shift+Enter no longer opens usages.
+- **Right Arrow** previews the selected result while keeping search open.
+  Cmd+Right on macOS and Ctrl+Right on Windows/Linux remain alternatives.
+- Popup hover hints, symbol instructions and empty-state help use the current
+  platform's key names, including Cmd/Option/Return on macOS and Ctrl/Alt/Enter
+  on Windows/Linux. Static descriptions list both platforms where relevant.
+
 ## 3.1.0 — 2026-10-31
 
 ### Added

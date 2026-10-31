@@ -170,18 +170,14 @@
         "when": "searchPlusPlusModalOpen"
       },
       {
-        "command": "searchPlusPlus.preview",
-        "key": "ctrl+enter",
-        "when": "searchPlusPlusModalOpen && inQuickOpen"
-      },
-      {
         "command": "searchPlusPlus.findUsages",
         "key": "shift+f12",
         "when": "searchPlusPlusModalOpen && inQuickOpen"
       },
       {
         "command": "searchPlusPlus.findUsages",
-        "key": "shift+enter",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
         "when": "searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)"
       },
       {
@@ -189,6 +185,11 @@
         "key": "ctrl+right",
         "mac": "cmd+right",
         "when": "searchPlusPlusModalOpen"
+      },
+      {
+        "command": "searchPlusPlus.preview",
+        "key": "right",
+        "when": "searchPlusPlusModalOpen && inQuickOpen"
       },
       {
         "command": "searchPlusPlus.openFiles",

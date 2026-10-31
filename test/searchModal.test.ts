@@ -159,6 +159,21 @@ test('Windows search controls and empty-result hints show Alt shortcuts', () => 
   expect(picker.items[0].description).toContain('gitignore (Alt+G), search-ignore (Alt+S)');
 });
 
+test.each([
+  ['darwin', 'Return', 'Cmd+Return'],
+  ['win32', 'Enter', 'Ctrl+Enter'],
+  ['linux', 'Enter', 'Ctrl+Enter'],
+])('%s symbol hints match the platform, with Right Arrow for preview', async (platform, enter, usages) => {
+  vi.stubGlobal('process', { ...process, platform });
+  modal.show(SearchMode.Symbol);
+  expect(picker.placeholder).toBe(`Search symbols... (${enter} to open, ${usages} for usages)`);
+  type('greet'); await vi.runAllTimersAsync();
+  requests[0].publish([{label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts')}]);
+  expect((picker.items[0] as any).buttons.map((button: any) => button.tooltip)).toEqual([
+    `Find Usages (${usages} or Shift+F12)`, `Go to Symbol (${enter})`, 'Preview (Right Arrow)',
+  ]);
+});
+
 test('the modal dispatches through the supplied search providers', () => {
   modal.show(SearchMode.File);
   type('file');
@@ -312,7 +327,7 @@ test('a symbol result button finds usages without opening the declaration', asyn
   const item: any = picker.items[0];
   const action = item.buttons.find((button: any) => button.tooltip.includes('Find Usages'));
   expect(action).toBeTruthy();
-  expect(action.tooltip).toBe('Find Usages (Shift+Enter or Shift+F12)');
+  expect(action.tooltip).toBe(`Find Usages (${process.platform === 'darwin' ? 'Cmd+Return' : 'Ctrl+Enter'} or Shift+F12)`);
   itemButton.fire({ item, button: action }); await vi.runAllTimersAsync();
   expect(requests.at(-1)?.options.usageTarget?.name).toBe('greet');
   expect(open).not.toHaveBeenCalled();
@@ -325,7 +340,7 @@ test('Go to Symbol opens its declaration in the current group with one operation
   const uri = vscode.Uri.file('/workspace/greet.ts');
   requests[0].publish([{ label: 'greet', mode: SearchMode.Symbol, uri, lineNumber: 12, column: 9 }]);
   const item: any = picker.items[0];
-  const action = item.buttons.find((button: any) => button.tooltip === 'Go to Symbol (Enter)');
+  const action = item.buttons.find((button: any) => button.iconPath.id === 'go-to-file');
   expect(action?.iconPath.id).toBe('go-to-file');
   itemButton.fire({ item, button: action });
   await vi.runAllTimersAsync();
@@ -343,7 +358,9 @@ test('Go to File reveals a text match at the top of the opened editor', async ()
   modal.show(SearchMode.Text); type('needle'); await vi.runAllTimersAsync();
   requests[0].publish([{ label: 'needle', mode: SearchMode.Text, uri, lineNumber: 100, column: 3 }]);
   const item: any = picker.items[0];
-  itemButton.fire({ item, button: item.buttons.find((button: any) => button.tooltip === 'Go to File (Enter)') });
+  const goToFile = item.buttons.find((button: any) => button.iconPath.id === 'go-to-file');
+  expect(goToFile).toBeDefined();
+  itemButton.fire({ item, button: goToFile });
   await vi.runAllTimersAsync();
   const position = new vscode.Position(100, 3);
   expect(revealRange).toHaveBeenCalledWith(new vscode.Selection(position, position), vscode.TextEditorRevealType.AtTop);
@@ -430,7 +447,7 @@ test('Back from an Everything symbol restores its sections and selected result',
 test('empty Symbols explains how to open a declaration or find usages', () => {
   modal.show(SearchMode.Symbol);
   expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol', mode: SearchMode.Symbol,
-    description: expect.stringContaining('Shift+Enter or Shift+F12') }]);
+    description: expect.stringContaining(`${process.platform === 'darwin' ? 'Cmd+Return' : 'Ctrl+Enter'} or Shift+F12`) }]);
 });
 
 test('empty reference results distinguish semantic coverage from an ordinary search miss', async () => {
@@ -541,7 +558,7 @@ test('the eye action shows the preview shortcut and previews the clicked row wit
   picker.activeItems = [picker.items[0]] as any;
   const clicked: any = picker.items[1];
   const eye = clicked.buttons.find((item: any) => item.iconPath.id === 'eye');
-  expect(eye?.tooltip).toBe('Preview (Ctrl+Enter)');
+  expect(eye?.tooltip).toBe('Preview (Right Arrow)');
   itemButton.fire({ item: clicked, button: eye }); await vi.runAllTimersAsync();
   expect(command).toHaveBeenCalledWith('vscode.open', clicked.uri, expect.objectContaining({
     preserveFocus: true, preview: true,
