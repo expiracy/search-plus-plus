@@ -11,9 +11,9 @@
   behaviour. At least one tab remains visible. Direct search commands can open
   hidden tabs temporarily; remembered hidden tabs fall back to a visible tab.
 - Ignore rules and excluded paths now live under **Search results**, alongside
-  result groups, limits, and search delay. The three settings categories are
-  **Search window**, **Search results**, and **Keyboard shortcuts**. Existing
-  setting keys remain compatible.
+  result groups, limits, and search delay. The two settings categories are
+  **Search window** (including the shortcut preset) and **Search results**.
+  Existing setting keys remain compatible.
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
   In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
   (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in

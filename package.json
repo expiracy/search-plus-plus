@@ -332,6 +332,22 @@
               "command"
             ],
             "description": "Order of search tabs and Tab navigation. Missing modes are appended; legacy usages entries map to Symbols."
+          },
+          "searchPlusPlus.shortcutPreset": {
+            "order": 5,
+            "type": "string",
+            "enum": [
+              "none",
+              "vscode",
+              "intellij"
+            ],
+            "enumDescriptions": [
+              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
+              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
+              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
+            ],
+            "default": "none",
+            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
           }
         }
       },
@@ -402,28 +418,6 @@
             },
             "default": [],
             "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
-          }
-        }
-      },
-      {
-        "title": "Keyboard shortcuts",
-        "order": 3,
-        "properties": {
-          "searchPlusPlus.shortcutPreset": {
-            "order": 1,
-            "type": "string",
-            "enum": [
-              "none",
-              "vscode",
-              "intellij"
-            ],
-            "enumDescriptions": [
-              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
-              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
-              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
-            ],
-            "default": "none",
-            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
           }
         }
       }

@@ -193,7 +193,8 @@ Under **Search window**, set **Default Mode** to choose the opening tab, or enab
 **Remember Last Mode** to continue with the last-used tab. **Visible Tabs** controls
 which tabs appear, and **Tab Order** controls their order. Use VS Code's standard
 list controls to edit these settings, and its **User** or **Workspace** tabs to
-choose where they apply.
+choose where they apply. **Shortcut Preset** is in the same group for choosing
+optional VS Code or IntelliJ-style shortcuts.
 
 At least one tab stays available. If the opening tab is hidden, the first visible
 tab opens instead. Direct search commands can still open hidden tabs, which appear
@@ -335,9 +336,8 @@ The Settings editor groups them by the object you want to configure:
 
 | Group | Settings |
 |-------|----------|
-| **Search window** | Opening tab, remembered tab, tab visibility, and tab order |
+| **Search window** | Opening tab, remembered tab, tab visibility, tab order, and shortcut preset |
 | **Search results** | Everything result groups and ordering, ignore rules, excluded paths, result limits, and search delay |
-| **Keyboard shortcuts** | Shortcut preset |
 
 | Setting | Default | Description |
 |---------|---------|-------------|
