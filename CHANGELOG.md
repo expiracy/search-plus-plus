@@ -27,6 +27,11 @@
   result limits and search delay. The two settings categories are
   **Search popup** (including the shortcut preset) and **Search results**.
   Existing setting keys remain compatible.
+- **Shortcut Preset** now lists the exact keys for macOS and Windows/Linux and
+  explains which search++ tabs they open. Descriptions explain how to disable a
+  preset, preserve custom bindings, and resolve keymap conflicts. A direct link
+  opens VS Code's Keyboard Shortcuts editor filtered to search++. Double Shift
+  and shortcuts inside the popup remain independent of the preset.
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
   In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
   (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in
