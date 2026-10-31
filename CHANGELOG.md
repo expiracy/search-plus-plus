@@ -2,78 +2,64 @@
 
 ## Unreleased
 
+## 3.1.0 — 2026-10-31
+
+### Added
+
+- Configure the search popup from its settings cog. Settings open directly in
+  VS Code and are grouped into **Search popup** and **Search results**.
+- Choose which search types appear as tabs and inside Everything, arrange their
+  order, and show or hide the combined Everything tab. To rearrange tabs, remove
+  groups from Tab Order and re-add them in the order you want.
+- Choose an opening tab or **Last used tab**, remembered per workspace across
+  restarts. Hidden opening tabs fall back to an available tab, and at least one
+  search source stays enabled.
+- Optional **VS Code** and **IntelliJ** shortcut presets open search++ modes
+  directly. **Default** keeps the standard shortcuts. A link opens VS Code's
+  Keyboard Shortcuts editor to view and customise search++ bindings.
+
 ### Changed
 
-- File results use VS Code's file-icon theme where supported and show the filename
-  once, with the parent folder beside it. Recent files and absolute paths use the same
-  layout; recent locations retain their line numbers. The Files title uses a
-  compact result count.
-- The popup's cog opens the normal VS Code Settings page directly, filtered to
-  search++. The **search++: Open Settings** command opens the same page.
-- **Everything Tab Sources** is one checkbox list for both tabs and Everything sources.
-  Unchecking Files, Folders, Text, Symbols, or Commands hides that type in both
-  places. A separate **Show Everything Tab** switch controls the combined tab.
-- **Tab Order** arranges tabs and Everything groups together. To rearrange tabs,
-  remove groups, then re-add them in the correct order. Unchecked sources are
-  hidden from the popup. The default Everything
-  groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
-- **When Search Opens** combines the opening choice and remembered-mode option
-  in one dropdown, including **Last used tab**. The default remains Everything.
-  The last enabled search cannot be unchecked; direct commands can temporarily
-  open other search types without changing these preferences.
-- Older tab, source, order, and opening preferences are converted at their User
-  or Workspace scope. At the same scope, disabled choices stay disabled and tab
-  order wins if the previous orders disagree. New shared preferences take priority.
-- Result settings use plain names: **Results per Search Type**, **Results per
-  Everything Group**, **Search Delay**, **Git Ignore Rules**, **Search Ignore
-  Rules**, and **Excluded Paths**. Descriptions explain scope and units. Earlier
-  values carry over automatically, and ignore-rule changes apply immediately.
-- Ignore rules and excluded paths now live under **Search results**, alongside
-  result limits and search delay. The two settings categories are
-  **Search popup** (including the shortcut preset) and **Search results**.
-  Existing setting keys remain compatible.
-- **Shortcut Preset** offers **Default**, **VS Code**, and **IntelliJ**, with
-  short examples of the keys each preset uses. **View and customise applied
-  shortcuts** opens VS Code's Keyboard Shortcuts editor filtered to search++.
-- **Symbols and Usages share one flow.** The separate Usages tab is removed.
-  In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
-  (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in
-  the same popup. The Find Usages row action and editor command remain available.
-- The native **Back** button in a usages view restores the previous search
-  query, cached results, highlighted item, and search options. This also works
-  when entering usages from Everything. Clearing the usages input starts a
-  fresh symbol search instead.
-- **Right Arrow now moves the text cursor normally.** Preview has moved from
-  plain Right Arrow to **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux.
-  Preview keeps the popup focused and reuses the preview editor tab; **Enter**
-  still opens a result and closes the popup.
-- Previewable results, including recent history, have an **eye button**. Its
-  hover tooltip shows the platform's preview shortcut, and clicking it previews
-  that row without closing search. Folders, commands, and informational rows do
-  not offer preview.
-- **Go to File** shows **Enter** in its tooltip on every platform. The eye button
-  shows **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux.
-- Tab order and keyboard cycling now have six modes. Existing `usages` entries
-  in custom tab orders map to Symbols without adding a duplicate tab. Closing a
-  usages view with Last used tab selected reopens Symbols next time; legacy
-  remembered Usages values also open Symbols.
+- **Symbols and Usages now share one flow.** Enter opens a symbol's declaration;
+  Ctrl+Enter (Control+Return on macOS) or Shift+F12 shows its usages in the same
+  popup. The separate Usages tab is removed.
+- **Back** restores the previous query, results, highlighted item and filters
+  after a usages lookup, including lookups started from Everything. Clearing
+  the usages input returns to symbol search.
+- **Right Arrow moves the text cursor.** Preview now uses **Cmd+Right** on macOS
+  or **Ctrl+Right** on Windows/Linux. An eye button on previewable results shows
+  the shortcut and previews the selected file while keeping search open.
+  **Enter** opens the result and closes the popup.
+- File rows show the filename once with a muted parent folder and VS Code's
+  themed file icons where supported. Recent files and absolute paths use the
+  same layout; saved recent locations retain their line numbers. Files shows
+  a compact result count.
+- Result limits, typing delay, ignore rules and excluded paths have clearer
+  setting names and descriptions. Ignore-rule changes apply immediately.
+  Existing preferences carry over automatically at their User/Workspace scope.
+- Tabs and Everything share source selection and ordering. Existing settings
+  that disabled a source keep it disabled during migration. Old Usages entries
+  in tab orders and remembered modes map to Symbols.
+
+### Fixed
+
+- Preserve correct file matches when narrowing Unicode queries, including
+  case-insensitive queries and combining characters.
 
 ### Performance
 
-- File search in very large workspaces responds faster as you type. Ignore
-  rules are evaluated once per index snapshot instead of on every keystroke,
-  and longer queries search only the previous query's matches. In a
-  200,000-file workspace a keystroke takes about 0.5–1 s instead of 1.5–2.6 s,
-  and much less once a query narrows the results.
-- Folder search reuses the folder list until the index changes, so each
-  keystroke takes milliseconds instead of several seconds in large workspaces.
-- Indexing a large workspace is several times faster: ignore decisions are
-  cached per directory, and custom exclusions are skipped when none are
-  configured.
-- Deleting many files at once no longer stalls the editor. Removing 1,000
-  files from a 250,000-file index takes about 0.25 s instead of 44 s.
-- Text search finds notebooks through the file index instead of scanning the
-  workspace again for every query.
+- Faster file search in large workspaces through cached ignore checks and
+  incremental matching as the query narrows.
+- Reuse folder lists between searches, cache ignore decisions during indexing,
+  and batch file deletions to reduce pauses in large workspaces.
+- Text search finds notebooks through the shared file index instead of scanning
+  the workspace again for every query.
+
+### Known issues
+
+- On macOS, clicking a tab can leave focus on its button. Cmd+A may then close
+  search and select the editor's contents instead of the query. Click the search
+  input before selecting or replacing query text.
 
 ## 3.0.4 — 2026-10-25
 
