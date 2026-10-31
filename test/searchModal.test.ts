@@ -67,7 +67,7 @@ function type(value: string) {
   input.fire(value);
 }
 
-test('the settings cog at the end of the input row closes search and opens search++ settings', () => {
+test('the settings cog at the end of the input row closes search and opens native configuration', () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
   const hidden = vi.spyOn(picker, 'hide');
   modal.show(SearchMode.File);
@@ -80,11 +80,11 @@ test('the settings cog at the end of the input row closes search and opens searc
   });
   expect(picker.buttons.at(-1)).toBe(settings);
   expect(settings.toggle).toBeUndefined();
-  expect(command).not.toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+  expect(command).not.toHaveBeenCalledWith('searchPlusPlus.configure');
   button.fire(settings);
   expect(hidden).toHaveBeenCalledOnce();
   expect(requests[0].dispose).toHaveBeenCalledOnce();
-  expect(command).toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+  expect(command).toHaveBeenCalledWith('searchPlusPlus.configure');
 });
 
 test('macOS search controls and empty-result hints show Option shortcuts', () => {
@@ -711,6 +711,34 @@ test('an explicitly requested mode overrides a valid mode stored by a previous s
   picker.hide();
   modal.show(SearchMode.File);
   expect(picker.placeholder).toContain('Search files');
+});
+
+test('the chosen opening tab and visible tab order apply while direct commands remain available', () => {
+  const settings: Record<string, unknown> = { defaultMode: 'file', visibleTabs: ['file', 'text'] };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
+  modal.show();
+  expect(picker.placeholder).toContain('Search files...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search text content...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search files...');
+  picker.hide();
+  modal.show(SearchMode.Command);
+  expect(picker.placeholder).toBe('Search commands...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search files...');
+  expect(picker.buttons.some((item: any) => item.tooltip === 'Commands')).toBe(false);
+});
+
+test('hidden remembered and default tabs fall back to the first visible tab', () => {
+  const settings: Record<string, unknown> = {
+    rememberLastMode: true, defaultMode: 'command', tabOrder: ['text', 'file'], visibleTabs: ['file', 'text'],
+  };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
+  workspaceState.get.mockReturnValue(SearchMode.Symbol);
+  modal.show();
+  expect(picker.placeholder).toBe('Search text content...');
+  expect(picker.buttons.slice(0, 2).map((item: any) => item.tooltip)).toEqual(['Text', 'Files']);
 });
 
 

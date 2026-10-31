@@ -4,6 +4,7 @@ import { IndexManager } from './index/indexManager';
 import { SearchHistory } from './history';
 import { SearchMode } from './providers/types';
 import { createProviders } from './providers/createProviders';
+import { SearchWindowConfiguration, type WindowNode } from './ui/searchWindowConfiguration';
 
 export function activate(context: vscode.ExtensionContext) {
   const indexManager = new IndexManager(context);
@@ -14,11 +15,21 @@ export function activate(context: vscode.ExtensionContext) {
   const history = new SearchHistory(context.workspaceState);
   const providers = createProviders(indexManager);
   const modal = new SearchModal(indexManager, history, providers.providers, undefined, context.workspaceState);
+  const configuration = new SearchWindowConfiguration();
 
   context.subscriptions.push(
     indexManager,
     modal,
     providers,
+    configuration,
+    vscode.commands.registerCommand('searchPlusPlus.configure', () => configuration.showMenu()),
+    vscode.commands.registerCommand('searchPlusPlus.configureWindow', () => configuration.show()),
+    vscode.commands.registerCommand('searchPlusPlus.configureWindow.openingTab', () => configuration.chooseOpeningTab()),
+    vscode.commands.registerCommand('searchPlusPlus.configureWindow.scope', () => configuration.chooseScope()),
+    vscode.commands.registerCommand('searchPlusPlus.configureWindow.moveTab', (node?: WindowNode) => configuration.moveTab(node)),
+    vscode.commands.registerCommand('searchPlusPlus.configureWindow.reset', () => configuration.reset()),
+    vscode.commands.registerCommand('searchPlusPlus.configureWindow.close', () => configuration.close()),
+    vscode.commands.registerCommand('searchPlusPlus.configureWindow.preview', () => modal.show()),
     vscode.commands.registerCommand('searchPlusPlus.open', () => modal.show()),
     vscode.commands.registerCommand('searchPlusPlus.openFiles', () => modal.show(SearchMode.File)),
     vscode.commands.registerCommand('searchPlusPlus.openText', () => modal.show(SearchMode.Text)),

@@ -122,6 +122,42 @@
       {
         "command": "searchPlusPlus.preview",
         "title": "search++: Preview Selected Result"
+      },
+      {
+        "command": "searchPlusPlus.configure",
+        "title": "search++: Configure"
+      },
+      {
+        "command": "searchPlusPlus.configureWindow",
+        "title": "search++: Configure Search Window"
+      },
+      {
+        "command": "searchPlusPlus.configureWindow.openingTab",
+        "title": "Choose opening tab"
+      },
+      {
+        "command": "searchPlusPlus.configureWindow.scope",
+        "title": "Change where settings apply",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "searchPlusPlus.configureWindow.moveTab",
+        "title": "Move tab..."
+      },
+      {
+        "command": "searchPlusPlus.configureWindow.reset",
+        "title": "Reset search window settings",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "searchPlusPlus.configureWindow.close",
+        "title": "Done",
+        "icon": "$(check)"
+      },
+      {
+        "command": "searchPlusPlus.configureWindow.preview",
+        "title": "Try search",
+        "icon": "$(search)"
       }
     ],
     "keybindings": [
@@ -244,10 +280,58 @@
             "order": 1,
             "type": "boolean",
             "default": false,
-            "description": "Remember the last search mode per workspace, including after restarting VS Code. Direct mode commands always open their requested mode."
+            "description": "Reopen the last visible tab used in this workspace. Otherwise use Default Mode. Choose this in search++: Configure Search Window."
+          },
+          "searchPlusPlus.defaultMode": {
+            "order": 2,
+            "type": "string",
+            "enum": [
+              "everywhere",
+              "file",
+              "folder",
+              "text",
+              "symbol",
+              "command"
+            ],
+            "enumDescriptions": [
+              "Everything tab",
+              "Files tab",
+              "Folders tab",
+              "Text tab",
+              "Symbols tab",
+              "Commands tab"
+            ],
+            "default": "everywhere",
+            "description": "Opening tab when Remember Last Mode is off. If hidden, the first visible tab opens. Direct search commands still open their requested tab."
+          },
+          "searchPlusPlus.visibleTabs": {
+            "order": 3,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "everywhere",
+                "file",
+                "folder",
+                "text",
+                "symbol",
+                "command"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 1,
+            "default": [
+              "everywhere",
+              "file",
+              "folder",
+              "text",
+              "symbol",
+              "command"
+            ],
+            "description": "Tabs shown in search. Use the checkboxes in search++: Configure Search Window. Direct search commands can still open hidden tabs."
           },
           "searchPlusPlus.tabOrder": {
-            "order": 2,
+            "order": 4,
             "type": "array",
             "items": {
               "type": "string",
@@ -279,7 +363,7 @@
               "symbol",
               "command"
             ],
-            "description": "Order of the six search mode buttons and Tab navigation. Missing modes are appended automatically. Legacy usages entries are treated as Symbols."
+            "description": "Order of search tabs. Drag tabs in search++: Configure Search Window. Missing modes are appended; legacy usages entries map to Symbols."
           }
         }
       },
@@ -329,6 +413,27 @@
             "type": "number",
             "default": 300,
             "description": "Debounce delay in milliseconds before triggering search"
+          },
+          "searchPlusPlus.excludeGitIgnored": {
+            "order": 5,
+            "type": "boolean",
+            "default": true,
+            "description": "Exclude git-ignored files and folders from search results by default"
+          },
+          "searchPlusPlus.excludeSearchIgnored": {
+            "order": 6,
+            "type": "boolean",
+            "default": true,
+            "description": "Exclude files matching .searchignore patterns from search results by default"
+          },
+          "searchPlusPlus.excludePaths": {
+            "order": 7,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
           }
         }
       },
@@ -353,33 +458,6 @@
             "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
           }
         }
-      },
-      {
-        "title": "Workspace files",
-        "order": 4,
-        "properties": {
-          "searchPlusPlus.excludeGitIgnored": {
-            "order": 1,
-            "type": "boolean",
-            "default": true,
-            "description": "Exclude git-ignored files and folders from search results by default"
-          },
-          "searchPlusPlus.excludeSearchIgnored": {
-            "order": 2,
-            "type": "boolean",
-            "default": true,
-            "description": "Exclude files matching .searchignore patterns from search results by default"
-          },
-          "searchPlusPlus.excludePaths": {
-            "order": 3,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": [],
-            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
-          }
-        }
       }
     ],
     "menus": {
@@ -388,6 +466,66 @@
           "command": "searchPlusPlus.findUsages",
           "when": "editorTextFocus",
           "group": "navigation@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "searchPlusPlus.configureWindow.openingTab",
+          "when": "false"
+        },
+        {
+          "command": "searchPlusPlus.configureWindow.scope",
+          "when": "false"
+        },
+        {
+          "command": "searchPlusPlus.configureWindow.moveTab",
+          "when": "false"
+        },
+        {
+          "command": "searchPlusPlus.configureWindow.reset",
+          "when": "false"
+        },
+        {
+          "command": "searchPlusPlus.configureWindow.close",
+          "when": "false"
+        },
+        {
+          "command": "searchPlusPlus.configureWindow.preview",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "searchPlusPlus.configureWindow.preview",
+          "when": "view == searchPlusPlus.searchWindow",
+          "group": "navigation@1"
+        },
+        {
+          "command": "searchPlusPlus.configureWindow.close",
+          "when": "view == searchPlusPlus.searchWindow",
+          "group": "navigation@2"
+        },
+        {
+          "command": "searchPlusPlus.configureWindow.reset",
+          "when": "view == searchPlusPlus.searchWindow",
+          "group": "configuration@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "searchPlusPlus.configureWindow.moveTab",
+          "when": "view == searchPlusPlus.searchWindow && viewItem == searchPlusPlus.windowTab",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "searchPlusPlus.searchWindow",
+          "name": "Search window",
+          "contextualTitle": "search++",
+          "when": "searchPlusPlus.configuringWindow"
         }
       ]
     }

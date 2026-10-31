@@ -4,11 +4,21 @@
 
 ### Changed
 
-- Settings are grouped by the object being configured: **Search window**,
-  **Search results**, **Keyboard shortcuts**, and **Workspace files**. Tab order
-  lives with window behaviour, both result limits live with results, and ignore
-  rules live with workspace files. Existing setting keys and defaults are unchanged.
-
+- The popup's cog opens a native configuration menu for **Search window**,
+  **Search results**, **Keyboard shortcuts**, and **All settings**.
+- **Search window** has a native sidebar configurator: drag tabs into order,
+  check which tabs are visible, and choose a fixed opening tab or **Last used
+  tab**. It supports User and Workspace settings, a keyboard position picker,
+  a **Try search** action, and reset for the selected scope. Changes save
+  automatically.
+- New `searchPlusPlus.defaultMode` and `searchPlusPlus.visibleTabs` settings
+  default to Everything and all six tabs, preserving the existing opening
+  behaviour. At least one tab remains visible. Direct search commands can open
+  hidden tabs temporarily; remembered hidden tabs fall back to a visible tab.
+- Ignore rules and excluded paths now live under **Search results**, alongside
+  result groups, limits, and search delay. The three settings categories are
+  **Search window**, **Search results**, and **Keyboard shortcuts**. Existing
+  setting keys remain compatible.
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
   In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
   (**Control+Return** on macOS) or **Shift+F12** shows its semantic usages in

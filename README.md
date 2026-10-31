@@ -184,10 +184,32 @@ On the **Files**, **Folders**, or **Everything** tab, enter a full filesystem pa
 such as `C:\Users\me\file.ts` or `/home/me/file.ts`. Select the result to open the
 file or reveal the folder in the Explorer.
 
+### Configure the Search Window
+
+Click the popup's cog and choose **Search window**, or run
+**search++: Configure Search Window** from the Command Palette. A native VS Code
+sidebar view lets you configure the popup:
+
+- **Applies to** chooses User settings or this workspace. Existing workspace
+  overrides are selected automatically.
+- **Open search with** chooses a fixed opening tab or **Last used tab**.
+- **Visible tabs** has a checkbox for each tab. Drag a tab to the position you
+  want; drop in empty space to move it to the end. Right-click a
+  tab and choose **Move tab...** for a keyboard-friendly position picker.
+- **Try search** previews the configured popup. Changes save automatically;
+  **Done** closes the configuration view. **Reset search window settings** in
+  the view's menu restores window settings for the selected scope.
+
+At least one tab stays visible. Hiding the fixed opening tab selects the first
+remaining visible tab. Direct search commands can still open hidden tabs, which
+appear temporarily while that search mode is active.
+
 ### Remember Your Search Mode
 
-Enable `searchPlusPlus.rememberLastMode` to reopen the last mode used in this
-workspace, including after restarting VS Code. It is off by default. Commands
+Choose **Last used tab** under **Open search with**, or enable
+`searchPlusPlus.rememberLastMode`, to reopen the last visible tab used in this
+workspace, including after restarting VS Code. It is off by default. Otherwise,
+`searchPlusPlus.defaultMode` chooses the opening tab. Commands
 such as **Search Files** still open their requested mode. Only the mode is saved;
 search text and nested usage lookups are cleared when the popup closes. Returning
 from a usages view opens the Symbols chooser.
@@ -308,19 +330,23 @@ These are also callable from the command palette and can be used in custom keybi
 | `search++: Previous Tab` | Switch to the previous tab |
 | `search++: Preview Selected Result` | Preview the active result while keeping search focused |
 | `search++: Autofill File Path` | Autofill the selected file's path |
+| `search++: Configure` | Open the native configuration menu |
+| `search++: Configure Search Window` | Arrange tabs, change visibility, and choose the opening tab |
 
 ## Settings
 
-Click the cog at the far right of the popup's search row to open VS Code
-Settings filtered to search++. All settings are under the `searchPlusPlus` namespace.
+Click the cog at the far right of the popup's search row to choose what to
+configure. **Search window** opens the native tab configurator; **Search results**
+and **Keyboard shortcuts** open the relevant VS Code settings. **All settings**
+opens the full Settings editor filtered to search++. All settings are under the
+`searchPlusPlus` namespace.
 The Settings editor groups them by the object you want to configure:
 
 | Group | Settings |
 |-------|----------|
-| **Search window** | Remembered tab and tab order |
-| **Search results** | Everything result groups and ordering, result limits, and search delay |
+| **Search window** | Opening tab, remembered tab, tab visibility, and tab order |
+| **Search results** | Everything result groups and ordering, ignore rules, excluded paths, result limits, and search delay |
 | **Keyboard shortcuts** | Shortcut preset |
-| **Workspace files** | Git-ignore and search-ignore rules, and excluded files or folders |
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -329,6 +355,8 @@ The Settings editor groups them by the object you want to configure:
 | `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
 | `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
+| `searchPlusPlus.defaultMode` | `"everywhere"` | Opening tab when remembering the last tab is off |
+| `searchPlusPlus.visibleTabs` | All six tabs | Tabs displayed in the popup; configure with the native checkboxes |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
 | `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
@@ -337,10 +365,11 @@ The Settings editor groups them by the object you want to configure:
 
 ### Search Order
 
-Use `searchPlusPlus.tabOrder` to reorder the mode buttons and keyboard Tab
-navigation together. Duplicate or unknown modes are ignored, and any missing
-modes are appended so all six remain available. Legacy `usages` entries map to
-Symbols; duplicates are removed. Changes apply to an open popup.
+Use **Configure Search Window** to drag tabs into order and set their visibility.
+`searchPlusPlus.tabOrder` remains available for manual configuration. Duplicate
+or unknown modes are ignored, and missing modes are appended to the saved order.
+`searchPlusPlus.visibleTabs` controls which appear. Legacy `usages` entries map to
+Symbols; duplicates are removed. Changes apply immediately.
 
 The separate `searchPlusPlus.everywhere.sections` setting controls the order of
 result groups inside Everything. Its default is files, folders, symbols, text,

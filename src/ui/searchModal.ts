@@ -124,7 +124,7 @@ export class SearchModal implements vscode.Disposable {
     this.excludeGitIgnored = config.get<boolean>('excludeGitIgnored', true);
     this.excludeSearchIgnored = config.get<boolean>('excludeSearchIgnored', true);
     this.configurationListener = vscode.workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('searchPlusPlus.tabOrder') && this.activeQuickPick) this.rebuildButtons(this.activeQuickPick);
+      if ((event.affectsConfiguration('searchPlusPlus.tabOrder') || event.affectsConfiguration('searchPlusPlus.visibleTabs')) && this.activeQuickPick) this.rebuildButtons(this.activeQuickPick);
     });
   }
 
@@ -247,7 +247,11 @@ export class SearchModal implements vscode.Disposable {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     const savedMode = config.get<boolean>('rememberLastMode', false)
       ? this.workspaceState?.get<unknown>('searchPlusPlus.lastSearchMode') : undefined;
-    this.activeTab = initialMode ?? (Object.values(SearchMode).includes(savedMode as SearchMode) ? getTabMode(savedMode as SearchMode) : SearchMode.Everywhere);
+    const visibleTabs = getTabOrder(config.get('tabOrder'), config.get('visibleTabs'));
+    const savedTab = getTabMode(savedMode as SearchMode);
+    const defaultTab = getTabMode(config.get<SearchMode>('defaultMode', SearchMode.Everywhere));
+    this.activeTab = initialMode ?? (visibleTabs.includes(savedTab) ? savedTab
+      : visibleTabs.includes(defaultTab) ? defaultTab : visibleTabs[0]);
     qp.placeholder = this.placeholder();
     qp.matchOnDescription = false;
     qp.matchOnDetail = false;
@@ -541,7 +545,10 @@ export class SearchModal implements vscode.Disposable {
   }
 
   private tabOrder(): SearchMode[] {
-    return getTabOrder(vscode.workspace.getConfiguration('searchPlusPlus').get('tabOrder'));
+    const config = vscode.workspace.getConfiguration('searchPlusPlus');
+    const visible = getTabOrder(config.get('tabOrder'), config.get('visibleTabs'));
+    const active = getTabMode(this.activeTab);
+    return getTabOrder(config.get('tabOrder')).filter(mode => visible.includes(mode) || mode === active);
   }
 
   private updateTabContexts(): void {
@@ -619,7 +626,7 @@ export class SearchModal implements vscode.Disposable {
       [vscode.QuickInputButtons.Back, () => this.restoreParentSearch()],
       [settingsBtn, () => {
         qp.hide();
-        void vscode.commands.executeCommand('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+        void vscode.commands.executeCommand('searchPlusPlus.configure');
       }],
       [everywhereBtn, () => this.switchTab(SearchMode.Everywhere)],
       [fileBtn, () => this.switchTab(SearchMode.File)],

@@ -74,6 +74,7 @@ export async function run(): Promise<void> {
     await verifyUsageNavigation(root);
     await verifyResultPreview(root);
     await verifyRowNavigation(root);
+    await verifyWindowPreferences();
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
     assert.ok(commands.includes('searchPlusPlus.preview'));
@@ -85,12 +86,50 @@ export async function run(): Promise<void> {
       await vscode.commands.executeCommand('searchPlusPlus.prevTab');
       await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
     }
+    await vscode.commands.executeCommand('searchPlusPlus.configureWindow');
+    await vscode.commands.executeCommand('searchPlusPlus.configureWindow.close');
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, native search-window configuration view, persisted opening tab and visibility with hidden direct-command access, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
+}
+
+async function verifyWindowPreferences(): Promise<void> {
+  const config = vscode.workspace.getConfiguration('searchPlusPlus');
+  const settings = ['tabOrder', 'visibleTabs', 'defaultMode', 'rememberLastMode'];
+  const previous = settings.map(key => config.inspect(key)?.workspaceValue);
+  let picker: vscode.QuickPick<SearchResult>;
+  const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
+    { getRecentItems: () => [] } as any, new Map(), () => picker = vscode.window.createQuickPick<SearchResult>());
+  const hide = async () => {
+    const hidden = nextEvent(picker.onDidHide, () => true);
+    await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+    await hidden;
+  };
+  try {
+    await config.update('tabOrder', ['text', 'file', 'everywhere', 'folder', 'symbol', 'command'], vscode.ConfigurationTarget.Workspace);
+    await config.update('visibleTabs', ['file', 'text'], vscode.ConfigurationTarget.Workspace);
+    await config.update('defaultMode', 'file', vscode.ConfigurationTarget.Workspace);
+    await config.update('rememberLastMode', false, vscode.ConfigurationTarget.Workspace);
+    modal.show();
+    assert.ok(picker!.placeholder?.startsWith('Search files...'), 'the persisted opening choice applies to the native popup');
+    assert.deepEqual(picker!.buttons.slice(0, 2).map(button => button.tooltip), ['Text', 'Files']);
+    assert.ok(!picker!.buttons.some(button => button.tooltip === 'Symbols'), 'hidden tabs have no mode button');
+    modal.nextTab();
+    assert.equal(picker!.placeholder, 'Search text content...', 'keyboard cycling skips hidden tabs');
+    await hide();
+    modal.show(SearchMode.Symbol);
+    assert.ok(picker!.placeholder?.startsWith('Search symbols...'), 'a direct command can still reach a hidden tab');
+    modal.nextTab();
+    assert.ok(!picker!.buttons.some(button => button.tooltip === 'Symbols'), 'the temporary hidden tab disappears after leaving it');
+    await hide();
+    assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('visibleTabs'), ['file', 'text'], 'temporary access preserves the visibility preference');
+  } finally {
+    modal.dispose();
+    for (const [index, key] of settings.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);
+  }
 }
 
 async function verifyTypeScriptUsages(root: vscode.Uri, rules: GitIgnoreManager): Promise<void> {

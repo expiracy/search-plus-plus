@@ -39,6 +39,7 @@ registry of providers that share the same search contract.
 | Component | Responsibility |
 | --- | --- |
 | `SearchModal` | Read input and options, select a provider, render results, and navigate to the selected resource. |
+| `SearchWindowConfiguration` | Use a native tree view to arrange tabs, change visibility and opening behaviour, and save User or Workspace preferences. |
 | `SearchSession` | Own the current request, its debounce timer, cancellation, and delivery of current results and errors. |
 | Search providers | Implement files, folders, text, symbols, usages, or commands through the `SearchProvider` contract. |
 | `EverywhereProvider` | Combine enabled providers into the Everything tab's ordered sections. |
@@ -79,6 +80,14 @@ delay. Section errors appear alongside results from the other providers.
 `searchPlusPlus.maxResults` limits results returned by each provider. The
 Everything tab applies its own section order and display limit to those results,
 with a link to the individual tab when more results are available.
+
+The popup's cog opens a native configuration menu. Search-window preferences use
+a tree view with drag and drop, checkboxes, and native choice pickers; result and
+shortcut preferences open the relevant Settings editor entries. Window edits are
+saved in sequence at the selected User or Workspace scope. At least one tab
+remains visible. Normal opening prefers a visible remembered tab, then the
+configured opening tab, then the first visible tab. Direct mode commands can
+temporarily show a hidden tab without changing the saved visibility list.
 
 ## Result previews
 
