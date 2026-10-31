@@ -21,13 +21,17 @@
 ### Changed
 
 - **Symbols and Usages now share one flow.** Enter opens a symbol's declaration;
-  Ctrl+Enter (Control+Return on macOS) or Shift+F12 shows its usages in the same
-  popup. The separate Usages tab is removed.
+  Shift+Enter shows its usages in the same popup, including symbols selected in
+  Everything. The action's hover hint shows Shift+Enter and the Shift+F12
+  alternative. Shift+F12 is scoped to the popup, so code editors keep VS Code's
+  built-in Find All References action. The separate Usages tab is removed.
 - **Back** restores the previous query, results, highlighted item and filters
   after a usages lookup, including lookups started from Everything. Clearing
   the usages input returns to symbol search.
-- **Right Arrow moves the text cursor.** Preview now uses **Cmd+Right** on macOS
-  or **Ctrl+Right** on Windows/Linux. An eye button on previewable results shows
+- **Right Arrow moves the text cursor.** **Ctrl+Enter** (Control+Return on macOS)
+  previews results throughout the popup, including Files and Symbols. It no
+  longer autofills file paths or opens usages. Cmd+Right on macOS and Ctrl+Right
+  on Windows/Linux remain preview alternatives. An eye button shows
   the shortcut and previews the selected file while keeping search open.
   **Enter** opens the result and closes the popup.
 - File rows show the filename once with a muted parent folder and VS Code's

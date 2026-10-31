@@ -170,19 +170,19 @@
         "when": "searchPlusPlusModalOpen"
       },
       {
-        "command": "searchPlusPlus.autofillPath",
+        "command": "searchPlusPlus.preview",
         "key": "ctrl+enter",
-        "when": "searchPlusPlusModalOpen && searchPlusPlusFileTab"
+        "when": "searchPlusPlusModalOpen && inQuickOpen"
       },
       {
         "command": "searchPlusPlus.findUsages",
         "key": "shift+f12",
-        "when": "searchPlusPlusModalOpen"
+        "when": "searchPlusPlusModalOpen && inQuickOpen"
       },
       {
         "command": "searchPlusPlus.findUsages",
-        "key": "ctrl+enter",
-        "when": "searchPlusPlusModalOpen && searchPlusPlusSymbolTab"
+        "key": "shift+enter",
+        "when": "searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)"
       },
       {
         "command": "searchPlusPlus.preview",

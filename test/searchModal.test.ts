@@ -9,6 +9,7 @@ let modal: InstanceType<typeof SearchModal>;
 let picker: ReturnType<typeof vscode.window.createQuickPick>;
 let input: InstanceType<typeof vscode.EventEmitter<string>>;
 let accept: InstanceType<typeof vscode.EventEmitter<void>>;
+let activeChanged: InstanceType<typeof vscode.EventEmitter<any>>;
 let state: InstanceType<typeof vscode.EventEmitter<string>>;
 let itemButton: InstanceType<typeof vscode.EventEmitter<any>>;
 let button: InstanceType<typeof vscode.EventEmitter<any>>;
@@ -22,6 +23,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   input = new vscode.EventEmitter();
   accept = new vscode.EventEmitter();
+  activeChanged = new vscode.EventEmitter();
   state = new vscode.EventEmitter();
   hide = new vscode.EventEmitter();
   itemButton = new vscode.EventEmitter();
@@ -32,6 +34,7 @@ beforeEach(() => {
     ...vscode.window.createQuickPick(),
     onDidChangeValue: input.event,
     onDidAccept: accept.event,
+    onDidChangeActive: activeChanged.event,
     onDidHide: hide.event,
     onDidTriggerItemButton: itemButton.event,
     onDidTriggerButton: button.event,
@@ -61,6 +64,7 @@ afterEach(() => {
   picker.hide();
   modal.dispose();
   configurationChanged.dispose();
+  activeChanged.dispose();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -70,6 +74,24 @@ function type(value: string) {
   picker.value = value;
   input.fire(value);
 }
+
+test('symbol selection enables drilldown in Everything and clears on another row or hide', () => {
+  const command = vi.spyOn(vscode.commands, 'executeCommand');
+  modal.show(SearchMode.Everywhere); type('greet');
+  const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
+  const file = { label: 'greet.ts', mode: SearchMode.File, uri: symbol.uri };
+  requests[0].publish([symbol, file]);
+  picker.activeItems = [symbol] as any; activeChanged.fire([symbol]);
+  expect(command).toHaveBeenLastCalledWith('setContext', 'searchPlusPlusSymbolSelected', true);
+  picker.activeItems = [file] as any; activeChanged.fire([file]);
+  expect(command).toHaveBeenLastCalledWith('setContext', 'searchPlusPlusSymbolSelected', false);
+  picker.activeItems = [symbol] as any; activeChanged.fire([symbol]);
+  command.mockClear(); picker.hide();
+  expect(command).toHaveBeenCalledWith('setContext', 'searchPlusPlusSymbolSelected', false);
+  const count = command.mock.calls.length;
+  activeChanged.fire([symbol]);
+  expect(command.mock.calls).toHaveLength(count);
+});
 
 test('the settings cog at the end of the input row closes search and opens VS Code Settings directly', () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
@@ -290,19 +312,20 @@ test('a symbol result button finds usages without opening the declaration', asyn
   const item: any = picker.items[0];
   const action = item.buttons.find((button: any) => button.tooltip.includes('Find Usages'));
   expect(action).toBeTruthy();
+  expect(action.tooltip).toBe('Find Usages (Shift+Enter or Shift+F12)');
   itemButton.fire({ item, button: action }); await vi.runAllTimersAsync();
   expect(requests.at(-1)?.options.usageTarget?.name).toBe('greet');
   expect(open).not.toHaveBeenCalled();
 });
 
-test('Go to File opens a positioned result in the current group with one operation', async () => {
+test('Go to Symbol opens its declaration in the current group with one operation', async () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
   const open = vi.spyOn(vscode.window, 'showTextDocument');
   modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
   const uri = vscode.Uri.file('/workspace/greet.ts');
   requests[0].publish([{ label: 'greet', mode: SearchMode.Symbol, uri, lineNumber: 12, column: 9 }]);
   const item: any = picker.items[0];
-  const action = item.buttons.find((button: any) => button.tooltip === 'Go to File (Enter)');
+  const action = item.buttons.find((button: any) => button.tooltip === 'Go to Symbol (Enter)');
   expect(action?.iconPath.id).toBe('go-to-file');
   itemButton.fire({ item, button: action });
   await vi.runAllTimersAsync();
@@ -407,7 +430,7 @@ test('Back from an Everything symbol restores its sections and selected result',
 test('empty Symbols explains how to open a declaration or find usages', () => {
   modal.show(SearchMode.Symbol);
   expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol', mode: SearchMode.Symbol,
-    description: expect.stringContaining('Ctrl+Enter or Shift+F12') }]);
+    description: expect.stringContaining('Shift+Enter or Shift+F12') }]);
 });
 
 test('empty reference results distinguish semantic coverage from an ordinary search miss', async () => {
@@ -518,7 +541,7 @@ test('the eye action shows the preview shortcut and previews the clicked row wit
   picker.activeItems = [picker.items[0]] as any;
   const clicked: any = picker.items[1];
   const eye = clicked.buttons.find((item: any) => item.iconPath.id === 'eye');
-  expect(eye?.tooltip).toBe(`Preview (${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Right)`);
+  expect(eye?.tooltip).toBe('Preview (Ctrl+Enter)');
   itemButton.fire({ item: clicked, button: eye }); await vi.runAllTimersAsync();
   expect(command).toHaveBeenCalledWith('vscode.open', clicked.uri, expect.objectContaining({
     preserveFocus: true, preview: true,
