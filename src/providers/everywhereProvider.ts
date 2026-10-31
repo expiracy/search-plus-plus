@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ResultSection, SearchMode, DEFAULT_EVERYWHERE_LIMIT, type SearchOptions, type SearchProvider, type SearchResult } from './types';
+import { ResultSection, SearchMode, DEFAULT_EVERYWHERE_LIMIT, DEFAULT_SECTIONS, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { FileProvider } from './fileProvider';
 import { FolderProvider } from './folderProvider';
 import { TextProvider } from './textProvider';
@@ -25,7 +25,7 @@ export class EverywhereProvider implements SearchProvider {
   ): vscode.Disposable {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     const debounceMs = config.get<number>('debounceMs', 200);
-    const sections = getEnabledSections(config.get('everywhere.sections'));
+    const sections = getEverythingSections(config);
     if (!sections.length) {
       onResults([]);
       return { dispose() {} };
@@ -207,4 +207,24 @@ export class EverywhereProvider implements SearchProvider {
       },
     };
   }
+}
+
+function getEverythingSections(config: vscode.WorkspaceConfiguration): ResultSection[] {
+  const oldSetting = config.inspect('everywhere.sections');
+  const useNewSetting = (key: string): boolean => {
+    const setting = config.inspect(key);
+    for (const scope of ['workspaceFolderValue', 'workspaceValue', 'globalValue'] as const) {
+      if (setting?.[scope] !== undefined) return true;
+      if (oldSetting?.[scope] !== undefined) return false;
+    }
+    return true;
+  };
+  const legacy = getEnabledSections(config.get('everywhere.sections'));
+  const rawOrder = useNewSetting('everything.order') ? config.get('everything.order') : legacy;
+  const ordered = getEnabledSections(Array.isArray(rawOrder)
+    ? rawOrder.map(name => typeof name === 'string' ? name.toLowerCase() : name) : undefined);
+  const order = [...new Set([...ordered, ...DEFAULT_SECTIONS])];
+  if (!useNewSetting('everything.sources')) return order.filter(section => legacy.includes(section));
+  const sources = config.get<Record<string, boolean>>('everything.sources', {});
+  return order.filter(section => sources?.[section[0].toUpperCase() + section.slice(1)] !== false);
 }

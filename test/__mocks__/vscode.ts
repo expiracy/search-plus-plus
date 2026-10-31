@@ -90,6 +90,7 @@ export const TextEditorRevealType = { InCenter: 1, AtTop: 3 };
 export const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
 export const QuickInputButtonLocation = { Title: 1, Inline: 2, Input: 3 };
 export const QuickInputButtons = { Back: { iconPath: new ThemeIcon('arrow-left'), tooltip: 'Back' } };
+export const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
 export const SymbolKind = {
   File: 0, Module: 1, Namespace: 2, Package: 3, Class: 4,
   Method: 5, Property: 6, Field: 7, Constructor: 8, Enum: 9,

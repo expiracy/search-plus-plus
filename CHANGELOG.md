@@ -6,6 +6,12 @@
 
 - The popup's cog opens the normal VS Code Settings page directly, filtered to
   search++. The **search++: Open Settings** command opens the same page.
+- **Everything: Sources** uses native checkboxes for Files, Folders, Symbols,
+  Text, and Commands. Showing or hiding a group takes one click. **Everything:
+  Order** separately supports drag-to-reorder with readable names; changing order
+  does not enable or disable sources. Existing `everywhere.sections` preferences
+  carry over automatically in their original User or Workspace scope, preserving
+  selections and custom order.
 - **Tabs** is one native list of readable tab names. Drag rows to reorder them,
   remove a row to hide a tab, and use **Add Item** to show one again. The new
   `searchPlusPlus.tabs` setting controls order and visibility together; existing

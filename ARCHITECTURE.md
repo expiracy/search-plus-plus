@@ -90,6 +90,15 @@ remembered tab, then the
 configured opening tab, then the first visible tab. Direct mode commands can
 temporarily show a hidden tab without changing the saved visibility list.
 
+Everything sources use a native boolean-object checkbox control, with an
+independent list for ordering. `EverywhereProvider` resolves each preference
+against the legacy section list in scope order. Unchecked sources do not start
+their providers; disabling every source settles the request with an empty result.
+Activation converts the older section list into checkbox values and a full order
+at the same User or Workspace scope. Existing new preferences are kept, and the
+old value is only removed after the replacements have been saved. Failed writes
+leave the older setting available to the compatibility reader.
+
 ## Result previews
 
 Cmd+Right on macOS or Ctrl+Right on Windows/Linux previews the active resource

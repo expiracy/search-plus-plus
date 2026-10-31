@@ -341,7 +341,7 @@ The Settings editor groups them by the object you want to configure:
 | Group | Settings |
 |-------|----------|
 | **Search window** | Tabs (order and visibility), opening tab, remembered tab, and shortcut preset |
-| **Search results** | Everything result groups and ordering, ignore rules, excluded paths, result limits, and search delay |
+| **Search results** | Everything source checkboxes and group order, ignore rules, excluded paths, result limits, and search delay |
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -354,7 +354,8 @@ The Settings editor groups them by the object you want to configure:
 | `searchPlusPlus.tabs` | Everything, Files, Folders, Text, Symbols, Commands | One ordered list of visible tabs; drag to reorder, remove to hide, Add Item to show |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
-| `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
+| `searchPlusPlus.everything.sources` | All checked | Native checkboxes for Files, Folders, Symbols, Text, and Commands on the Everything tab |
+| `searchPlusPlus.everything.order` | Files, Folders, Symbols, Text, Commands | Optional group order; drag rows to arrange sources without changing their enabled state |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
 
 ### Tabs and Result Groups
@@ -369,10 +370,19 @@ workspace preferences still take precedence over User settings. The older contro
 are deprecated and only appear in the Settings page if already configured.
 Legacy `usages` entries map to Symbols without adding a duplicate tab.
 
-The separate `searchPlusPlus.everywhere.sections` setting controls the order of
-result groups inside Everything. Its default is files, folders, symbols, text,
-then commands; your explicit custom order is preserved. VS Code controls the
-native Command Palette order independently.
+Under **Search results**, **Everything: Sources** provides a checkbox for Files,
+Folders, Symbols, Text, and Commands. Tick a source to show its results and untick
+it to hide them. You can turn every source off.
+
+**Everything: Order** is optional: drag its rows to change the group order.
+Showing and hiding sources uses the checkboxes, so you do not need to delete,
+edit, or re-add a name to toggle its results. Sources missing from the order list
+appear at the end. The default stays Files, Folders, Symbols, Text, then Commands.
+
+Existing `searchPlusPlus.everywhere.sections` selections and custom order carry
+over automatically in their original User or Workspace scope. Choices already
+made with the new controls are kept. Workspace settings still override User
+settings. VS Code controls the native Command Palette order independently.
 
 ### `.searchignore`
 

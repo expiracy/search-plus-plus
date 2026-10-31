@@ -396,8 +396,107 @@
         "title": "Search results",
         "order": 2,
         "properties": {
-          "searchPlusPlus.everywhere.sections": {
+          "searchPlusPlus.everything.sources": {
             "order": 1,
+            "type": "object",
+            "properties": {
+              "Files": {
+                "type": "boolean",
+                "default": true
+              },
+              "Folders": {
+                "type": "boolean",
+                "default": true
+              },
+              "Symbols": {
+                "type": "boolean",
+                "default": true
+              },
+              "Text": {
+                "type": "boolean",
+                "default": true
+              },
+              "Commands": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "Files": true,
+              "Folders": true,
+              "Symbols": true,
+              "Text": true,
+              "Commands": true
+            },
+            "description": "Choose which sources appear on the Everything tab. Tick a source to include it; untick it to hide it."
+          },
+          "searchPlusPlus.everything.order": {
+            "order": 2,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Files",
+                "Folders",
+                "Symbols",
+                "Text",
+                "Commands"
+              ]
+            },
+            "uniqueItems": true,
+            "default": [
+              "Files",
+              "Folders",
+              "Symbols",
+              "Text",
+              "Commands"
+            ],
+            "markdownDescription": "Optional order of groups on the Everything tab. **Drag rows to reorder.** Use `#searchPlusPlus.everything.sources#` to show or hide sources. Missing sources appear last."
+          },
+          "searchPlusPlus.maxResults": {
+            "order": 3,
+            "type": "number",
+            "default": 200,
+            "description": "Maximum number of results to display per search mode"
+          },
+          "searchPlusPlus.everywhere.resultLimit": {
+            "order": 4,
+            "type": "integer",
+            "default": 20,
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Maximum results shown per section on the Everything tab"
+          },
+          "searchPlusPlus.debounceMs": {
+            "order": 5,
+            "type": "number",
+            "default": 300,
+            "description": "Debounce delay in milliseconds before triggering search"
+          },
+          "searchPlusPlus.excludeGitIgnored": {
+            "order": 6,
+            "type": "boolean",
+            "default": true,
+            "description": "Exclude git-ignored files and folders from search results by default"
+          },
+          "searchPlusPlus.excludeSearchIgnored": {
+            "order": 7,
+            "type": "boolean",
+            "default": true,
+            "description": "Exclude files matching .searchignore patterns from search results by default"
+          },
+          "searchPlusPlus.excludePaths": {
+            "order": 8,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
+          },
+          "searchPlusPlus.everywhere.sections": {
+            "order": 99,
             "type": "array",
             "items": {
               "type": "string",
@@ -417,48 +516,8 @@
               "text",
               "commands"
             ],
-            "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it."
-          },
-          "searchPlusPlus.maxResults": {
-            "order": 2,
-            "type": "number",
-            "default": 200,
-            "description": "Maximum number of results to display per search mode"
-          },
-          "searchPlusPlus.everywhere.resultLimit": {
-            "order": 3,
-            "type": "integer",
-            "default": 20,
-            "minimum": 1,
-            "maximum": 200,
-            "description": "Maximum results shown per section on the Everything tab"
-          },
-          "searchPlusPlus.debounceMs": {
-            "order": 4,
-            "type": "number",
-            "default": 300,
-            "description": "Debounce delay in milliseconds before triggering search"
-          },
-          "searchPlusPlus.excludeGitIgnored": {
-            "order": 5,
-            "type": "boolean",
-            "default": true,
-            "description": "Exclude git-ignored files and folders from search results by default"
-          },
-          "searchPlusPlus.excludeSearchIgnored": {
-            "order": 6,
-            "type": "boolean",
-            "default": true,
-            "description": "Exclude files matching .searchignore patterns from search results by default"
-          },
-          "searchPlusPlus.excludePaths": {
-            "order": 7,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "default": [],
-            "description": "Glob patterns to always exclude from search results (e.g., \"**/dist/**\", \"**/*.min.js\"). Applied in addition to gitignore."
+            "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everything.sources#` for checkboxes and `#searchPlusPlus.everything.order#` for ordering. Existing choices remain effective until the replacements are configured at the same scope."
           }
         }
       }

@@ -4,8 +4,11 @@ import { IndexManager } from './index/indexManager';
 import { SearchHistory } from './history';
 import { SearchMode } from './providers/types';
 import { createProviders } from './providers/createProviders';
+import { migrateEverythingSettings } from './settingsMigration';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  try { await migrateEverythingSettings(); }
+  catch (error) { console.warn('search++ could not convert older Everything settings; they remain supported.', error); }
   const indexManager = new IndexManager(context);
 
   // Build file index asynchronously — don't block activation

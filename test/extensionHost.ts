@@ -10,6 +10,8 @@ import { SearchModal } from '../src/ui/searchModal';
 import { ResultPreview } from '../src/ui/resultPreview';
 import { SymbolProvider } from '../src/providers/symbolProvider';
 import { FolderProvider } from '../src/providers/folderProvider';
+import { EverywhereProvider } from '../src/providers/everywhereProvider';
+import { migrateEverythingSettings } from '../src/settingsMigration';
 import { SearchMode, type SearchOptions, type SearchResult, type SearchProvider } from '../src/providers/types';
 
 const options: SearchOptions = {
@@ -75,6 +77,7 @@ export async function run(): Promise<void> {
     await verifyResultPreview(root);
     await verifyRowNavigation(root);
     await verifyWindowPreferences();
+    await verifyEverythingPreferences();
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
     assert.ok(commands.includes('searchPlusPlus.preview'));
@@ -91,9 +94,37 @@ export async function run(): Promise<void> {
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, normal VS Code Settings page, persisted opening tab and visibility with hidden direct-command access, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, normal VS Code Settings page, persisted opening tab and visibility with hidden direct-command access, Everything source checkboxes and independent ordering, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
+}
+
+async function verifyEverythingPreferences(): Promise<void> {
+  const config = vscode.workspace.getConfiguration('searchPlusPlus');
+  const keys = ['everywhere.sections', 'everything.sources', 'everything.order'];
+  const previous = keys.map(key => config.inspect(key)?.workspaceValue);
+  const section = (mode: SearchMode): SearchProvider => ({ mode, search(_query, _options, publish) {
+    publish([{ label: mode, mode }]); return { dispose() {} };
+  } });
+  const disabled = { search() { throw new Error('An unchecked Everything source was searched'); } };
+  const provider = new EverywhereProvider(disabled as any, section(SearchMode.Folder) as any,
+    section(SearchMode.Text) as any, disabled as any, disabled as any);
+  try {
+    await config.update('everywhere.sections', ['text', 'folders'], vscode.ConfigurationTarget.Workspace);
+    await migrateEverythingSettings();
+    const migrated = vscode.workspace.getConfiguration('searchPlusPlus');
+    assert.equal(migrated.inspect('everywhere.sections')?.workspaceValue, undefined, 'the old editable array is removed after conversion');
+    assert.deepEqual(migrated.get('everything.sources'), { Files: false, Folders: true, Symbols: false, Text: true, Commands: false }, 'checkboxes reflect the previous source selection');
+    const results = await collect<SearchResult>((publish) => provider.search('match', options, publish));
+    assert.deepEqual(results.map(result => result.belongsToSection), ['text', 'folders'], 'checkbox choices and independent order apply through real VS Code configuration');
+    await config.update('everything.order', ['Folders', 'Text', 'Files', 'Symbols', 'Commands'], vscode.ConfigurationTarget.Workspace);
+    const reordered = await collect<SearchResult>((publish) => provider.search('match', options, publish));
+    assert.deepEqual(reordered.map(result => result.belongsToSection), ['folders', 'text'], 'reordering preserves the checked sources');
+    await config.update('everything.sources', { Files: false, Folders: false, Symbols: false, Text: false, Commands: false }, vscode.ConfigurationTarget.Workspace);
+    assert.deepEqual(await collect<SearchResult>((publish) => provider.search('match', options, publish)), [], 'all sources can be unchecked without starting a search');
+  } finally {
+    for (const [index, key] of keys.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);
+  }
 }
 
 async function verifyWindowPreferences(): Promise<void> {
