@@ -32,7 +32,7 @@ const PLACEHOLDERS: Record<SearchMode, string> = {
   [SearchMode.File]: 'Search files... (append :line:col to jump)',
   [SearchMode.Folder]: 'Search folders...',
   [SearchMode.Text]: 'Search text content...',
-  [SearchMode.Symbol]: 'Search symbols... (Enter to open, Ctrl+Enter for usages)',
+  [SearchMode.Symbol]: 'Search symbols... (Enter to open, Shift+Enter for usages)',
   [SearchMode.Command]: 'Search commands...',
   [SearchMode.Usages]: 'Search symbols to find usages...',
 };
@@ -52,9 +52,11 @@ const goToFileButton: vscode.QuickInputButton = {
   tooltip: 'Go to File (Enter)',
 };
 
+const goToSymbolButton: vscode.QuickInputButton = { ...goToFileButton, tooltip: 'Go to Symbol (Enter)' };
+
 const findUsagesButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('references'),
-  tooltip: 'Find Usages (Shift+F12)',
+  tooltip: 'Find Usages (Shift+Enter or Shift+F12)',
 };
 
 const removeFromHistoryButton: vscode.QuickInputButton = {
@@ -67,7 +69,7 @@ export class SearchModal implements vscode.Disposable {
   private preview = new ResultPreview();
   private readonly previewButton: vscode.QuickInputButton = {
     iconPath: new vscode.ThemeIcon('eye'),
-    tooltip: `Preview (${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Right)`,
+    tooltip: 'Preview (Ctrl+Enter)',
   };
   private modernButtons: boolean;
   private readonly configurationListener: vscode.Disposable;
@@ -86,6 +88,7 @@ export class SearchModal implements vscode.Disposable {
   // Full unfiltered results from the last search
   private fullResults: SearchResult[] = [];
   private activeQuickPick: vscode.QuickPick<SearchResult> | undefined;
+  private symbolSelected?: boolean;
 
   // Stored so keyboard shortcut commands can trigger re-search
   private triggerSearch: (() => void) | undefined;
@@ -189,7 +192,7 @@ export class SearchModal implements vscode.Disposable {
 
       if (item.uri && !item.isFolder && !item.commandId) {
         filtered.push({ ...item, buttons: item.mode === SearchMode.Symbol
-          ? [findUsagesButton, goToFileButton, this.previewButton] : [goToFileButton, this.previewButton] });
+          ? [findUsagesButton, goToSymbolButton, this.previewButton] : [goToFileButton, this.previewButton] });
       } else {
         filtered.push(item);
       }
@@ -208,6 +211,7 @@ export class SearchModal implements vscode.Disposable {
     }
 
     this.updateTitle(qp, counts);
+    this.updateSymbolSelectionContext();
   }
 
   private updateTitle(
@@ -281,7 +285,7 @@ export class SearchModal implements vscode.Disposable {
     const buildEmptyQueryItems = (): SearchResult[] => {
       if (this.activeTab === SearchMode.Symbol) return [{
         label: '$(symbol-method) Search for a symbol',
-        description: 'Enter opens the symbol; Ctrl+Enter or Shift+F12 shows usages',
+        description: 'Enter opens the symbol; Shift+Enter or Shift+F12 shows usages',
         mode: SearchMode.Symbol,
         alwaysShow: true,
       }];
@@ -474,6 +478,7 @@ export class SearchModal implements vscode.Disposable {
       executeSearchForCurrentTab();
     });
 
+    const activeDisposable = qp.onDidChangeActive(() => this.updateSymbolSelectionContext());
     const acceptDisposable = this.setupAcceptHandler(qp);
     const staleDisposable = this.setupStaleHandler(qp);
     const itemButtonDisposable = this.setupItemButtonHandler(qp, buildEmptyQueryItems);
@@ -493,11 +498,13 @@ export class SearchModal implements vscode.Disposable {
       vscode.commands.executeCommand('setContext', 'searchPlusPlusSymbolTab', false);
       this.searchSession.cancel();
       this.activeQuickPick = undefined;
+      this.updateSymbolSelectionContext();
       this.triggerSearch = undefined;
       this.clearUsageTarget();
       this.gotoLine = undefined;
       this.gotoColumn = undefined;
       inputDisposable.dispose();
+      activeDisposable.dispose();
       acceptDisposable.dispose();
       staleDisposable.dispose();
       itemButtonDisposable.dispose();
@@ -569,6 +576,16 @@ export class SearchModal implements vscode.Disposable {
     vscode.commands.executeCommand('setContext', 'searchPlusPlusFileTab', this.activeTab === SearchMode.File || this.activeTab === SearchMode.Everywhere);
     vscode.commands.executeCommand('setContext', 'searchPlusPlusEverythingTab', this.activeTab === SearchMode.Everywhere);
     vscode.commands.executeCommand('setContext', 'searchPlusPlusSymbolTab', this.activeTab === SearchMode.Symbol);
+    this.updateSymbolSelectionContext();
+  }
+
+  private updateSymbolSelectionContext(): void {
+    const item = this.activeQuickPick?.activeItems[0];
+    const selected = (this.activeTab === SearchMode.Symbol || this.activeTab === SearchMode.Everywhere)
+      && !!item?.uri && item.mode === SearchMode.Symbol && this.isCurrentItem(item);
+    if (selected === this.symbolSelected) return;
+    this.symbolSelected = selected;
+    void vscode.commands.executeCommand('setContext', 'searchPlusPlusSymbolSelected', selected);
   }
 
   private getSearchOptions(): SearchOptions {

@@ -4,22 +4,32 @@ test('plain Tab cycles popup modes without Shift+Tab or Ctrl+Tab bindings', () =
   const bindings = manifest.contributes.keybindings;
   expect(bindings.find(binding => binding.command === 'searchPlusPlus.nextTab')?.key).toBe('tab');
   expect(bindings.filter(binding => ['searchPlusPlus.nextTab', 'searchPlusPlus.prevTab'].includes(binding.command)).map(binding => binding.key)).toEqual(['tab']);
-  expect(bindings.find(binding => binding.command === 'searchPlusPlus.findUsages')).toMatchObject({ key: 'shift+f12', when: 'searchPlusPlusModalOpen' });
 });
 
 test('Cmd/Ctrl+Right previews results while plain Right remains available for editing', () => {
-  expect(manifest.contributes.keybindings.find(binding => binding.command === 'searchPlusPlus.preview')).toMatchObject({ key: 'ctrl+right', mac: 'cmd+right', when: 'searchPlusPlusModalOpen' });
+  expect(manifest.contributes.keybindings.find(binding => binding.command === 'searchPlusPlus.preview' && binding.key === 'ctrl+right')).toMatchObject({ key: 'ctrl+right', mac: 'cmd+right', when: 'searchPlusPlusModalOpen' });
   expect(manifest.contributes.keybindings.some(binding => binding.key === 'right')).toBe(false);
   expect(manifest.contributes.commands.some(command => command.command === 'searchPlusPlus.preview')).toBe(true);
 });
 
-test('Ctrl+Enter finds usages in Symbols without taking the file path autofill shortcut', () => {
+test('Shift+Enter shows usages for symbols in Symbols and Everything', () => {
   expect(manifest.contributes.keybindings).toContainEqual({
-    command: 'searchPlusPlus.findUsages', key: 'ctrl+enter',
-    when: 'searchPlusPlusModalOpen && searchPlusPlusSymbolTab',
+    command: 'searchPlusPlus.findUsages', key: 'shift+enter',
+    when: 'searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)',
   });
-  expect(manifest.contributes.keybindings.find(binding => binding.command === 'searchPlusPlus.autofillPath'))
-    .toMatchObject({ key: 'ctrl+enter', when: 'searchPlusPlusModalOpen && searchPlusPlusFileTab' });
+});
+
+test('Ctrl+Enter only previews throughout the popup, including Files and Symbols', () => {
+  expect(manifest.contributes.keybindings.filter(binding => binding.key === 'ctrl+enter')).toEqual([{
+    command: 'searchPlusPlus.preview', key: 'ctrl+enter', when: 'searchPlusPlusModalOpen && inQuickOpen',
+  }]);
+  expect(manifest.contributes.keybindings.some(binding => binding.command === 'searchPlusPlus.autofillPath')).toBe(false);
+});
+
+test('Shift+F12 belongs to Search++ only while its picker is open', () => {
+  expect(manifest.contributes.keybindings.filter(binding => binding.key === 'shift+f12')).toEqual([{
+    command: 'searchPlusPlus.findUsages', key: 'shift+f12', when: 'searchPlusPlusModalOpen && inQuickOpen',
+  }]);
 });
 
 
