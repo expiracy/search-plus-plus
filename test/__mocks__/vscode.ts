@@ -114,6 +114,7 @@ export const workspace = {
   workspaceFolders: undefined as any,
   getConfiguration: (_section?: string) => ({
     get: <T>(_key: string, defaultVal: T): T => defaultVal,
+    inspect: (_key: string) => undefined,
   }),
   asRelativePath: (pathOrUri: any): string => {
     const p = typeof pathOrUri === 'string'

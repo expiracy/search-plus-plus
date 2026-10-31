@@ -98,7 +98,7 @@ export async function run(): Promise<void> {
 
 async function verifyWindowPreferences(): Promise<void> {
   const config = vscode.workspace.getConfiguration('searchPlusPlus');
-  const settings = ['tabOrder', 'visibleTabs', 'defaultMode', 'rememberLastMode'];
+  const settings = ['tabs', 'defaultMode', 'rememberLastMode'];
   const previous = settings.map(key => config.inspect(key)?.workspaceValue);
   let picker: vscode.QuickPick<SearchResult>;
   const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
@@ -109,8 +109,7 @@ async function verifyWindowPreferences(): Promise<void> {
     await hidden;
   };
   try {
-    await config.update('tabOrder', ['text', 'file', 'everywhere', 'folder', 'symbol', 'command'], vscode.ConfigurationTarget.Workspace);
-    await config.update('visibleTabs', ['file', 'text'], vscode.ConfigurationTarget.Workspace);
+    await config.update('tabs', ['Text', 'Files'], vscode.ConfigurationTarget.Workspace);
     await config.update('defaultMode', 'file', vscode.ConfigurationTarget.Workspace);
     await config.update('rememberLastMode', false, vscode.ConfigurationTarget.Workspace);
     modal.show();
@@ -125,7 +124,7 @@ async function verifyWindowPreferences(): Promise<void> {
     modal.nextTab();
     assert.ok(!picker!.buttons.some(button => button.tooltip === 'Symbols'), 'the temporary hidden tab disappears after leaving it');
     await hide();
-    assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('visibleTabs'), ['file', 'text'], 'temporary access preserves the visibility preference');
+    assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('tabs'), ['Text', 'Files'], 'temporary access preserves the Tabs list');
   } finally {
     modal.dispose();
     for (const [index, key] of settings.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);

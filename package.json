@@ -244,11 +244,31 @@
         "title": "Search window",
         "order": 1,
         "properties": {
-          "searchPlusPlus.rememberLastMode": {
+          "searchPlusPlus.tabs": {
             "order": 1,
-            "type": "boolean",
-            "default": false,
-            "description": "Reopen the last-used tab when it is visible. Otherwise use Default Mode. Direct search commands open their requested tab."
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "Everything",
+                "Files",
+                "Folders",
+                "Text",
+                "Symbols",
+                "Commands"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 1,
+            "default": [
+              "Everything",
+              "Files",
+              "Folders",
+              "Text",
+              "Symbols",
+              "Commands"
+            ],
+            "markdownDescription": "Tabs shown in the search window. **Drag rows to reorder.** Remove a tab to hide it; choose **Add Item** to show it again. Keep at least one tab. Direct search commands can still open hidden tabs."
           },
           "searchPlusPlus.defaultMode": {
             "order": 2,
@@ -270,10 +290,45 @@
               "Commands tab"
             ],
             "default": "everywhere",
-            "description": "Opening tab when Remember Last Mode is off. If hidden, the first visible tab opens. Direct search commands still open their requested tab."
+            "description": "Opening tab when Remember Last Mode is off. If hidden, the first visible tab opens. Direct search commands still open their requested tab.",
+            "enumItemLabels": [
+              "Everything",
+              "Files",
+              "Folders",
+              "Text",
+              "Symbols",
+              "Commands"
+            ]
+          },
+          "searchPlusPlus.rememberLastMode": {
+            "order": 3,
+            "type": "boolean",
+            "default": false,
+            "description": "Reopen the last-used tab when it is visible. Otherwise use Default Mode. Direct search commands open their requested tab."
+          },
+          "searchPlusPlus.shortcutPreset": {
+            "order": 4,
+            "type": "string",
+            "enum": [
+              "none",
+              "vscode",
+              "intellij"
+            ],
+            "enumDescriptions": [
+              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
+              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
+              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
+            ],
+            "default": "none",
+            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence.",
+            "enumItemLabels": [
+              "Keep existing shortcuts",
+              "VS Code",
+              "IntelliJ"
+            ]
           },
           "searchPlusPlus.visibleTabs": {
-            "order": 3,
+            "order": 99,
             "type": "array",
             "items": {
               "type": "string",
@@ -296,10 +351,11 @@
               "symbol",
               "command"
             ],
-            "description": "Tabs shown in the popup. Keep at least one tab visible. Direct search commands can still open hidden tabs."
+            "description": "Tabs shown in the popup. Keep at least one tab visible. Direct search commands can still open hidden tabs.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.tabs#` to arrange and show or hide tabs in one list. Existing values still apply until Tabs is configured at this scope."
           },
           "searchPlusPlus.tabOrder": {
-            "order": 4,
+            "order": 100,
             "type": "array",
             "items": {
               "type": "string",
@@ -331,23 +387,8 @@
               "symbol",
               "command"
             ],
-            "description": "Order of search tabs and Tab navigation. Missing modes are appended; legacy usages entries map to Symbols."
-          },
-          "searchPlusPlus.shortcutPreset": {
-            "order": 5,
-            "type": "string",
-            "enum": [
-              "none",
-              "vscode",
-              "intellij"
-            ],
-            "enumDescriptions": [
-              "Keep your existing shortcuts. Assign individual shortcuts in the Keyboard Shortcuts editor.",
-              "Use the usual VS Code file, workspace symbol, text, and command search shortcuts for search++. F1 still opens the native Command Palette.",
-              "Use IntelliJ-style file, workspace symbol, text, and action search shortcuts for search++. Keymap extensions may require explicit user overrides."
-            ],
-            "default": "none",
-            "description": "Optional shortcuts for opening search modes directly. User keybindings take precedence."
+            "description": "Order of search tabs and Tab navigation. Missing modes are appended; legacy usages entries map to Symbols.",
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.tabs#` to arrange and show or hide tabs in one list. Existing values still apply until Tabs is configured at this scope."
           }
         }
       },

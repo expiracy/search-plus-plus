@@ -675,7 +675,7 @@ test('streaming Everything results preserve the selected symbol when text has th
 
 test('remembering a mode is opt-in and restores the last closed mode in the workspace', () => {
   let remember = false;
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? remember : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? remember : fallback } as any);
   modal.show(SearchMode.Text);
   picker.hide();
   expect(workspaceState.update).not.toHaveBeenCalled();
@@ -691,7 +691,7 @@ test('remembering a mode is opt-in and restores the last closed mode in the work
 });
 
 test('closing usages remembers the combined Symbols tab without a reference target', async () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   modal.show(SearchMode.Symbol); type('greet'); await vi.runAllTimersAsync();
   const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts') };
   requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
@@ -704,7 +704,7 @@ test('closing usages remembers the combined Symbols tab without a reference targ
 
 
 test('an explicitly requested mode overrides a valid mode stored by a previous session', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   workspaceState.get.mockReturnValue(SearchMode.Symbol);
   modal.show();
   expect(picker.placeholder).toContain('Search symbols');
@@ -715,7 +715,7 @@ test('an explicitly requested mode overrides a valid mode stored by a previous s
 
 test('the chosen opening tab and visible tab order apply while direct commands remain available', () => {
   const settings: Record<string, unknown> = { defaultMode: 'file', visibleTabs: ['file', 'text'] };
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: settings[key] }), get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
   modal.show();
   expect(picker.placeholder).toContain('Search files...');
   modal.nextTab();
@@ -730,11 +730,26 @@ test('the chosen opening tab and visible tab order apply while direct commands r
   expect(picker.buttons.some((item: any) => item.tooltip === 'Commands')).toBe(false);
 });
 
+test('the single Tabs list controls popup buttons and cycling with readable names', () => {
+  const settings: Record<string, unknown> = { tabs: ['Text', 'Files'], defaultMode: 'file' };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+    get: (key: string, fallback: unknown) => settings[key] ?? fallback,
+    inspect: (key: string) => ({ globalValue: settings[key] }),
+  } as any);
+  modal.show();
+  expect(picker.buttons.slice(0, 2).map((item: any) => item.tooltip)).toEqual(['Text', 'Files']);
+  expect(picker.placeholder).toContain('Search files...');
+  modal.nextTab();
+  expect(picker.placeholder).toBe('Search text content...');
+  modal.nextTab();
+  expect(picker.placeholder).toContain('Search files...');
+});
+
 test('hidden remembered and default tabs fall back to the first visible tab', () => {
   const settings: Record<string, unknown> = {
     rememberLastMode: true, defaultMode: 'command', tabOrder: ['text', 'file'], visibleTabs: ['file', 'text'],
   };
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: settings[key] }), get: (key: string, fallback: unknown) => settings[key] ?? fallback } as any);
   workspaceState.get.mockReturnValue(SearchMode.Symbol);
   modal.show();
   expect(picker.placeholder).toBe('Search text content...');
@@ -743,7 +758,7 @@ test('hidden remembered and default tabs fall back to the first visible tab', ()
 
 
 test('invalid stored modes fall back to Everything and legacy Usages opens Symbols', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (key: string, fallback: unknown) => key === 'rememberLastMode' ? true : fallback } as any);
   workspaceState.get.mockReturnValue('removed-mode');
   modal.show();
   expect(picker.placeholder).toBe('Search everywhere...');
@@ -756,7 +771,7 @@ test('invalid stored modes fall back to Everything and legacy Usages opens Symbo
 });
 
 test('configured tab order controls buttons and keyboard cycling while retaining every mode', () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (key: string, fallback: unknown) => key === 'tabOrder' ? ['command', 'file'] : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: (key: string) => ({ globalValue: key === 'tabOrder' ? ['command', 'file'] : undefined }), get: (key: string, fallback: unknown) => key === 'tabOrder' ? ['command', 'file'] : fallback } as any);
   modal.show();
   expect(picker.buttons.slice(0, 6).map((item: any) => item.tooltip)).toEqual(['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols']);
   modal.prevTab();

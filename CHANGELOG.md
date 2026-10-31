@@ -6,10 +6,14 @@
 
 - The popup's cog opens the normal VS Code Settings page directly, filtered to
   search++. The **search++: Open Settings** command opens the same page.
-- New `searchPlusPlus.defaultMode` and `searchPlusPlus.visibleTabs` settings
-  default to Everything and all six tabs, preserving the existing opening
-  behaviour. At least one tab remains visible. Direct search commands can open
-  hidden tabs temporarily; remembered hidden tabs fall back to a visible tab.
+- **Tabs** is one native list of readable tab names. Drag rows to reorder them,
+  remove a row to hide a tab, and use **Add Item** to show one again. The new
+  `searchPlusPlus.tabs` setting controls order and visibility together; existing
+  `tabOrder` and `visibleTabs` settings remain supported for compatibility.
+- `searchPlusPlus.defaultMode` chooses the opening tab. Opening-tab and shortcut
+  dropdowns use readable labels. Defaults remain Everything and all six tabs.
+  At least one tab stays available. Direct search commands can open hidden tabs
+  temporarily; remembered hidden tabs fall back to a visible tab.
 - Ignore rules and excluded paths now live under **Search results**, alongside
   result groups, limits, and search delay. The two settings categories are
   **Search window** (including the shortcut preset) and **Search results**.

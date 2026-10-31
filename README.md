@@ -189,12 +189,16 @@ file or reveal the folder in the Explorer.
 Click the popup's cog, or run **search++: Open Settings** from the Command
 Palette, to open the normal VS Code Settings page filtered to search++.
 
-Under **Search window**, set **Default Mode** to choose the opening tab, or enable
-**Remember Last Mode** to continue with the last-used tab. **Visible Tabs** controls
-which tabs appear, and **Tab Order** controls their order. Use VS Code's standard
-list controls to edit these settings, and its **User** or **Workspace** tabs to
-choose where they apply. **Shortcut Preset** is in the same group for choosing
-optional VS Code or IntelliJ-style shortcuts.
+Under **Search window**, **Tabs** is one list with readable tab names:
+
+- **Drag rows** to change their order.
+- **Remove a row** to hide that tab.
+- **Add Item** offers the available tabs so you can show one again.
+
+Set **Default Mode** to choose the opening tab, or enable **Remember Last Mode**
+to continue with the last-used tab. **Shortcut Preset** is in the same group for
+choosing optional VS Code or IntelliJ-style shortcuts. Use the Settings page's
+**User** or **Workspace** tabs to choose where these settings apply.
 
 At least one tab stays available. If the opening tab is hidden, the first visible
 tab opens instead. Direct search commands can still open hidden tabs, which appear
@@ -336,7 +340,7 @@ The Settings editor groups them by the object you want to configure:
 
 | Group | Settings |
 |-------|----------|
-| **Search window** | Opening tab, remembered tab, tab visibility, tab order, and shortcut preset |
+| **Search window** | Tabs (order and visibility), opening tab, remembered tab, and shortcut preset |
 | **Search results** | Everything result groups and ordering, ignore rules, excluded paths, result limits, and search delay |
 
 | Setting | Default | Description |
@@ -347,20 +351,23 @@ The Settings editor groups them by the object you want to configure:
 | `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
 | `searchPlusPlus.rememberLastMode` | `false` | Reopen the last mode used in this workspace; direct mode commands take precedence |
 | `searchPlusPlus.defaultMode` | `"everywhere"` | Opening tab when remembering the last tab is off |
-| `searchPlusPlus.visibleTabs` | All six tabs | Tabs displayed in the popup; remove entries to hide them |
+| `searchPlusPlus.tabs` | Everything, Files, Folders, Text, Symbols, Commands | One ordered list of visible tabs; drag to reorder, remove to hide, Add Item to show |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
-| `searchPlusPlus.tabOrder` | `["everywhere", "file", "folder", "text", "symbol", "command"]` | Order of mode buttons and Tab navigation; missing modes are appended |
 | `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
 | `searchPlusPlus.everywhere.sections` | `["files", "folders", "symbols", "text", "commands"]` | Sections shown on the Everything tab; array order controls display order |
 | `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
 
-### Search Order
+### Tabs and Result Groups
 
-Set `searchPlusPlus.tabOrder` in VS Code Settings to change the mode-button and
-keyboard Tab navigation order. Duplicate
-or unknown modes are ignored, and missing modes are appended to the saved order.
-`searchPlusPlus.visibleTabs` controls which appear. Legacy `usages` entries map to
-Symbols; duplicates are removed. Changes apply immediately.
+The **Tabs** list controls both mode-button order and keyboard Tab navigation.
+Drag its rows in the normal Settings page to reorder them. Removing a row hides
+that tab; **Add Item** shows it again. Changes apply immediately.
+
+Existing `searchPlusPlus.tabOrder` and `searchPlusPlus.visibleTabs` configurations
+remain supported. **Tabs** replaces them when configured at the same scope;
+workspace preferences still take precedence over User settings. The older controls
+are deprecated and only appear in the Settings page if already configured.
+Legacy `usages` entries map to Symbols without adding a duplicate tab.
 
 The separate `searchPlusPlus.everywhere.sections` setting controls the order of
 result groups inside Everything. Its default is files, folders, symbols, text,

@@ -83,7 +83,10 @@ with a link to the individual tab when more results are available.
 The popup's cog opens VS Code's normal Settings page filtered to search++.
 Its settings are grouped into Search window (including shortcut presets) and
 Search results; VS Code manages their User and Workspace scopes. At least one tab
-remains available. Normal opening prefers a visible remembered tab, then the
+remains available. A single native Tabs list controls visibility and order;
+`getSearchTabs` resolves it alongside legacy preferences in scope order, with the
+new list taking precedence at the same scope. Normal opening prefers a visible
+remembered tab, then the
 configured opening tab, then the first visible tab. Direct mode commands can
 temporarily show a hidden tab without changing the saved visibility list.
 
