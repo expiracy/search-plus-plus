@@ -7,6 +7,7 @@ import { SearchSession } from '../searchSession';
 import { ResultPreview } from './resultPreview';
 import { buildTitle, parseLineCol } from './searchModel';
 import { getSearchConfiguration, getSearchTabs, getTabMode } from '../searchModes';
+import { getResultSetting } from '../resultSettings';
 
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
 interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.QuickPick<T> {
@@ -121,11 +122,21 @@ export class SearchModal implements vscode.Disposable {
     const [major, minor] = (vscode.version ?? '').split('.').map(Number);
     this.modernButtons = !!vscode.QuickInputButtonLocation && (major > 1 || (major === 1 && minor >= 109));
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    this.excludeGitIgnored = config.get<boolean>('excludeGitIgnored', true);
-    this.excludeSearchIgnored = config.get<boolean>('excludeSearchIgnored', true);
+    this.excludeGitIgnored = getResultSetting(config, 'gitIgnoreRules', true);
+    this.excludeSearchIgnored = getResultSetting(config, 'searchIgnoreRules', true);
     this.configurationListener = vscode.workspace.onDidChangeConfiguration(event => {
-      if (['enabledSearches', 'showEverythingTab', 'searchOrder', 'tabs', 'tabOrder', 'visibleTabs', 'everywhere.sections', 'everything.sources', 'everything.order']
-        .some(key => event.affectsConfiguration(`searchPlusPlus.${key}`)) && this.activeQuickPick) this.rebuildButtons(this.activeQuickPick);
+      let filtersChanged = false;
+      for (const [key, property] of [['gitIgnoreRules', 'excludeGitIgnored'], ['searchIgnoreRules', 'excludeSearchIgnored']] as const) {
+        if (event.affectsConfiguration(`searchPlusPlus.${key}`) || event.affectsConfiguration(`searchPlusPlus.${property}`)) {
+          const value = getResultSetting(vscode.workspace.getConfiguration('searchPlusPlus'), key, true);
+          if (this[property] !== value) { this[property] = value; filtersChanged = true; }
+        }
+      }
+      if (this.activeQuickPick && (filtersChanged || ['everythingTabSources', 'enabledSearches', 'showEverythingTab', 'searchOrder', 'tabs', 'tabOrder', 'visibleTabs', 'everywhere.sections', 'everything.sources', 'everything.order']
+        .some(key => event.affectsConfiguration(`searchPlusPlus.${key}`)))) {
+        this.rebuildButtons(this.activeQuickPick);
+        if (filtersChanged) this.triggerSearch?.();
+      }
     });
   }
 
@@ -263,7 +274,7 @@ export class SearchModal implements vscode.Disposable {
     this.rebuildButtons(qp);
     qp.title = buildTitle(this.tabTitle(), this.indexManager.state);
 
-    const debounceMs = config.get<number>('debounceMs', 200);
+    const debounceMs = getResultSetting(config, 'searchDelay', 200);
 
     const buildEmptyQueryItems = (): SearchResult[] => {
       if (this.activeTab === SearchMode.Symbol) return [{

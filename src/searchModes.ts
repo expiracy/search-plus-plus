@@ -50,7 +50,7 @@ function readModes(raw: unknown): SearchMode[] | undefined {
 }
 
 export function getSearchConfiguration(config: Configuration, through: SearchScope = 'workspaceFolderValue') {
-  let order = getTabOrder(readModes(config.inspect('searchOrder')?.defaultValue));
+  let order = getTabOrder(readModes(config.inspect('tabOrder')?.defaultValue ?? config.inspect('searchOrder')?.defaultValue));
   let showEverythingTab = config.inspect('showEverythingTab')?.defaultValue !== false;
   const initialOpening = config.inspect('whenSearchOpens')?.defaultValue;
   let remember = initialOpening === 'last';
@@ -63,7 +63,7 @@ export function getSearchConfiguration(config: Configuration, through: SearchSco
       if (typeof value === 'boolean') types[mode] = intersect ? types[mode] && value : value;
     }
   };
-  applyTypes(config.inspect('enabledSearches')?.defaultValue);
+  applyTypes(config.inspect('everythingTabSources')?.defaultValue ?? config.inspect('enabledSearches')?.defaultValue);
   for (const scope of SEARCH_SCOPES) {
     const value = (key: string) => config.inspect(key)?.[scope];
     const oldOrder = readModes(value('tabs')) ?? readModes(value('tabOrder'));
@@ -87,9 +87,14 @@ export function getSearchConfiguration(config: Configuration, through: SearchSco
     const oldDefault = readModes([value('defaultMode')])?.[0];
     if (oldDefault) defaultMode = oldDefault;
     applyTypes(value('enabledSearches'));
+    applyTypes(value('everythingTabSources'));
     if (typeof value('showEverythingTab') === 'boolean') showEverythingTab = value('showEverythingTab') as boolean;
     const sharedOrder = readModes(value('searchOrder'));
     if (sharedOrder) order = getTabOrder(sharedOrder);
+    const namedTabOrder = value('tabOrder');
+    if (Array.isArray(namedTabOrder) && namedTabOrder.every(item => Object.values(SEARCH_LABELS).includes(item))) {
+      order = getTabOrder(readModes(namedTabOrder));
+    }
     if (value('whenSearchOpens') === 'last') remember = true;
     else {
       const opening = readModes([value('whenSearchOpens')])?.[0];

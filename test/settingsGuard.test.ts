@@ -24,23 +24,23 @@ function setup(user: Record<string, unknown>, workspace: Record<string, unknown>
 
 test('unchecking the last search restores the previous User checkbox selection', async () => {
   const choices = { Files: true, Folders: false, Text: false, Symbols: false, Commands: false };
-  const { user, update } = setup({ enabledSearches: choices });
-  await update('enabledSearches', { ...choices, Files: false }, vscode.ConfigurationTarget.Global);
-  await vi.waitFor(() => expect(user.enabledSearches).toEqual(choices));
+  const { user, update } = setup({ everythingTabSources: choices });
+  await update('everythingTabSources', { ...choices, Files: false }, vscode.ConfigurationTarget.Global);
+  await vi.waitFor(() => expect(user.everythingTabSources).toEqual(choices));
 });
 
 test('the Workspace guard respects search types inherited from User settings', async () => {
   const choices = { Files: false, Folders: false, Text: false, Symbols: true, Commands: false };
-  const { user, workspace, update } = setup({ enabledSearches: choices });
-  await update('enabledSearches', { Symbols: false }, vscode.ConfigurationTarget.Workspace);
-  await vi.waitFor(() => expect(workspace.enabledSearches).toBeUndefined());
-  expect(user.enabledSearches).toEqual(choices);
+  const { user, workspace, update } = setup({ everythingTabSources: choices });
+  await update('everythingTabSources', { Symbols: false }, vscode.ConfigurationTarget.Workspace);
+  await vi.waitFor(() => expect(workspace.everythingTabSources).toBeUndefined());
+  expect(user.everythingTabSources).toEqual(choices);
 });
 
 test('a valid User edit keeps a remaining Workspace search enabled without undoing the User choice', async () => {
   const choices = { Files: true, Folders: false, Text: false, Symbols: true, Commands: false };
-  const { user, workspace, update } = setup({ enabledSearches: choices }, { enabledSearches: { Symbols: false } });
-  await update('enabledSearches', { ...choices, Files: false }, vscode.ConfigurationTarget.Global);
-  await vi.waitFor(() => expect(workspace.enabledSearches).toEqual({ Symbols: false, Files: true }));
-  expect((user.enabledSearches as any).Files).toBe(false);
+  const { user, workspace, update } = setup({ everythingTabSources: choices }, { everythingTabSources: { Symbols: false } });
+  await update('everythingTabSources', { ...choices, Files: false }, vscode.ConfigurationTarget.Global);
+  await vi.waitFor(() => expect(workspace.everythingTabSources).toEqual({ Symbols: false, Files: true }));
+  expect((user.everythingTabSources as any).Files).toBe(false);
 });

@@ -191,11 +191,11 @@ Palette, to open the normal VS Code Settings page filtered to search++.
 
 Under **Search window**:
 
-- **Enabled Searches** has checkboxes for Files, Folders, Text, Symbols, and
-  Commands. Unchecking a type hides both its tab and its results inside Everything.
 - **Show Everything Tab** controls the combined tab while keeping the individual
   enabled searches available.
-- **Search Order** supports dragging rows to arrange tabs and Everything groups
+- **Everything Tab Sources** has checkboxes for Files, Folders, Text, Symbols, and
+  Commands. Unchecking a type hides both its tab and its results inside Everything.
+- **Tab Order** supports dragging rows to arrange tabs and Everything groups
   together. Disabled searches keep their saved position and are skipped.
 - **When Search Opens** chooses a fixed starting tab or **Last used tab**.
 - **Shortcut Preset** chooses optional VS Code or IntelliJ-style shortcuts.
@@ -341,26 +341,26 @@ The Settings editor groups them by the object you want to configure:
 
 | Group | Settings |
 |-------|----------|
-| **Search window** | Shared search-type checkboxes, Everything tab, shared order, opening choice, and shortcut preset |
-| **Search results** | Ignore rules, excluded paths, result limits, and search delay |
+| **Search window** | Show Everything Tab, Everything Tab Sources, Tab Order, When Search Opens, and Shortcut Preset |
+| **Search results** | Results per Search Type, Results per Everything Group, Search Delay, Git Ignore Rules, Search Ignore Rules, and Excluded Paths |
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `searchPlusPlus.excludeGitIgnored` | `true` | Exclude git-ignored files by default |
-| `searchPlusPlus.excludeSearchIgnored` | `true` | Exclude files matching `.searchignore` patterns by default |
-| `searchPlusPlus.excludePaths` | `[]` | Glob patterns to always exclude (e.g. `**/dist/**`, `**/*.min.js`) |
-| `searchPlusPlus.maxResults` | `200` | Maximum results per search mode |
-| `searchPlusPlus.enabledSearches` | All checked | Shared checkboxes controlling tabs and their sources in Everything |
 | `searchPlusPlus.showEverythingTab` | `true` | Show the combined Everything tab |
-| `searchPlusPlus.searchOrder` | Everything, Files, Folders, Text, Symbols, Commands | Shared tab and Everything-group order; drag rows to arrange |
+| `searchPlusPlus.everythingTabSources` | All checked | Sources included in Everything and shown as individual tabs |
+| `searchPlusPlus.tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Tab order, also used for Everything groups; drag rows to arrange |
 | `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
 | `searchPlusPlus.shortcutPreset` | `"none"` | Optional `vscode` or `intellij` shortcuts for direct search modes |
-| `searchPlusPlus.debounceMs` | `300` | Delay in ms before debounced text, symbol, usage, and command searches |
-| `searchPlusPlus.everywhere.resultLimit` | `20` | Maximum results per section on the Everything tab (1-200) |
+| `searchPlusPlus.resultsPerSearchType` | `200` | Maximum results returned per source: Files, Folders, Text, Symbols, or Commands |
+| `searchPlusPlus.resultsPerEverythingGroup` | `20` | Maximum results displayed per Everything group (1-200) |
+| `searchPlusPlus.searchDelay` | `300` | Typing delay in milliseconds for Text, Symbols, and Commands tabs and delayed Everything groups |
+| `searchPlusPlus.gitIgnoreRules` | `true` | Hide files matched by `.gitignore` by default |
+| `searchPlusPlus.searchIgnoreRules` | `true` | Hide files matched by `.searchignore` by default |
+| `searchPlusPlus.excludedPaths` | `[]` | Glob patterns always excluded, including when ignore-file filters are off |
 
 ### Tabs and Result Groups
 
-**Enabled Searches** controls the same types in tabs and Everything. **Search
+**Everything Tab Sources** controls the same types in tabs and Everything. **Tab
 Order** controls mode buttons, keyboard Tab navigation, and Everything groups
 together. Drag its rows to arrange them; use the checkboxes to show or hide types.
 Missing order entries are appended automatically. Changes apply immediately.
@@ -373,6 +373,11 @@ controls take precedence. Invalid empty selections retain one usable search type
 Legacy `usages` entries map to Symbols without adding a duplicate tab. Workspace
 preferences still override User settings. VS Code controls the native Command
 Palette order independently.
+
+Previous `enabledSearches`, `searchOrder`, `maxResults`, `everywhere.resultLimit`,
+`debounceMs`, `excludeGitIgnored`, `excludeSearchIgnored`, and `excludePaths` values
+carry over to their clearer names automatically. Ignore-rule changes apply
+immediately without restarting the extension.
 
 ### `.searchignore`
 
@@ -401,7 +406,7 @@ Exclusions are applied additively from three sources:
 
 1. **Git ignored** -- `.gitignore` rules (**Option+G** on macOS, **Alt+G** on Windows/Linux)
 2. **Search ignored** -- `.searchignore` rules (**Option+S** on macOS, **Alt+S** on Windows/Linux)
-3. **Custom patterns** -- `searchPlusPlus.excludePaths` (always applied)
+3. **Custom patterns** -- `searchPlusPlus.excludedPaths` (always applied)
 
 Rules apply within each workspace root. Git's internal metadata is excluded from
 workspace indexing and text searches, including when both toggles are off.

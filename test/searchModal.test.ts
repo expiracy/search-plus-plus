@@ -12,6 +12,7 @@ let accept: InstanceType<typeof vscode.EventEmitter<void>>;
 let state: InstanceType<typeof vscode.EventEmitter<string>>;
 let itemButton: InstanceType<typeof vscode.EventEmitter<any>>;
 let button: InstanceType<typeof vscode.EventEmitter<any>>;
+let configurationChanged: InstanceType<typeof vscode.EventEmitter<any>>;
 let hide: InstanceType<typeof vscode.EventEmitter<void>>;
 let workspaceState: { get: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
 let history: { getRecentItems: () => any[]; addOpened: ReturnType<typeof vi.fn> };
@@ -25,6 +26,8 @@ beforeEach(() => {
   hide = new vscode.EventEmitter();
   itemButton = new vscode.EventEmitter();
   button = new vscode.EventEmitter();
+  configurationChanged = new vscode.EventEmitter();
+  vi.spyOn(vscode.workspace, 'onDidChangeConfiguration').mockImplementation(listener => configurationChanged.event(listener));
   picker = {
     ...vscode.window.createQuickPick(),
     onDidChangeValue: input.event,
@@ -57,6 +60,7 @@ afterEach(() => {
   vscode.window.activeTextEditor = undefined;
   picker.hide();
   modal.dispose();
+  configurationChanged.dispose();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -85,6 +89,20 @@ test('the settings cog at the end of the input row closes search and opens VS Co
   expect(hidden).toHaveBeenCalledOnce();
   expect(requests[0].dispose).toHaveBeenCalledOnce();
   expect(command).toHaveBeenCalledWith('workbench.action.openSettings', '@ext:expiracy.search-plus-plus');
+});
+
+test('saved ignore-rule defaults apply immediately without restarting the extension', () => {
+  const settings: Record<string, unknown> = { gitIgnoreRules: false, searchIgnoreRules: false };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+    get: (key: string, fallback: unknown) => settings[key] ?? fallback,
+    inspect: (key: string) => ({ globalValue: settings[key] }),
+  } as any);
+  configurationChanged.fire({ affectsConfiguration: (name: string) => ['searchPlusPlus.gitIgnoreRules', 'searchPlusPlus.searchIgnoreRules'].includes(name) });
+  modal.show(SearchMode.File); type('rules');
+  expect(requests[0].options).toMatchObject({ excludeGitIgnored: false, excludeSearchIgnored: false });
+  settings.gitIgnoreRules = true;
+  configurationChanged.fire({ affectsConfiguration: (name: string) => name === 'searchPlusPlus.gitIgnoreRules' });
+  expect(requests.at(-1)?.options).toMatchObject({ excludeGitIgnored: true, excludeSearchIgnored: false });
 });
 
 test('macOS search controls and empty-result hints show Option shortcuts', () => {

@@ -16,12 +16,12 @@ test('existing choices become shared checkboxes and ordering at their original s
   } as any));
   await migrateSearchSettings();
   expect(user).toEqual({
-    enabledSearches: { Files: true, Folders: false, Text: true, Symbols: false, Commands: false },
-    searchOrder: ['Everything', 'Text', 'Files', 'Folders', 'Symbols', 'Commands'],
+    everythingTabSources: { Files: true, Folders: false, Text: true, Symbols: false, Commands: false },
+    tabOrder: ['Everything', 'Text', 'Files', 'Folders', 'Symbols', 'Commands'],
   });
   expect(workspace).toEqual({
-    enabledSearches: { Files: false, Folders: true, Text: false, Symbols: false, Commands: false },
-    searchOrder: ['Everything', 'Folders', 'Files', 'Text', 'Symbols', 'Commands'],
+    everythingTabSources: { Files: false, Folders: true, Text: false, Symbols: false, Commands: false },
+    tabOrder: ['Everything', 'Folders', 'Files', 'Text', 'Symbols', 'Commands'],
   });
 });
 
@@ -38,8 +38,8 @@ test('previous source checkbox choices and ordering carry over into shared setti
   } as any);
   await migrateSearchSettings();
   expect(values).toEqual({
-    enabledSearches: { Files: false, Folders: true, Text: true, Symbols: true, Commands: true },
-    searchOrder: ['Everything', 'Text', 'Files', 'Folders', 'Symbols', 'Commands'],
+    everythingTabSources: { Files: false, Folders: true, Text: true, Symbols: true, Commands: true },
+    tabOrder: ['Everything', 'Text', 'Files', 'Folders', 'Symbols', 'Commands'],
   });
   expect(update).toHaveBeenCalledWith('everywhere.sections', undefined, vscode.ConfigurationTarget.Global);
 });
@@ -64,8 +64,8 @@ test('shared choices win while conflicting old tab and source choices stay disab
     update: async (key: string, value: unknown) => { if (value === undefined) delete values[key]; else values[key] = value; },
   } as any);
   await migrateSearchSettings();
-  expect(values.enabledSearches).toEqual({ Files: false, Folders: false, Text: true, Symbols: false, Commands: true });
-  expect((values.searchOrder as string[])[0]).toBe('Commands');
+  expect(values.everythingTabSources).toEqual({ Files: false, Folders: false, Text: true, Symbols: false, Commands: true });
+  expect((values.tabOrder as string[])[0]).toBe('Commands');
   expect(values.whenSearchOpens).toBe('last');
   expect(values.tabs).toBeUndefined();
   expect(values['everything.sources']).toBeUndefined();
@@ -84,4 +84,43 @@ test('Workspace opening overrides retain their inherited legacy default during c
   await migrateSearchSettings();
   expect(user).toEqual({ whenSearchOpens: 'last' });
   expect(workspace).toEqual({ whenSearchOpens: 'file' });
+});
+
+test('renaming current controls preserves sources, order, limits, and scope overrides', async () => {
+  const user: Record<string, unknown> = {
+    enabledSearches: { Symbols: false }, searchOrder: ['Folders', 'Everything', 'Files', 'Text', 'Symbols', 'Commands'],
+    maxResults: 45, 'everywhere.resultLimit': 8, debounceMs: 120,
+    excludeGitIgnored: false, excludeSearchIgnored: true, excludePaths: ['**/out/**'],
+  };
+  const workspace: Record<string, unknown> = { maxResults: 12, resultsPerSearchType: 90, debounceMs: 700 };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockImplementation(() => ({
+    inspect: (key: string) => ({ globalValue: user[key], workspaceValue: workspace[key] }),
+    update: async (key: string, value: unknown, target: number) => {
+      const values = target === vscode.ConfigurationTarget.Global ? user : workspace;
+      if (value === undefined) delete values[key]; else values[key] = value;
+    },
+  } as any));
+  await migrateSearchSettings();
+  expect(user).toEqual({
+    everythingTabSources: { Files: true, Folders: true, Text: true, Symbols: false, Commands: true },
+    tabOrder: ['Folders', 'Everything', 'Files', 'Text', 'Symbols', 'Commands'],
+    resultsPerSearchType: 45, resultsPerEverythingGroup: 8, searchDelay: 120,
+    gitIgnoreRules: false, searchIgnoreRules: true, excludedPaths: ['**/out/**'],
+  });
+  expect(workspace).toEqual({ resultsPerSearchType: 90, searchDelay: 700 });
+});
+
+test('old Tab order IDs normalize in place while the newer Search order preference carries over', async () => {
+  const user: Record<string, unknown> = { tabOrder: ['command', 'file'] };
+  const workspace: Record<string, unknown> = { tabOrder: ['folder'], searchOrder: ['Text', 'Files'] };
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockImplementation(() => ({
+    inspect: (key: string) => ({ globalValue: user[key], workspaceValue: workspace[key] }),
+    update: async (key: string, value: unknown, target: number) => {
+      const values = target === vscode.ConfigurationTarget.Global ? user : workspace;
+      if (value === undefined) delete values[key]; else values[key] = value;
+    },
+  } as any));
+  await migrateSearchSettings();
+  expect(user).toEqual({ tabOrder: ['Commands', 'Files', 'Everything', 'Folders', 'Text', 'Symbols'] });
+  expect(workspace).toEqual({ tabOrder: ['Text', 'Files', 'Everything', 'Folders', 'Symbols', 'Commands'] });
 });

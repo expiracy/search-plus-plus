@@ -76,14 +76,14 @@ The Everything tab combines providers incrementally: files and folders use the
 index, text results stream, and symbols and commands start after their debounce
 delay. Section errors appear alongside results from the other providers.
 
-`searchPlusPlus.maxResults` limits results returned by each provider. The
-Everything tab applies its own section order and display limit to those results,
+`searchPlusPlus.resultsPerSearchType` limits results returned by each provider.
+Everything applies `resultsPerEverythingGroup` and the shared Tab Order,
 with a link to the individual tab when more results are available.
 
 The popup's cog opens VS Code's normal Settings page filtered to search++.
 Its settings are grouped into Search window (including shortcut presets) and
 Search results; VS Code manages their User and Workspace scopes.
-`getSearchConfiguration` resolves shared search-type checkboxes, one order,
+`getSearchConfiguration` resolves Everything Tab Sources, Tab Order,
 the Everything-tab switch, and the opening choice in scope order. Both the modal
 and `EverywhereProvider` consume this model. Unchecked types have no normal tab
 or Everything provider request. Direct mode commands can temporarily open another
@@ -97,6 +97,8 @@ listener restores the previous checkbox choice if the last search is unchecked;
 it also protects workspaces whose remaining type was inherited from User settings.
 The reader retains a usable type for invalid configurations while that correction
 is pending.
+Result-limit and delay reads use `getResultSetting`, which supports old keys
+with the same User/Workspace precedence while their saved values are converted.
 
 ## Result previews
 
@@ -125,7 +127,7 @@ at the top of the text editor after opening it.
 Discovery collects files across workspace roots and excludes Git's internal
 metadata. The index retains candidates controlled by the Git-ignore and
 search-ignore toggles so changing either toggle can reveal those paths. Custom
-`searchPlusPlus.excludePaths` rules always apply. Excluded matches do not consume
+`searchPlusPlus.excludedPaths` rules always apply. Excluded matches do not consume
 the provider's result limit.
 
 Resources are identified by their full URI. Ignore matching uses paths relative

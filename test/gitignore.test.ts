@@ -47,7 +47,7 @@ vi.doMock('vscode', async () => {
 
   base.workspace.fs = {
     readFile: async (uri: any) => {
-      const fs = require('fs');
+      const fs = await import('node:fs');
       const content = fs.readFileSync(uri.fsPath ?? uri.path, 'utf-8');
       return new TextEncoder().encode(content);
     },
@@ -55,6 +55,7 @@ vi.doMock('vscode', async () => {
   };
 
   base.workspace.getConfiguration = (section?: string) => ({
+    inspect: (_key: string) => undefined,
     get: <T>(_key: string, defaultVal: T): T => {
       // Return empty excludes for files/search config
       if (section === 'files' || section === 'search') {

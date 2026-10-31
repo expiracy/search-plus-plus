@@ -6,7 +6,7 @@ const options = { fuzzySearch: false, caseSensitive: false, useRegex: false, mat
 afterEach(() => vi.restoreAllMocks());
 
 test('ignored symbols do not consume the visible result budget', async () => {
-  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ get: (_key: string, fallback: unknown) => _key === 'maxResults' ? 1 : fallback } as any);
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({ inspect: () => undefined, get: (_key: string, fallback: unknown) => _key === 'maxResults' ? 1 : fallback } as any);
   vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(['hidden', 'visible'].map(name => ({
     name: 'needle', kind: vscode.SymbolKind.Function, containerName: '',
     location: { uri: vscode.Uri.file(`/workspace/${name}.ts`), range: { start: { line: 0, character: 0 } } },

@@ -18,6 +18,17 @@ test('unchecking an enabled search hides its tab', () => {
   ]);
 });
 
+test('Everything tab sources controls both the source and its corresponding tab', () => {
+  expect(getSearchTabs(configuration({ everythingTabSources: { Symbols: false } }))).toEqual([
+    'everywhere', 'file', 'folder', 'text', 'command',
+  ]);
+});
+
+test('the renamed Tab order takes precedence over the previous Search order', () => {
+  expect(getSearchTabs(configuration({ tabOrder: ['Commands', 'Everything', 'Files'], searchOrder: ['Text', 'Files'] })))
+    .toEqual(['command', 'everywhere', 'file', 'folder', 'text', 'symbol']);
+});
+
 test('the Everything switch hides only the combined tab', () => {
   const config = getSearchConfiguration(configuration({ showEverythingTab: false }));
   expect(config.tabs).toEqual(['file', 'folder', 'text', 'symbol', 'command']);

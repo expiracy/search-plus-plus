@@ -6,10 +6,10 @@
 
 - The popup's cog opens the normal VS Code Settings page directly, filtered to
   search++. The **search++: Open Settings** command opens the same page.
-- **Enabled Searches** is one checkbox list for both tabs and Everything sources.
+- **Everything Tab Sources** is one checkbox list for both tabs and Everything sources.
   Unchecking Files, Folders, Text, Symbols, or Commands hides that type in both
   places. A separate **Show Everything Tab** switch controls the combined tab.
-- **Search Order** supports dragging rows to arrange tabs and Everything groups
+- **Tab Order** supports dragging rows to arrange tabs and Everything groups
   together. Disabled searches retain their position. The default Everything
   groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
 - **When Search Opens** combines the opening choice and remembered-mode option
@@ -19,6 +19,10 @@
 - Older tab, source, order, and opening preferences are converted at their User
   or Workspace scope. At the same scope, disabled choices stay disabled and tab
   order wins if the previous orders disagree. New shared preferences take priority.
+- Result settings use plain names: **Results per Search Type**, **Results per
+  Everything Group**, **Search Delay**, **Git Ignore Rules**, **Search Ignore
+  Rules**, and **Excluded Paths**. Descriptions explain scope and units. Earlier
+  values carry over automatically, and ignore-rule changes apply immediately.
 - Ignore rules and excluded paths now live under **Search results**, alongside
   result limits and search delay. The two settings categories are
   **Search window** (including the shortcut preset) and **Search results**.

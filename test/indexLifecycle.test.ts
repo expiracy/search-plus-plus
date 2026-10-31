@@ -79,6 +79,7 @@ describe('workspace discovery', () => {
 
   test('cached searches never expose git metadata or custom-excluded notebooks when toggles change', async () => {
     vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+      inspect: (_key: string) => undefined,
       get: (_key: string, fallback: unknown) => _key === 'excludePaths' ? ['private/'] : fallback,
     } as any);
     vi.spyOn(vscode.workspace, 'findFiles').mockImplementation(async (pattern: string) => pattern === '**/*'

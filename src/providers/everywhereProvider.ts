@@ -7,6 +7,7 @@ import { CommandProvider } from './commandProvider';
 import { SymbolProvider } from './symbolProvider';
 import { debounce } from '../utils';
 import { getSearchConfiguration } from '../searchModes';
+import { getResultSetting } from '../resultSettings';
 
 export class EverywhereProvider implements SearchProvider {
   readonly mode = SearchMode.Everywhere;
@@ -25,13 +26,13 @@ export class EverywhereProvider implements SearchProvider {
     onResults: (results: SearchResult[]) => void,
   ): vscode.Disposable {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    const debounceMs = config.get<number>('debounceMs', 200);
+    const debounceMs = getResultSetting(config, 'searchDelay', 200);
     const sections = getEverythingSections(config);
     if (!sections.length) {
       onResults([]);
       return { dispose() {} };
     }
-    const limit = Math.max(1, Math.floor(config.get<number>('everywhere.resultLimit', DEFAULT_EVERYWHERE_LIMIT)));
+    const limit = Math.max(1, Math.floor(getResultSetting(config, 'resultsPerEverythingGroup', DEFAULT_EVERYWHERE_LIMIT)));
     const enabledSections = new Set(sections);
 
     const resultStore: Record<ResultSection, SearchResult[]> = {

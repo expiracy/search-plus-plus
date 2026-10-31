@@ -9,17 +9,17 @@ export function registerSearchTypeValidation(): vscode.Disposable {
   const clone = (value: unknown): unknown => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   const previous = scopes.map(([scope]) => {
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
-    return { raw: clone(config.inspect('enabledSearches')?.[scope]), enabled: getSearchConfiguration(config, scope).enabled };
+    return { raw: clone(config.inspect('everythingTabSources')?.[scope]), enabled: getSearchConfiguration(config, scope).enabled };
   });
   let disposed = false;
   let pending = Promise.resolve();
   const listener = vscode.workspace.onDidChangeConfiguration(event => {
-    if (!event.affectsConfiguration('searchPlusPlus.enabledSearches')) return;
+    if (!event.affectsConfiguration('searchPlusPlus.everythingTabSources')) return;
     pending = pending.then(async () => {
       for (const [index, [scope, target]] of scopes.entries()) {
         if (disposed) return;
         const config = vscode.workspace.getConfiguration('searchPlusPlus');
-        const raw = config.inspect('enabledSearches')?.[scope];
+        const raw = config.inspect('everythingTabSources')?.[scope];
         const choices = getSearchConfiguration(config, scope);
         if (choices.hasEnabledSearches) {
           previous[index] = { raw: clone(raw), enabled: choices.enabled };
@@ -30,8 +30,8 @@ export function registerSearchTypeValidation(): vscode.Disposable {
           ...(raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}),
           [SEARCH_LABELS[previous[index].enabled[0]]]: true,
         };
-        await config.update('enabledSearches', replacement, target);
-        void vscode.window.showInformationMessage('Keep at least one search type enabled.');
+        await config.update('everythingTabSources', replacement, target);
+        void vscode.window.showInformationMessage('Keep at least one source selected so a search tab remains available.');
       }
     }).catch(error => { console.warn('search++ could not restore enabled search types.', error); });
   });

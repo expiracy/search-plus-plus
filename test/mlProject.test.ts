@@ -145,6 +145,7 @@ vi.doMock('vscode', async () => {
   };
 
   base.workspace.getConfiguration = (section?: string) => ({
+    inspect: (_key: string) => undefined,
     get: <T>(_key: string, defaultVal: T): T => {
       if (section === 'files' || section === 'search') return {} as T;
       return defaultVal;
