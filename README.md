@@ -184,12 +184,12 @@ On the **Files**, **Folders**, or **Everything** tab, enter a full filesystem pa
 such as `C:\Users\me\file.ts` or `/home/me/file.ts`. Select the result to open the
 file or reveal the folder in the Explorer.
 
-### Configure the Search Window
+### Configure the Search Popup
 
 Click the popup's cog, or run **search++: Open Settings** from the Command
 Palette, to open the normal VS Code Settings page filtered to search++.
 
-Under **Search window**:
+Under **Search popup**:
 
 - **Show Everything Tab** controls the combined tab while keeping the individual
   enabled searches available.
@@ -341,7 +341,7 @@ The Settings editor groups them by the object you want to configure:
 
 | Group | Settings |
 |-------|----------|
-| **Search window** | Show Everything Tab, Everything Tab Sources, Tab Order, When Search Opens, and Shortcut Preset |
+| **Search popup** | Show Everything Tab, Everything Tab Sources, Tab Order, When Search Opens, and Shortcut Preset |
 | **Search results** | Results per Search Type, Results per Everything Group, Search Delay, Git Ignore Rules, Search Ignore Rules, and Excluded Paths |
 
 | Setting | Default | Description |

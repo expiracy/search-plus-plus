@@ -241,7 +241,7 @@
     ],
     "configuration": [
       {
-        "title": "Search window",
+        "title": "Search popup",
         "order": 1,
         "properties": {
           "searchPlusPlus.showEverythingTab": {
@@ -443,7 +443,7 @@
               "Symbols",
               "Commands"
             ],
-            "markdownDescription": "Tabs shown in the search window. **Drag rows to reorder.** Remove a tab to hide it; choose **Add Item** to show it again. Keep at least one tab. Direct search commands can still open hidden tabs.",
+            "markdownDescription": "Tabs shown in the search popup. **Drag rows to reorder.** Remove a tab to hide it; choose **Add Item** to show it again. Keep at least one tab. Direct search commands can still open hidden tabs.",
             "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#`. Existing choices are converted automatically."
           },
           "searchPlusPlus.defaultMode": {
@@ -639,7 +639,7 @@
               "Commands": true
             },
             "description": "Choose which sources appear on the Everything tab. Tick a source to include it; untick it to hide it.",
-            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search window. Tabs and Everything share these choices."
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search popup. Tabs and Everything share these choices."
           },
           "searchPlusPlus.everything.order": {
             "order": 103,
@@ -663,7 +663,7 @@
               "Commands"
             ],
             "markdownDescription": "Optional order of groups on the Everything tab. **Drag rows to reorder.** Use `#searchPlusPlus.everything.sources#` to show or hide sources. Missing sources appear last.",
-            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search window. Tabs and Everything share these choices."
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search popup. Tabs and Everything share these choices."
           },
           "searchPlusPlus.everywhere.sections": {
             "order": 104,
@@ -687,7 +687,7 @@
               "commands"
             ],
             "markdownDescription": "Sections shown on the Everything tab. Array order controls display order. Remove a section to hide it.",
-            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search window. Tabs and Everything share these choices."
+            "markdownDeprecationMessage": "Use `#searchPlusPlus.everythingTabSources#` and `#searchPlusPlus.tabOrder#` under Search popup. Tabs and Everything share these choices."
           }
         }
       }

@@ -81,7 +81,7 @@ Everything applies `resultsPerEverythingGroup` and the shared Tab Order,
 with a link to the individual tab when more results are available.
 
 The popup's cog opens VS Code's normal Settings page filtered to search++.
-Its settings are grouped into Search window (including shortcut presets) and
+Its settings are grouped into Search popup (including shortcut presets) and
 Search results; VS Code manages their User and Workspace scopes.
 `getSearchConfiguration` resolves Everything Tab Sources, Tab Order,
 the Everything-tab switch, and the opening choice in scope order. Both the modal

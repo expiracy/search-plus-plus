@@ -25,7 +25,7 @@
   values carry over automatically, and ignore-rule changes apply immediately.
 - Ignore rules and excluded paths now live under **Search results**, alongside
   result limits and search delay. The two settings categories are
-  **Search window** (including the shortcut preset) and **Search results**.
+  **Search popup** (including the shortcut preset) and **Search results**.
   Existing setting keys remain compatible.
 - **Symbols and Usages share one flow.** The separate Usages tab is removed.
   In Symbols, **Enter** opens the selected declaration; **Ctrl+Enter**
