@@ -42,9 +42,10 @@ export async function run(): Promise<void> {
     const files = new FileProvider(index);
     const folders = new FolderProvider(index);
     const fuzzy = await collect<SearchResult>((publish, fail) => files.search('idx', { ...options, fuzzySearch: true }, publish, fail));
-    assert.ok(fuzzy.some(result => result.description === 'src/index.ts'));
+    assert.ok(fuzzy.some(result => result.uri?.path.endsWith('/src/index.ts') && result.description === 'src'
+      && result.resourceUri?.toString() === result.uri.toString()));
     assert.equal((await collect<SearchResult>((publish, fail) => files.search('output', options, publish, fail))).length, 0);
-    assert.ok((await collect<SearchResult>((publish, fail) => files.search('output', { ...options, excludeGitIgnored: false }, publish, fail))).some(result => result.description === 'build/output.js'));
+    assert.ok((await collect<SearchResult>((publish, fail) => files.search('output', { ...options, excludeGitIgnored: false }, publish, fail))).some(result => result.uri?.path.endsWith('/build/output.js')));
     assert.equal((await collect<SearchResult>((publish, fail) => files.search('guide.pdf', options, publish, fail))).length, 0);
     assert.ok((await collect<SearchResult>((publish, fail) => files.search('guide.pdf', { ...options, excludeSearchIgnored: false }, publish, fail))).length > 0);
     assert.ok((await collect<SearchResult>((publish, fail) => folders.search('scmp', { ...options, fuzzySearch: true }, publish, fail))).some(result => result.description === 'src/components'));

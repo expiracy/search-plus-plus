@@ -71,6 +71,9 @@ test('cleanup preserves the recent-file limit and does not restore evicted entri
   await new Promise(resolve => setTimeout(resolve, 0));
   const items = history.getRecentItems();
   expect(items).toHaveLength(19);
-  expect(items[0]).toMatchObject({ description: '/workspace/current.ts:42', lineNumber: 41, column: 4 });
+  expect(items[0]).toMatchObject({
+    label: 'current.ts:42', description: '/workspace', lineNumber: 41, column: 4,
+    resourceUri: vscode.Uri.file('/workspace/current.ts'),
+  });
   expect(items.some(item => item.uri?.fsPath === '/workspace/19.ts')).toBe(false);
 });

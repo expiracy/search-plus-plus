@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ResultSection, SearchMode, getMaxResults, type SearchOptions, type SearchProvider, type SearchResult } from './types';
 import { FileIndex } from '../index/fileIndex';
+import { filePresentation } from '../filePresentation';
 
 export class FileProvider implements SearchProvider {
   readonly mode = SearchMode.File;
@@ -54,11 +55,9 @@ export class FileProvider implements SearchProvider {
 
   private toFileResult(relativePath: string, uri: vscode.Uri): SearchResult {
     return {
-      label: relativePath.split('/').pop() || relativePath,
-      description: relativePath,
+      ...filePresentation(relativePath, uri),
       mode: SearchMode.File,
       uri,
-      iconPath: vscode.ThemeIcon.File,
       alwaysShow: true,
       belongsToSection: ResultSection.Files,
     };

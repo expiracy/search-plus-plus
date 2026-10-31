@@ -68,6 +68,10 @@ search++ requires VS Code 1.96 or a newer compatible release. See the
 | **Symbols** | Functions, classes and variables, with a drill-down to semantic usages |
 | **Commands** | All VS Code commands (built-in and from extensions) |
 
+File rows show the filename with its parent folder alongside it and use VS Code's
+themed file icons where supported. Recent files use the same layout, with saved
+line locations shown as `file.ts:42`.
+
 <p align="center">
   <img src="media/everywhere.png" alt="Everything mode showing grouped file, text, and symbol results for 'preview'" width="720">
   <br><em>Everything: grouped results from every source</em>

@@ -8,6 +8,7 @@ import { ResultPreview } from './resultPreview';
 import { buildTitle, parseLineCol } from './searchModel';
 import { getSearchConfiguration, getSearchTabs, getTabMode } from '../searchModes';
 import { getResultSetting } from '../resultSettings';
+import { filePresentation } from '../filePresentation';
 
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
 interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.QuickPick<T> {
@@ -241,7 +242,8 @@ export class SearchModal implements vscode.Disposable {
           this.activeTab === SearchMode.Text ? 'matches' :
           this.activeTab === SearchMode.Symbol ? 'symbols' :
           this.activeTab === SearchMode.Command ? 'commands' : 'results';
-        qp.title = buildTitle(`${tabName}: ${count} ${unit}`, state);
+        qp.title = buildTitle(this.activeTab === SearchMode.File
+          ? `${tabName} (${count})` : `${tabName}: ${count} ${unit}`, state);
       }
     }
   }
@@ -516,9 +518,8 @@ export class SearchModal implements vscode.Disposable {
     try {
       const stat = await vscode.workspace.fs.stat(uri);
       const isDir = (stat.type & vscode.FileType.Directory) !== 0;
-      const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
       return [{
-        label: name, description: path,
+        ...filePresentation(path, uri),
         mode: isDir ? SearchMode.Folder : SearchMode.File,
         uri, iconPath: isDir ? vscode.ThemeIcon.Folder : vscode.ThemeIcon.File,
         alwaysShow: true, isFolder: isDir,

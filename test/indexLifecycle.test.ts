@@ -115,7 +115,12 @@ describe('workspace discovery', () => {
         excludeGitIgnored: true, excludeSearchIgnored: true,
       }, resolve);
     });
-    expect(results.map(r => r.description)).toEqual(['src/index.ts']);
+    expect(results).toMatchObject([{
+      label: 'index.ts', description: 'src',
+      uri: vscode.Uri.file('/workspace/src/index.ts'),
+      resourceUri: vscode.Uri.file('/workspace/src/index.ts'),
+      iconPath: vscode.ThemeIcon.File,
+    }]);
   });
 
   test('deleting a directory removes all indexed descendants', async () => {

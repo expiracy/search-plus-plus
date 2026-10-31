@@ -185,6 +185,26 @@ test('accepting a text result reveals the matching line at the top of the editor
   expect(revealRange).toHaveBeenCalledWith(new vscode.Selection(position, position), vscode.TextEditorRevealType.AtTop);
 });
 
+test('absolute file results show the parent folder and retain their navigation target', async () => {
+  vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.File } as any);
+  modal.show(SearchMode.File);
+  type('/workspace/src/file.ts');
+  await vi.runAllTimersAsync();
+  expect(picker.items).toMatchObject([{
+    label: 'file.ts', description: '/workspace/src',
+    uri: vscode.Uri.file('/workspace/src/file.ts'),
+    resourceUri: vscode.Uri.file('/workspace/src/file.ts'),
+  }]);
+});
+
+test('an absolute drive root keeps a visible name', async () => {
+  vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.Directory } as any);
+  modal.show(SearchMode.File);
+  type('C:\\');
+  await vi.runAllTimersAsync();
+  expect(picker.items).toMatchObject([{ label: 'C:\\', iconPath: vscode.ThemeIcon.Folder, isFolder: true }]);
+});
+
 test('a late absolute path lookup cannot replace a newer query', async () => {
   let finish!: (stat: { type: number }) => void;
   vi.spyOn(vscode.workspace.fs, 'stat').mockImplementation(() => new Promise(resolve => { finish = resolve; }));

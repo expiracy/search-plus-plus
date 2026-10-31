@@ -4,6 +4,10 @@
 
 ### Changed
 
+- File results use VS Code's file-icon theme where supported and show the filename
+  once, with the parent folder beside it. Recent files and absolute paths use the same
+  layout; recent locations retain their line numbers. The Files title uses a
+  compact result count.
 - The popup's cog opens the normal VS Code Settings page directly, filtered to
   search++. The **search++: Open Settings** command opens the same page.
 - **Everything Tab Sources** is one checkbox list for both tabs and Everything sources.
