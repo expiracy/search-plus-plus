@@ -13,6 +13,7 @@ import { FolderProvider } from '../src/providers/folderProvider';
 import { EverywhereProvider } from '../src/providers/everywhereProvider';
 import { migrateSearchSettings } from '../src/settingsMigration';
 import { getSearchTabs } from '../src/searchModes';
+import { SearchOrderPicker, type SearchOrderItem } from '../src/ui/searchOrderPicker';
 import { SearchMode, type SearchOptions, type SearchResult, type SearchProvider } from '../src/providers/types';
 
 const options: SearchOptions = {
@@ -79,6 +80,7 @@ export async function run(): Promise<void> {
     await verifyRowNavigation(root);
     await verifyWindowPreferences();
     await verifyEverythingPreferences();
+    await verifySearchOrderPicker();
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
     assert.ok(commands.includes('searchPlusPlus.preview'));
@@ -92,12 +94,52 @@ export async function run(): Promise<void> {
     }
     await vscode.commands.executeCommand('searchPlusPlus.configure');
     assert.equal(vscode.window.tabGroups.activeTabGroup.activeTab?.label, 'Settings', 'configuration opens the normal VS Code Settings page');
+    const settingsTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+    await vscode.commands.executeCommand('searchPlusPlus.arrangeSearchOrder', 'workspace');
+    assert.equal(vscode.window.tabGroups.activeTabGroup.activeTab, settingsTab, 'the order editor preserves the Settings page underneath');
+    await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
     await vscode.commands.executeCommand('searchPlusPlus.reindex');
     console.log(`search++ extension-host smoke passed on VS Code ${vscode.version}`);
     if (process.env.SEARCH_PLUS_PLUS_HOST_REPORT) {
-      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, normal VS Code Settings page, persisted opening tab and visibility with hidden direct-command access, shared search checkboxes and ordering, preference migration and last-enabled guard, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
+      await writeFile(process.env.SEARCH_PLUS_PLUS_HOST_REPORT, JSON.stringify({ version: vscode.version, checks: 'activation, file and folder search, exclusions, ripgrep, semantic references, real TypeScript symbol-to-reference lookup, popup drilldown, Back restoration and clear navigation, mode commands, normal VS Code Settings page, persisted opening tab and visibility with hidden direct-command access, shared search checkboxes and ordering, native up/down order editor, preference migration and last-enabled guard, reusable preview tab and matches at the top with both preview settings, Enter and Go to File reveal matches at the top without splitting the editor, reindex' }));
     }
   } finally { text.dispose(); index.dispose(); rules.dispose(); }
+}
+
+async function verifySearchOrderPicker(): Promise<void> {
+  const config = vscode.workspace.getConfiguration('searchPlusPlus');
+  const previous = config.inspect('searchOrder')?.workspaceValue;
+  const picker = vscode.window.createQuickPick<SearchOrderItem>();
+  const actions = new vscode.EventEmitter<vscode.QuickPickItemButtonEvent<SearchOrderItem>>();
+  const controlled = new Proxy(picker, {
+    get(target, property) {
+      if (property === 'onDidTriggerItemButton') return actions.event;
+      const value = Reflect.get(target, property, target);
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+    set: (target, property, value) => Reflect.set(target, property, value, target),
+  });
+  const editor = new SearchOrderPicker(() => controlled);
+  try {
+    await config.update('searchOrder', ['Everything', 'Files', 'Folders', 'Text', 'Symbols', 'Commands'], vscode.ConfigurationTarget.Workspace);
+    await editor.show('workspace');
+    assert.ok(picker.title?.includes('Workspace settings'));
+    assert.ok(!picker.items[0].buttons?.some(button => button.tooltip === 'Move up'), 'the first row has no invalid up action');
+    const accepted = nextEvent(picker.onDidAccept, () => true);
+    await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
+    await accepted;
+    const file = picker.items.find(item => item.mode === SearchMode.File)!;
+    const moved = nextEvent(vscode.workspace.onDidChangeConfiguration, event => event.affectsConfiguration('searchPlusPlus.searchOrder')
+      && vscode.workspace.getConfiguration('searchPlusPlus').get<string[]>('searchOrder')?.[1] === 'Folders');
+    const selected = nextEvent(picker.onDidChangeActive, items => items[0]?.mode === SearchMode.File);
+    actions.fire({ item: file, button: file.buttons!.find(button => button.tooltip === 'Move down')! });
+    await moved; await selected;
+    assert.deepEqual(vscode.workspace.getConfiguration('searchPlusPlus').get('searchOrder'), ['Everything', 'Folders', 'Files', 'Text', 'Symbols', 'Commands'], 'native item arrows save the chosen Workspace order');
+    assert.equal(picker.activeItems[0]?.mode, SearchMode.File, 'the moved row retains its native selection');
+  } finally {
+    editor.dispose(); actions.dispose();
+    await config.update('searchOrder', previous, vscode.ConfigurationTarget.Workspace);
+  }
 }
 
 async function verifyEverythingPreferences(): Promise<void> {

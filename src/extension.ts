@@ -6,6 +6,7 @@ import { SearchMode } from './providers/types';
 import { createProviders } from './providers/createProviders';
 import { migrateSearchSettings } from './settingsMigration';
 import { registerSearchTypeValidation } from './settingsGuard';
+import { SearchOrderPicker } from './ui/searchOrderPicker';
 
 export async function activate(context: vscode.ExtensionContext) {
   try { await migrateSearchSettings(); }
@@ -18,13 +19,16 @@ export async function activate(context: vscode.ExtensionContext) {
   const history = new SearchHistory(context.workspaceState);
   const providers = createProviders(indexManager);
   const modal = new SearchModal(indexManager, history, providers.providers, undefined, context.workspaceState);
+  const orderPicker = new SearchOrderPicker();
 
   context.subscriptions.push(
     registerSearchTypeValidation(),
     indexManager,
     modal,
     providers,
+    orderPicker,
     vscode.commands.registerCommand('searchPlusPlus.configure', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:expiracy.search-plus-plus')),
+    vscode.commands.registerCommand('searchPlusPlus.arrangeSearchOrder', (scope?: 'user' | 'workspace') => orderPicker.show(scope)),
     vscode.commands.registerCommand('searchPlusPlus.open', () => modal.show()),
     vscode.commands.registerCommand('searchPlusPlus.openFiles', () => modal.show(SearchMode.File)),
     vscode.commands.registerCommand('searchPlusPlus.openText', () => modal.show(SearchMode.Text)),

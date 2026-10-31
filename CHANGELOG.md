@@ -9,8 +9,10 @@
 - **Enabled Searches** is one checkbox list for both tabs and Everything sources.
   Unchecking Files, Folders, Text, Symbols, or Commands hides that type in both
   places. A separate **Show Everything Tab** switch controls the combined tab.
-- **Search Order** supports dragging rows to arrange tabs and Everything groups
-  together. Disabled searches retain their position. The default Everything
+- **Search Order** offers an **Arrange with ↑/↓ buttons** action that opens a
+  native reorder list. Each row moves up or down without editing names. Changes
+  save to the User or Workspace scope shown in the title. Disabled searches
+  retain their position. The default Everything
   groups now follow the tab order: Files, Folders, Text, Symbols, then Commands.
 - **When Search Opens** combines the opening choice and remembered-mode option
   in one dropdown, including **Last used tab**. The default remains Everything.
