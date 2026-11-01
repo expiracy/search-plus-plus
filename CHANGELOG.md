@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 3.1.4 — 2026-11-01
+
+### Changed
+
+- The README is shorter and matches the current extension: one features list,
+  a `.searchignore` section, and up-to-date shortcuts and settings.
+- The Marketplace page opens with a 10-second demo of searching everything,
+  previewing a result, finding usages, and going to a line.
+- The [website](https://expiracy.github.io/search-plus-plus/) is redesigned, with
+  every search mode, a shortcuts table for your platform, and a captioned
+  walkthrough video.
+
 ## 3.1.3 — 2026-11-01
 
 ### Changed
