@@ -88,6 +88,11 @@ async function expectFocused(description) {
   assert.equal(state.focused, true, `${description}: ${JSON.stringify(state)}`);
 }
 
+async function closeSettings() {
+  await key('w', 'KeyW', 87, modifier);
+  await waitFor(async () => evaluate(`!!document.activeElement?.closest('.monaco-editor') && !document.activeElement.closest('.settings-editor')`), 'Settings to close and return focus to the code editor');
+}
+
 async function controlState(selector) {
   return evaluate(`(() => {
     const element = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => {
@@ -349,7 +354,7 @@ try {
   await clickSelector(settingSelector);
   if (temporary) await waitFor(async () => JSON.parse(await readFile(path.join(temporary, 'configuration.json'), 'utf8')).rememberLastSearch === true, 'the setting to reach the extension host');
   await waitFor(async () => (await controlState(settingSelector))?.checked === 'true', 'the enabled checkbox to render');
-  await key('w', 'KeyW', 87, modifier);
+  await closeSettings();
   await key('p', 'KeyP', 80, modifier); await waitFor(async () => (await popup()).visible, 'Files after changing settings');
   await replaceQuery('audit-search'); await expectText('audit-search.txt');
   await key('Enter', 'Enter', 13); await waitFor(async () => !(await popup()).visible, 'accepted search to close');
@@ -364,7 +369,7 @@ try {
   await clickSelector(settingSelector);
   if (temporary) await waitFor(async () => JSON.parse(await readFile(path.join(temporary, 'configuration.json'), 'utf8')).rememberLastSearch === false, 'the disabled setting to reach the extension host');
   await waitFor(async () => (await controlState(settingSelector))?.checked === 'false', 'the disabled checkbox to render');
-  await key('w', 'KeyW', 87, modifier);
+  await closeSettings();
   await key('p', 'KeyP', 80, modifier); await waitFor(async () => (await popup()).visible, 'a fresh Files search');
   assert.equal((await popup()).value, '');
   console.log('PASS: native Settings checkbox, Enter/reopen persistence and disabling persistence');
