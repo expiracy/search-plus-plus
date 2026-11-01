@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.3 — 2026-11-01
+
 ### Changed
 
 - Require **VS Code 1.109.0 or later** for consistent native popup controls and
