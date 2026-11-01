@@ -68,8 +68,8 @@ File and folder searches use the same index matcher during startup and normal
 operation. They wait for the first usable snapshot when necessary. Text, symbol,
 usage, and command searches use the configured debounce delay. Usages are a
 nested view of Symbols rather than a separate top-level tab. Enter opens a
-symbol; Cmd+Return on macOS or Ctrl+Enter on Windows/Linux, or Shift+F12, resolves
-its references. The parent search is
+symbol; Cmd+Return or Shift+Return on macOS, Ctrl+Enter or Shift+Enter on
+Windows/Linux, or Shift+F12, resolves its references on supported hosts. The parent search is
 snapshotted before the drill-down. Back cancels references and restores the
 query, displayed results, active item, and options; programmatic input changes
 do not restart that restored search. Reopening a remembered usages lookup refreshes
@@ -104,7 +104,8 @@ with the same User/Workspace precedence while their saved values are converted.
 
 ## Result previews
 
-Right Arrow, or Cmd+Right on macOS and Ctrl+Right on Windows/Linux, previews the active resource
+Right Arrow at the end of the query with no selection, or Cmd+Right on macOS
+and Ctrl+Right on Windows/Linux, previews the active resource
 through `ResultPreview`, preserving
 QuickPick focus and the match position. The matching text editor reveals the
 selected range with `TextEditorRevealType.AtTop`, including when that range

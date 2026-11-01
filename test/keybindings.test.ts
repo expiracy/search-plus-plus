@@ -6,18 +6,21 @@ test('plain Tab cycles popup modes without Shift+Tab or Ctrl+Tab bindings', () =
   expect(bindings.filter(binding => ['searchPlusPlus.nextTab', 'searchPlusPlus.prevTab'].includes(binding.command)).map(binding => binding.key)).toEqual(['tab']);
 });
 
-test('Right Arrow previews results, with Cmd/Ctrl+Right retained as an alternative', () => {
+test('Right Arrow previews only at the input end, while Cmd/Ctrl+Right stays available', () => {
   expect(manifest.contributes.keybindings.find(binding => binding.command === 'searchPlusPlus.preview' && binding.key === 'ctrl+right')).toMatchObject({ key: 'ctrl+right', mac: 'cmd+right', when: 'searchPlusPlusModalOpen' });
-  expect(manifest.contributes.keybindings).toContainEqual({command: 'searchPlusPlus.preview', key: 'right', when: 'searchPlusPlusModalOpen && inQuickOpen'});
+  expect(manifest.contributes.keybindings).toContainEqual({command: 'searchPlusPlus.preview', key: 'right', when: 'searchPlusPlusModalOpen && inQuickOpen && cursorAtEndOfQuickInputBox'});
   expect(manifest.contributes.commands.some(command => command.command === 'searchPlusPlus.preview')).toBe(true);
 });
 
-test('Cmd/Ctrl+Enter shows usages for symbols in Symbols and Everything', () => {
+test('Shift+Enter and Cmd/Ctrl+Enter show usages for symbols in Symbols and Everything', () => {
   expect(manifest.contributes.keybindings).toContainEqual({
     command: 'searchPlusPlus.findUsages', key: 'ctrl+enter', mac: 'cmd+enter',
     when: 'searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)',
   });
-  expect(manifest.contributes.keybindings.some(binding => binding.key === 'shift+enter')).toBe(false);
+  expect(manifest.contributes.keybindings).toContainEqual({
+    command: 'searchPlusPlus.findUsages', key: 'shift+enter',
+    when: 'searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)',
+  });
 });
 
 test('Ctrl+Enter does not conflict with preview or path autofill', () => {

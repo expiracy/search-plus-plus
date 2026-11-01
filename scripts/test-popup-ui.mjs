@@ -74,8 +74,8 @@ async function click(label) {
     return { x, y };
   })()`);
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...position });
-  await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...position });
-  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...position });
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', buttons: 1, clickCount: 1, ...position });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', buttons: 0, clickCount: 1, ...position });
   await pause(300);
 }
 
@@ -88,19 +88,25 @@ async function expectFocused(description) {
   assert.equal(state.focused, true, `${description}: ${JSON.stringify(state)}`);
 }
 
-async function clickSelector(selector) {
-  const position = await evaluate(`(() => {
-    const element = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.getBoundingClientRect().width > 0);
-    if (!element) throw new Error('Missing control: ' + ${JSON.stringify(selector)});
-    element.scrollIntoView({ block: 'center' });
+async function controlState(selector) {
+  return evaluate(`(() => {
+    const element = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => {
+      const r = e.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && e.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+    });
+    if (!element) return undefined;
     const r = element.getBoundingClientRect();
     const x = r.x + r.width / 2, y = r.y + r.height / 2;
-    if (!element.contains(document.elementFromPoint(x, y))) throw new Error('Control is clipped or covered: ' + ${JSON.stringify(selector)});
-    return { x, y };
+    return { x, y, checked: element.getAttribute('aria-checked') };
   })()`);
+}
+
+async function clickSelector(selector) {
+  const { x, y } = await waitFor(() => controlState(selector), `an interactive ${selector}`);
+  const position = { x, y };
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...position });
-  await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...position });
-  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...position });
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', buttons: 1, clickCount: 1, ...position });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', buttons: 0, clickCount: 1, ...position });
   await pause(300);
 }
 
@@ -109,6 +115,7 @@ async function popup() {
     const widget = [...document.querySelectorAll('.quick-input-widget')].find(element => element.getBoundingClientRect().height > 0);
     const input = [...(widget?.querySelectorAll('input') ?? [])].find(element => element.getBoundingClientRect().width > 0);
     return { visible: !!widget?.getBoundingClientRect().height, value: input?.value,
+      selectionStart: input?.selectionStart, selectionEnd: input?.selectionEnd,
       focused: input === document.activeElement, text: widget?.innerText,
       title: widget?.querySelector('.quick-input-title')?.textContent,
       active: document.activeElement?.getAttribute('aria-label'),
@@ -246,9 +253,34 @@ try {
   console.log('PASS: fuzzy matching, both ignore toggles and permanent exclusions');
 
   await replaceQuery('utils.ts:2:3'); await expectText('utils.ts');
+  const queryLength = 'utils.ts:2:3'.length;
+  const editorWasAtTarget = await evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 2, Col 3')`);
+  assert.equal(editorWasAtTarget, false, 'the preview target differs from the initial editor position');
+  for (let step = 0; step < 3; step++) await key('ArrowLeft', 'ArrowLeft', 37);
+  await waitFor(async () => (await popup()).selectionStart === queryLength - 3, 'Left Arrow to move inside the query');
+  await key('ArrowRight', 'ArrowRight', 39);
+  await waitFor(async () => (await popup()).selectionStart === queryLength - 2, 'Right Arrow to move inside the query without preview');
+  assert.equal(await evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 2, Col 3')`), false);
+  await key('ArrowRight', 'ArrowRight', 39); await key('ArrowRight', 'ArrowRight', 39);
+  await waitFor(async () => (await popup()).selectionStart === queryLength, 'the caret to reach the end');
+  assert.equal(await evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 2, Col 3')`), false);
   await key('ArrowRight', 'ArrowRight', 39); await pause(300);
   await expectFocused('Right Arrow preview keeps input focus');
-  await click('Preview (Right Arrow)'); await expectFocused('eye preview keeps input focus');
+  await waitFor(async () => evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 2, Col 3')`), 'Right Arrow at the end to preview');
+  await replaceQuery('utils.ts:1:1'); await expectText('utils.ts');
+  await key('a', 'KeyA', 65, modifier);
+  await waitFor(async () => { const state = await popup(); return state.selectionStart === 0 && state.selectionEnd === queryLength; }, 'Select All in the query');
+  await key('ArrowRight', 'ArrowRight', 39);
+  await waitFor(async () => { const state = await popup(); return state.selectionStart === queryLength && state.selectionEnd === queryLength; }, 'Right Arrow to collapse the selection');
+  assert.ok(await evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 2, Col 3')`), 'collapsing selected text does not preview');
+  await key('ArrowRight', 'ArrowRight', 39);
+  await waitFor(async () => evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 1, Col 1')`), 'a second Right Arrow to preview');
+  await replaceQuery('utils.ts:1:2'); await expectText('utils.ts');
+  for (let step = 0; step < 3; step++) await key('ArrowLeft', 'ArrowLeft', 37);
+  await key('ArrowRight', 'ArrowRight', 39, modifier);
+  await waitFor(async () => evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 1, Col 2')`), 'Cmd/Ctrl+Right to preview from inside the query');
+  await replaceQuery('utils.ts:2:3'); await expectText('utils.ts');
+  await click(`Preview (Right Arrow at query end or ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Right)`); await expectFocused('eye preview keeps input focus');
   await key('Enter', 'Enter', 13);
   await waitFor(async () => !(await popup()).visible, 'Enter to close search');
   assert.ok(await evaluate(String.raw`document.body.innerText.replace(/\s+/g, ' ').includes('Ln 2, Col 3')`), 'Enter opens the requested line and column');
@@ -266,11 +298,37 @@ try {
   await clickSelector('.quick-input-widget .codicon-quick-input-back');
   await expectText('Symbols'); await expectFocused('Back restores typing focus');
   assert.equal((await popup()).value, 'greet');
+  if (Number(hostVersion.split('.')[1]) >= 109) {
+    await key('Enter', 'Enter', 13, 8); await expectText('Usages of greet');
+    console.log(`PASS: Shift+Enter opens usages on VS Code ${hostVersion}`);
+    await clickSelector('.quick-input-widget .codicon-quick-input-back');
+    await expectText('Symbols'); await expectFocused('Back after Shift+Enter restores typing focus');
+  }
   if (Number(hostVersion.split('.')[1]) < 109) await key('F12', 'F12', 123, 8);
   else await key('Enter', 'Enter', 13, modifier);
   await expectText('Usages of greet');
   await replaceQuery(''); await expectText('Search for a symbol');
   console.log('PASS: folders, real TypeScript symbols, usages, filtering, Back, Shift+F12 and clearing');
+
+  await click('Everything'); await replaceQuery('greet'); await expectText('Symbols');
+  for (let step = 0; step < 20; step++) {
+    if (await evaluate(`!!document.querySelector('.quick-input-widget .monaco-list-row.focused .codicon-symbol-function')`)) break;
+    await key('ArrowDown', 'ArrowDown', 40); await pause(100);
+  }
+  assert.ok(await evaluate(`!!document.querySelector('.quick-input-widget .monaco-list-row.focused .codicon-symbol-function')`), 'a symbol is selected in Everything');
+  if (Number(hostVersion.split('.')[1]) >= 109) {
+    for (const modifiers of [8, modifier]) {
+      await key('Enter', 'Enter', 13, modifiers); await expectText('Usages of greet');
+      await clickSelector('.quick-input-widget .codicon-quick-input-back');
+      await waitFor(async () => (await popup()).title?.startsWith('Everything'), 'Back to restore Everything');
+    }
+    console.log('PASS: both Enter aliases find usages from Everything symbols');
+  } else {
+    await click('Find Usages (Shift+F12)'); await expectText('Usages of greet');
+    await clickSelector('.quick-input-widget .codicon-quick-input-back');
+    await waitFor(async () => (await popup()).title?.startsWith('Everything'), 'Back to restore Everything');
+    console.log('PASS: legacy Everything symbol action finds usages');
+  }
 
   await click('Commands'); await replaceQuery('search++'); await expectText('search++: Reindex Workspace');
   await expectFocused('Commands keeps input focus');
@@ -295,10 +353,10 @@ try {
   await replaceQuery('@id:searchPlusPlus.rememberLastSearch');
   await waitFor(async () => evaluate(String.raw`/\b1 Settings? Found\b/i.test(document.body.innerText.replace(/\s+/g, ' '))`), 'the exact setting filter to finish');
   const settingSelector = '[role="checkbox"][aria-label="searchPlusPlus.rememberLastSearch"]';
-  await waitFor(async () => evaluate(`!![...document.querySelectorAll(${JSON.stringify(settingSelector)})].find(e => e.getBoundingClientRect().width > 0)`), 'Remember Last Search checkbox');
+  await waitFor(() => controlState(settingSelector), 'Remember Last Search checkbox');
   await clickSelector(settingSelector);
   if (temporary) await waitFor(async () => JSON.parse(await readFile(path.join(temporary, 'configuration.json'), 'utf8')).rememberLastSearch === true, 'the setting to reach the extension host');
-  await waitFor(async () => evaluate(`[...document.querySelectorAll(${JSON.stringify(settingSelector)})].find(e => e.getBoundingClientRect().width > 0)?.getAttribute('aria-checked') === 'true'`), 'the enabled checkbox to render');
+  await waitFor(async () => (await controlState(settingSelector))?.checked === 'true', 'the enabled checkbox to render');
   await key('w', 'KeyW', 87, modifier);
   await key('p', 'KeyP', 80, modifier); await waitFor(async () => (await popup()).visible, 'Files after changing settings');
   await replaceQuery('audit-search'); await expectText('audit-search.txt');
@@ -310,10 +368,10 @@ try {
   await key('f', 'KeyF', 70, modifier);
   await replaceQuery('@id:searchPlusPlus.rememberLastSearch');
   await waitFor(async () => evaluate(String.raw`/\b1 Settings? Found\b/i.test(document.body.innerText.replace(/\s+/g, ' '))`), 'the exact setting filter again');
-  await waitFor(async () => evaluate(`!![...document.querySelectorAll(${JSON.stringify(settingSelector)})].find(e => e.getBoundingClientRect().width > 0)`), 'the remembered-search checkbox again');
+  await waitFor(() => controlState(settingSelector), 'the remembered-search checkbox again');
   await clickSelector(settingSelector);
   if (temporary) await waitFor(async () => JSON.parse(await readFile(path.join(temporary, 'configuration.json'), 'utf8')).rememberLastSearch === false, 'the disabled setting to reach the extension host');
-  await waitFor(async () => evaluate(`[...document.querySelectorAll(${JSON.stringify(settingSelector)})].find(e => e.getBoundingClientRect().width > 0)?.getAttribute('aria-checked') === 'false'`), 'the disabled checkbox to render');
+  await waitFor(async () => (await controlState(settingSelector))?.checked === 'false', 'the disabled checkbox to render');
   await key('w', 'KeyW', 87, modifier);
   await key('p', 'KeyP', 80, modifier); await waitFor(async () => (await popup()).visible, 'a fresh Files search');
   assert.equal((await popup()).value, '');

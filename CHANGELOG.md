@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added
+
+- **Shift+Return** on macOS / **Shift+Enter** on Windows/Linux also shows usages
+  of the selected symbol, alongside **Cmd+Return** / **Ctrl+Enter** and Shift+F12.
+  Older native pickers can intercept both Enter combinations; their hints keep
+  the Shift+F12 fallback.
+
+### Changed
+
+- Plain **Right Arrow** previews only when the query caret is at the end with no
+  text selected. Elsewhere it moves through the query normally. The eye button
+  and **Cmd+Right** on macOS / **Ctrl+Right** on Windows/Linux still preview.
+
 ### Fixed
 
 - Clicking search tabs, filters or Back returns keyboard focus to the query, so

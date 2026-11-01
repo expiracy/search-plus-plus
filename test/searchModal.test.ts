@@ -360,7 +360,7 @@ test.each([
   type('greet'); await vi.runAllTimersAsync();
   requests[0].publish([{label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts')}]);
   expect((picker.items[0] as any).buttons.map((button: any) => button.tooltip)).toEqual([
-    `Find Usages (${usages} or Shift+F12)`, `Go to Symbol (${enter})`, 'Preview (Right Arrow)',
+    `Find Usages (${usages}, Shift+${enter} or Shift+F12)`, `Go to Symbol (${enter})`, `Preview (Right Arrow at query end or ${platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Right)`,
   ]);
 });
 
@@ -517,7 +517,7 @@ test('a symbol result button finds usages without opening the declaration', asyn
   const item: any = picker.items[0];
   const action = item.buttons.find((button: any) => button.tooltip.includes('Find Usages'));
   expect(action).toBeTruthy();
-  expect(action.tooltip).toBe(`Find Usages (${process.platform === 'darwin' ? 'Cmd+Return' : 'Ctrl+Enter'} or Shift+F12)`);
+  expect(action.tooltip).toBe(`Find Usages (${process.platform === 'darwin' ? 'Cmd+Return, Shift+Return' : 'Ctrl+Enter, Shift+Enter'} or Shift+F12)`);
   itemButton.fire({ item, button: action }); await vi.runAllTimersAsync();
   expect(requests.at(-1)?.options.usageTarget?.name).toBe('greet');
   expect(open).not.toHaveBeenCalled();
@@ -637,7 +637,7 @@ test('Back from an Everything symbol restores its sections and selected result',
 test('empty Symbols explains how to open a declaration or find usages', () => {
   modal.show(SearchMode.Symbol);
   expect(picker.items).toMatchObject([{ label: '$(symbol-method) Search for a symbol', mode: SearchMode.Symbol,
-    description: expect.stringContaining(`${process.platform === 'darwin' ? 'Cmd+Return' : 'Ctrl+Enter'} or Shift+F12`) }]);
+    description: expect.stringContaining(`${process.platform === 'darwin' ? 'Cmd+Return, Shift+Return' : 'Ctrl+Enter, Shift+Enter'} or Shift+F12`) }]);
 });
 
 test('empty reference results distinguish semantic coverage from an ordinary search miss', async () => {
@@ -748,7 +748,7 @@ test('the eye action shows the preview shortcut and previews the clicked row wit
   picker.activeItems = [picker.items[0]] as any;
   const clicked: any = picker.items[1];
   const eye = clicked.buttons.find((item: any) => item.iconPath.id === 'eye');
-  expect(eye?.tooltip).toBe('Preview (Right Arrow)');
+  expect(eye?.tooltip).toBe(`Preview (Right Arrow at query end or ${process.platform === 'darwin' ? 'Cmd' : 'Ctrl'}+Right)`);
   itemButton.fire({ item: clicked, button: eye }); await vi.runAllTimersAsync();
   expect(command).toHaveBeenCalledWith('vscode.open', clicked.uri, expect.objectContaining({
     preserveFocus: true, preview: true,

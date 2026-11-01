@@ -33,12 +33,14 @@
   commands share one popup. Press **Tab** to change mode without losing your query.
 - **Everything at a glance.** The Everything tab groups the best matches from each
   source, so you can find a file, a line of text, or a command from one place.
-- **Browse results without leaving the popup.** Press **Right Arrow**, or click
+- **Browse results without leaving the popup.** Press **Right Arrow** at the end
+  of your query, or click
   a result's eye button, to preview a result in a reusable editor tab. The matched
   line appears at the top, and the
   popup keeps focus.
 - **Find usages in the same popup.** Pick a symbol in Symbols and press
-  **Cmd+Return** on macOS or **Ctrl+Enter** on Windows/Linux to list its references.
+  **Cmd+Return** or **Shift+Return** on macOS, or **Ctrl+Enter** or **Shift+Enter**
+  on Windows/Linux, to list its references.
   **Shift+F12** also works inside the popup. Type over the name to
   filter them by text or path, and use **Back** to restore your search.
 - **Fast on large workspaces.** File search uses an in-memory index with fzf
@@ -91,17 +93,18 @@ line locations shown as `file.ts:42`.
 ### Find Usages
 
 Open **Symbols**, type a name, and select the matching symbol. **Return** on macOS
-or **Enter** on Windows/Linux opens its declaration. **Cmd+Return** on macOS or
-**Ctrl+Enter** on Windows/Linux lists its references in the same
+or **Enter** on Windows/Linux opens its declaration. **Cmd+Return** or
+**Shift+Return** on macOS, or **Ctrl+Enter** or **Shift+Enter** on Windows/Linux,
+lists its references in the same
 popup. From **Everything**, select a symbol
 and use the same shortcut or click its **Find Usages** button. Hovering the button
 shows your platform's usages shortcut and **Shift+F12** as an alternative.
 In code editors, **Shift+F12** keeps VS Code's
 built-in Find All References action.
 
-Older native pickers (before VS Code 1.109) can intercept **Cmd+Return** on macOS
-or **Ctrl+Enter** on Windows/Linux. Use **Shift+F12** or the **Find Usages** button
-there; the popup's hints show that fallback.
+Older native pickers (before VS Code 1.109) can intercept both modified Enter
+shortcuts. Use **Shift+F12** or the **Find Usages** button there; the popup's hints
+show that fallback.
 
 <p align="center">
   <img src="media/usages-filter.png" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'" width="720">
@@ -131,8 +134,8 @@ references.
 
 ### Preview a Result
 
-Press **Right Arrow** on a file, text,
-symbol, or usage result to preview its file
+With the query caret at the end and no text selected, press **Right Arrow** on a
+file, text, symbol, or usage result to preview its file
 while the popup keeps focus. Text matches jump to their line and column, with the
 matched line at the top of the editor viewport where scrolling permits. Use the
 Up/Down keys to select another result and the preview shortcut to view it in the same
@@ -142,6 +145,8 @@ Press **Return** on macOS or **Enter** on Windows/Linux to open the selected res
 with its matching line at the top.
 Folders, commands, and informational rows have no file preview.
 **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux also preview results.
+Elsewhere in the query, plain Right Arrow moves the caret normally. If text is
+selected, the first Right Arrow collapses the selection instead of previewing.
 
 Each previewable result has an **eye button**, including recent history. Hover
 over it to see the preview shortcut, or click it to preview that row.
@@ -274,10 +279,11 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 |-------|-----------------|--------|---------|
 | **Shift+Shift** | **Shift+Shift** | Open search (Everything tab) | Global |
 | **Tab** | **Tab** | Next search mode | Popup open |
-| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
+| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Query caret at the end, no selection |
 | **Cmd+Right** | **Ctrl+Right** | Preview (alternative shortcut) | Popup open |
 | **Return** | **Enter** | Open the selected result | Popup open |
 | **Cmd+Return** | **Ctrl+Enter** | Show usages of the selected symbol | Symbols or Everything |
+| **Shift+Return** | **Shift+Enter** | Show usages (alternative) | Symbols or Everything |
 | **Shift+F12** | **Shift+F12** | Find usages of the selected symbol | Popup open |
 | **Option+C** | **Alt+C** | Toggle case sensitive | Popup open |
 | **Option+R** | **Alt+R** | Toggle regex | Popup open |
