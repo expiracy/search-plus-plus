@@ -164,6 +164,9 @@ test('reopening a usages lookup restores its filter, semantic target and Back na
   expect(picker.activeItems[0]).toMatchObject(reference);
   button.fire(vscode.QuickInputButtons.Back);
   expect(picker.value).toBe('gre');
+  await vi.runAllTimersAsync();
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'gre' });
+  requests.at(-1)!.publish([{ ...symbol }]);
   expect(picker.items[0]).toMatchObject(symbol);
   expect(picker.activeItems[0]).toMatchObject(symbol);
 });
@@ -177,6 +180,21 @@ test('Remember Last Search is off by default even when Last used tab is enabled'
   expect(requests).toHaveLength(1);
 });
 
+test('Back after reopening usages refreshes its parent instead of resurrecting old symbol results', async () => {
+  configureSearch({ rememberLastSearch: true });
+  modal.show(SearchMode.Symbol); type('gre'); await vi.runAllTimersAsync();
+  const old = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/deleted.ts') };
+  requests[0].publish([old]); picker.activeItems = [picker.items[0]] as any;
+  modal.findUsages(); await vi.runAllTimersAsync();
+  picker.hide(); reopen(); await vi.runAllTimersAsync();
+  button.fire(vscode.QuickInputButtons.Back); await vi.runAllTimersAsync();
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Symbol, query: 'gre' });
+  expect(picker.items.some((item: any) => item.uri?.fsPath === old.uri.fsPath)).toBe(false);
+  const fresh = { ...old, label: 'greetVisitor', uri: vscode.Uri.file('/workspace/current.ts') };
+  requests.at(-1)!.publish([fresh]);
+  expect(picker.items[0]).toMatchObject(fresh);
+});
+
 test('direct commands restore a matching last search but open a different requested mode with an empty query', () => {
   configureSearch({ rememberLastSearch: true });
   modal.show(SearchMode.File); type('checkout'); picker.hide();
@@ -187,6 +205,23 @@ test('direct commands restore a matching last search but open a different reques
   reopen(SearchMode.Text);
   expect(picker.value).toBe('');
   expect(picker.placeholder).toBe('Search text content...');
+});
+
+test('a refreshed remembered parent restores selection using the new native item objects', async () => {
+  configureSearch({ rememberLastSearch: true });
+  modal.show(SearchMode.Symbol); type('gre'); await vi.runAllTimersAsync();
+  const first = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/first.ts') };
+  const chosen = { label: 'greetVisitor', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/chosen.ts') };
+  requests[0].publish([first, chosen]); picker.activeItems = [picker.items[1]] as any;
+  modal.findUsages(); await vi.runAllTimersAsync(); picker.hide(); reopen(); await vi.runAllTimersAsync();
+  let active: any[] = [];
+  // VS Code drops activeItems which are not in the current items-to-handles map.
+  Object.defineProperty(picker, 'activeItems', { configurable: true, get: () => active,
+    set: (items: any[]) => { active = items.filter(item => (picker.items as any[]).includes(item)); },
+  });
+  button.fire(vscode.QuickInputButtons.Back); await vi.runAllTimersAsync();
+  requests.at(-1)!.publish([{ ...first }, { ...chosen }]);
+  expect(picker.activeItems[0]).toMatchObject(chosen);
 });
 
 test('a hidden remembered tab falls back to the opening tab without restoring its query', () => {

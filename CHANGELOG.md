@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Fixed
+
+- Clicking search tabs, filters or Back returns keyboard focus to the query, so
+  selecting or editing text cannot accidentally target the code editor.
+- Back from a remembered usages lookup refreshes the parent search instead of
+  showing symbol results cached before the popup closed.
+- Recent history preserves complete resource URIs for navigation, cleanup and
+  removal, including different authorities with the same path. Existing history
+  entries remain readable.
+- Per-source result limits are positive whole numbers; invalid saved limits use a bounded
+  fallback rather than giving providers inconsistent budgets.
+- Legacy picker hints show Shift+F12 for usages where the host intercepts
+  modified Enter. Modern hosts retain Cmd+Return on macOS / Ctrl+Enter on
+  Windows/Linux, with Shift+F12 also available.
+
 ## 3.1.2 — 2026-11-01
 
 ### Added

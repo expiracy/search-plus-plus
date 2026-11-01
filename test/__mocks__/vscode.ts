@@ -8,7 +8,7 @@ export class Uri {
   fsPath: string;
   path: string;
 
-  private constructor(scheme: string, fsPath: string) {
+  private constructor(scheme: string, fsPath: string, public authority = '') {
     this.scheme = scheme;
     this.fsPath = fsPath;
     this.path = fsPath.replace(/\\/g, '/');
@@ -18,13 +18,18 @@ export class Uri {
     return new Uri('file', fsPath);
   }
 
+  static parse(value: string): Uri {
+    const parsed = new URL(value);
+    return new Uri(parsed.protocol.slice(0, -1), decodeURIComponent(parsed.pathname), parsed.host);
+  }
+
   static joinPath(base: Uri, ...segments: string[]): Uri {
     const joined = path.posix.join(base.path, ...segments);
-    return new Uri(base.scheme, joined);
+    return new Uri(base.scheme, joined, base.authority);
   }
 
   toString() {
-    return `${this.scheme}://${this.path}`;
+    return `${this.scheme}://${this.authority}${this.path}`;
   }
 }
 

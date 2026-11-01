@@ -20,6 +20,15 @@ Set `VSCODE_VERSION=1.96.0` or `VSCODE_VERSION=stable` to download and test a sp
 VS Code release through the official extension test runner. Linux CI runs these
 tests under `xvfb-run`.
 
+Run `npm run test:ui` for real mouse and keyboard checks in an isolated VS Code
+profile. It covers all six search modes, toolbar focus, filters, exclusions,
+preview/open navigation, semantic usages and Back, recent history, and the native
+Settings checkbox for remembering a search. It uses Chromium's local debugging
+protocol with Node.js 22's built-in WebSocket support; no browser package is
+needed. It briefly brings its test window to the foreground. The same
+`VSCODE_VERSION` and `VSCODE_EXECUTABLE_PATH` overrides select the host. Linux CI
+runs it under `xvfb-run` after the API smoke suite on both supported VS Code hosts.
+
 See the [architecture documentation](ARCHITECTURE.md) for component responsibilities,
 request flow, indexing, and backend behavior.
 

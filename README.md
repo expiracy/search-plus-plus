@@ -99,6 +99,10 @@ shows your platform's usages shortcut and **Shift+F12** as an alternative.
 In code editors, **Shift+F12** keeps VS Code's
 built-in Find All References action.
 
+Older native pickers (before VS Code 1.109) can intercept **Cmd+Return** on macOS
+or **Ctrl+Enter** on Windows/Linux. Use **Shift+F12** or the **Find Usages** button
+there; the popup's hints show that fallback.
+
 <p align="center">
   <img src="media/usages-filter.png" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'" width="720">
   <br><em>Type over the symbol name to filter its references</em>

@@ -6,6 +6,32 @@ const { SearchHistory } = await import('../src/history');
 
 afterEach(() => vi.restoreAllMocks());
 
+test('history preserves a virtual resource URI for navigation and stale-entry checks', async () => {
+  let entries: unknown[] = [];
+  const state = { get: () => entries, update: async (_key: string, value: unknown[]) => { entries = value; } };
+  const stat = vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.File } as any);
+  const uri = vscode.Uri.parse('auditfs://alpha/workspace/a.ts');
+  const history = new SearchHistory(state as any);
+  await history.addOpened(uri, 4, 2);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  expect(history.getRecentItems()[0].uri?.toString()).toBe(uri.toString());
+  expect(stat).toHaveBeenCalledWith(uri);
+});
+
+test('history distinguishes and removes resources with the same path on different authorities', async () => {
+  let entries: unknown[] = [];
+  const state = { get: () => entries, update: async (_key: string, value: unknown[]) => { entries = value; } };
+  vi.spyOn(vscode.workspace.fs, 'stat').mockResolvedValue({ type: vscode.FileType.File } as any);
+  const first = vscode.Uri.parse('auditfs://alpha/workspace/a.ts');
+  const second = vscode.Uri.parse('auditfs://beta/workspace/a.ts');
+  expect(first.fsPath).toBe(second.fsPath);
+  const history = new SearchHistory(state as any);
+  await history.addOpened(first); await history.addOpened(second);
+  expect(history.getRecentItems().map(item => item.uri?.toString())).toEqual([second.toString(), first.toString()]);
+  await history.removeEntry(first);
+  expect(history.getRecentItems().map(item => item.uri?.toString())).toEqual([second.toString()]);
+});
+
 test('background cleanup cannot overwrite a more recently opened file', async () => {
   let entries: unknown[] = [{ relativePath: 'missing.ts', fsPath: '/workspace/missing.ts' }];
   const state = {

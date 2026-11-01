@@ -47,7 +47,8 @@ export const DEFAULT_EVERYWHERE_LIMIT = 20;
 export const DEFAULT_MAX_RESULTS = 200;
 
 export function getMaxResults(): number {
-  return getResultSetting(vscode.workspace.getConfiguration('searchPlusPlus'), 'resultsPerSearchType', DEFAULT_MAX_RESULTS);
+  const value = getResultSetting(vscode.workspace.getConfiguration('searchPlusPlus'), 'resultsPerSearchType', DEFAULT_MAX_RESULTS);
+  return Number.isFinite(value) ? Math.max(1, Math.floor(value)) : DEFAULT_MAX_RESULTS;
 }
 
 export interface TextSearchOptions extends Omit<SearchOptions, 'fuzzySearch'> {

@@ -526,7 +526,8 @@
         "properties": {
           "searchPlusPlus.resultsPerSearchType": {
             "order": 1,
-            "type": "number",
+            "type": "integer",
+            "minimum": 1,
             "default": 200,
             "markdownDescription": "Maximum results returned for each search type: Files, Folders, Text, Symbols or Commands. On Everything, each group also has its own display limit: `#searchPlusPlus.resultsPerEverythingGroup#`."
           },
@@ -718,6 +719,7 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "test": "vitest run",
     "test:host": "npm run build && node scripts/test-extension-host.mjs",
+    "test:ui": "npm run build && node scripts/test-popup-ui.mjs",
     "package": "vsce package --no-dependencies --githubBranch master --skip-license --out search-plus-plus.vsix",
     "check:release": "node scripts/check-release.mjs",
     "build:site": "node scripts/build-site.mjs",
