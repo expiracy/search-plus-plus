@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 3.1.2 — 2026-11-01
+
 ### Added
 
 - **Remember Last Search** under **Search popup** restores the last query, tab
