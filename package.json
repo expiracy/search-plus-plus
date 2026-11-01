@@ -2,7 +2,7 @@
   "name": "search-plus-plus",
   "displayName": "search++",
   "description": "Unified popup search for files, folders, text, symbols, usages and commands. Inspired by JetBrains IDEs.",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "private": true,
   "publisher": "expiracy",
   "icon": "media/logo.png",
