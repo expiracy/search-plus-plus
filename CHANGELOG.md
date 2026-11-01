@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+
+- **Remember Last Search** under **Search popup** restores the last query, tab
+  and selection when reopening, including after opening a result. Results refresh
+  on reopen, and usages retain their filter and Back navigation. The setting is
+  off by default; searches stay in memory for the current VS Code session only.
+
 ## 3.1.1 — 2026-10-31
 
 ### Changed

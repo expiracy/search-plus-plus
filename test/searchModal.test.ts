@@ -75,6 +75,161 @@ function type(value: string) {
   input.fire(value);
 }
 
+function configureSearch(settings: Record<string, unknown>) {
+  vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
+    get: (key: string, fallback: unknown) => settings[key] ?? fallback,
+    inspect: (key: string) => ({ globalValue: settings[key] }),
+  } as any);
+}
+
+function reopen(mode?: typeof SearchMode[keyof typeof SearchMode]) {
+  picker = { ...picker, value: '', items: [], activeItems: [], selectedItems: [], busy: false };
+  vi.mocked(vscode.window.createQuickPick).mockReturnValue(picker);
+  modal.show(mode);
+}
+
+test('Remember Last Search restores the accepted query and tab with fresh results and selection', async () => {
+  configureSearch({ rememberLastSearch: true });
+  const open = vi.spyOn(vscode.commands, 'executeCommand');
+  const showDocument = vi.spyOn(vscode.window, 'showTextDocument');
+  modal.show(SearchMode.File); type('checkout:42:5');
+  const first = { label: 'checkout.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/checkout.ts') };
+  const chosen = { label: 'checkout.test.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/checkout.test.ts') };
+  requests[0].publish([first, chosen]);
+  picker.activeItems = [picker.items[1]] as any;
+  picker.selectedItems = [picker.items[1]] as any;
+  accept.fire();
+  await vi.runAllTimersAsync();
+  expect(open).toHaveBeenCalledWith('vscode.open', chosen.uri);
+  expect(workspaceState.update).not.toHaveBeenCalled();
+
+  reopen();
+  expect(picker.value).toBe('checkout:42:5');
+  expect(picker.placeholder).toContain('Search files...');
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.File, query: 'checkout' });
+  const refreshed = { ...chosen, label: 'updated checkout.test.ts' };
+  requests.at(-1)!.publish([first, refreshed]);
+  expect(picker.items).toHaveLength(2);
+  expect(picker.activeItems[0]).toMatchObject(refreshed);
+  picker.selectedItems = [picker.activeItems[0]] as any;
+  accept.fire(); await vi.runAllTimersAsync();
+  expect(showDocument).toHaveBeenCalledWith(chosen.uri, {
+    selection: new vscode.Selection(new vscode.Position(41, 4), new vscode.Position(41, 4)),
+  });
+});
+
+test('clearing the last query returns to the configured opening tab instead of an older search', () => {
+  configureSearch({ rememberLastSearch: true, whenSearchOpens: 'text' });
+  modal.show(SearchMode.File); type('checkout'); picker.hide();
+  reopen();
+  type(''); picker.hide();
+  reopen();
+  expect(picker.value).toBe('');
+  expect(picker.placeholder).toBe('Search text content...');
+});
+
+test('turning Remember Last Search off while closed forgets the query even if re-enabled', () => {
+  const settings = { rememberLastSearch: true };
+  configureSearch(settings);
+  modal.show(SearchMode.File); type('private-query'); picker.hide();
+  settings.rememberLastSearch = false;
+  configurationChanged.fire({ affectsConfiguration: (key: string) => key === 'searchPlusPlus.rememberLastSearch' });
+  settings.rememberLastSearch = true;
+  configurationChanged.fire({ affectsConfiguration: (key: string) => key === 'searchPlusPlus.rememberLastSearch' });
+  reopen();
+  expect(picker.value).toBe('');
+  expect(picker.placeholder).toBe('Search everywhere...');
+});
+
+test('reopening a usages lookup restores its filter, semantic target and Back navigation', async () => {
+  configureSearch({ rememberLastSearch: true });
+  modal.show(SearchMode.Symbol); type('gre'); await vi.runAllTimersAsync();
+  const symbol = { label: 'greet', mode: SearchMode.Symbol, uri: vscode.Uri.file('/workspace/greet.ts'), lineNumber: 2, column: 4 };
+  requests[0].publish([symbol]); picker.activeItems = [picker.items[0]] as any;
+  modal.findUsages(); await vi.runAllTimersAsync();
+  type('consumer'); await vi.runAllTimersAsync();
+  const reference = { label: 'greet();', mode: SearchMode.Usages, uri: vscode.Uri.file('/workspace/consumer.ts'), lineNumber: 7, column: 3 };
+  requests.at(-1)!.publish([reference]);
+  picker.activeItems = [picker.items[0]] as any;
+  picker.selectedItems = [picker.items[0]] as any;
+  accept.fire(); await vi.runAllTimersAsync();
+
+  reopen(); await vi.runAllTimersAsync();
+  expect(picker.value).toBe('consumer');
+  expect(picker.buttons).toContain(vscode.QuickInputButtons.Back);
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Usages, query: 'consumer',
+    options: { usageTarget: { uri: symbol.uri, name: 'greet', position: new vscode.Position(2, 4) } },
+  });
+  requests.at(-1)!.publish([{ ...reference }]);
+  expect(picker.activeItems[0]).toMatchObject(reference);
+  button.fire(vscode.QuickInputButtons.Back);
+  expect(picker.value).toBe('gre');
+  expect(picker.items[0]).toMatchObject(symbol);
+  expect(picker.activeItems[0]).toMatchObject(symbol);
+});
+
+test('Remember Last Search is off by default even when Last used tab is enabled', () => {
+  configureSearch({ whenSearchOpens: 'last' });
+  modal.show(SearchMode.File); type('checkout'); picker.hide();
+  reopen();
+  expect(picker.value).toBe('');
+  expect(picker.placeholder).toContain('Search files...');
+  expect(requests).toHaveLength(1);
+});
+
+test('direct commands restore a matching last search but open a different requested mode with an empty query', () => {
+  configureSearch({ rememberLastSearch: true });
+  modal.show(SearchMode.File); type('checkout'); picker.hide();
+  reopen(SearchMode.File);
+  expect(picker.value).toBe('checkout');
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.File, query: 'checkout' });
+  picker.hide();
+  reopen(SearchMode.Text);
+  expect(picker.value).toBe('');
+  expect(picker.placeholder).toBe('Search text content...');
+});
+
+test('a hidden remembered tab falls back to the opening tab without restoring its query', () => {
+  const settings: Record<string, unknown> = { rememberLastSearch: true };
+  configureSearch(settings);
+  modal.show(SearchMode.Symbol); type('greet'); picker.hide();
+  settings.everythingTabSources = { Symbols: false };
+  reopen();
+  expect(picker.value).toBe('');
+  expect(picker.placeholder).toBe('Search everywhere...');
+});
+
+test('reopening after dismissal preserves text whitespace and search options', async () => {
+  configureSearch({ rememberLastSearch: true });
+  modal.show(SearchMode.Text); type('  price  ');
+  modal.toggleCaseSensitive(); modal.toggleGitIgnore();
+  await vi.runAllTimersAsync();
+  picker.hide();
+  reopen(); await vi.runAllTimersAsync();
+  expect(picker.value).toBe('  price  ');
+  expect(requests.at(-1)).toMatchObject({ mode: SearchMode.Text, query: '  price  ',
+    options: { caseSensitive: true, excludeGitIgnored: false },
+  });
+});
+
+test('reopened streaming results restore a later symbol without accepting old callbacks or overriding a later selection', () => {
+  configureSearch({ rememberLastSearch: true });
+  modal.show(); type('greet');
+  const file = { label: 'greet.ts', mode: SearchMode.File, uri: vscode.Uri.file('/workspace/greet.ts') };
+  const symbol = { ...file, label: 'greet', mode: SearchMode.Symbol };
+  requests[0].publish([file, symbol]); picker.activeItems = [picker.items[1]] as any;
+  picker.hide(); reopen();
+  requests[0].publish([{ ...file, label: 'obsolete result' }]);
+  expect(picker.items).toEqual([]);
+  requests.at(-1)!.publish([file]);
+  picker.activeItems = [picker.items[0]] as any;
+  requests.at(-1)!.publish([file, { ...symbol }]);
+  expect(picker.activeItems[0]).toMatchObject(symbol);
+  picker.activeItems = [picker.items[0]] as any; activeChanged.fire(picker.activeItems);
+  requests.at(-1)!.publish([{ ...file }, { ...symbol }]);
+  expect(picker.activeItems[0]).toMatchObject(file);
+});
+
 test('symbol selection enables drilldown in Everything and clears on another row or hide', () => {
   const command = vi.spyOn(vscode.commands, 'executeCommand');
   modal.show(SearchMode.Everywhere); type('greet');

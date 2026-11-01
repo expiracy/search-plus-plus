@@ -334,10 +334,16 @@
               "Commands"
             ],
             "default": "everywhere",
-            "description": "Choose the tab shown when opening search++. Last used tab remembers your last tab in this workspace. If that tab is hidden, the first visible tab opens."
+            "description": "Choose the opening tab when there is no search to restore. Last used tab remembers your last tab in this workspace. If that tab is hidden, the first visible tab opens."
+          },
+          "searchPlusPlus.rememberLastSearch": {
+            "order": 5,
+            "type": "boolean",
+            "default": false,
+            "description": "Reopen the last query and tab, including after opening a result. Refresh results and restore the selection when available. Kept only for this VS Code session."
           },
           "searchPlusPlus.shortcutPreset": {
-            "order": 5,
+            "order": 6,
             "type": "string",
             "enum": [
               "none",

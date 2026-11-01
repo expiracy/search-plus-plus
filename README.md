@@ -224,9 +224,22 @@ temporarily without changing the checkbox choices.
 
 Choose **Last used tab** in `searchPlusPlus.whenSearchOpens` to reopen the
 last-used available tab, including after restarting VS Code. The default is
-Everything. Commands such as **Search Files** still open their requested mode. Only the mode is saved;
-search text and nested usage lookups are cleared when the popup closes. Returning
-from a usages view opens the Symbols chooser.
+Everything. Commands such as **Search Files** still open their requested mode.
+This choice saves only the tab; search text and nested usage lookups are cleared
+unless **Remember Last Search** is enabled. Returning from a usages view opens
+the Symbols chooser by default.
+
+### Remember Last Search
+
+Enable **Search popup → Remember Last Search** to keep your query and tab when
+reopening the popup, including after opening a result. Results refresh and the
+selected result is restored if it still matches. Usages also retain their filter
+and Back navigation.
+
+This takes precedence over **When Search Opens** while a search is saved. Direct
+search commands restore a matching tab's query; a different requested tab opens
+with an empty query. Clearing the query starts fresh. Searches stay in memory for
+the current VS Code session only; turning the setting off forgets the saved search.
 
 ### Search History
 
@@ -363,7 +376,7 @@ ignore rules and excluded paths stay together under Search results:
 
 | Group | Settings |
 |-------|----------|
-| **Search popup** | Show Everything Tab, Everything Tab Sources, Tab Order, When Search Opens, and Shortcut Preset |
+| **Search popup** | Show Everything Tab, Everything Tab Sources, Tab Order, When Search Opens, Remember Last Search, and Shortcut Preset |
 | **Search results** | Results per Search Type, Results per Everything Group, Search Delay, Git Ignore Rules, Search Ignore Rules, and Excluded Paths |
 
 | Setting | Default | Description |
@@ -372,6 +385,7 @@ ignore rules and excluded paths stay together under Search results:
 | `searchPlusPlus.everythingTabSources` | All checked | Sources included in Everything and shown as individual tabs |
 | `searchPlusPlus.tabOrder` | Everything, Files, Folders, Text, Symbols, Commands | Tab order, also used for Everything groups; remove groups and re-add them in the correct order |
 | `searchPlusPlus.whenSearchOpens` | `"everywhere"` | Opening tab, or `"last"` to restore the last-used available tab |
+| `searchPlusPlus.rememberLastSearch` | `false` | Restore the last query, tab and selected result during this VS Code session; results refresh on reopen |
 | `searchPlusPlus.shortcutPreset` | `"none"` (Default) | Optional `vscode` or `intellij` opening shortcuts; the setting gives an example and links to individual bindings |
 | `searchPlusPlus.resultsPerSearchType` | `200` | Maximum results returned per source: Files, Folders, Text, Symbols, or Commands |
 | `searchPlusPlus.resultsPerEverythingGroup` | `20` | Maximum results displayed per Everything group (1-200) |

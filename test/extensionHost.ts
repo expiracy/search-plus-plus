@@ -79,6 +79,7 @@ export async function run(): Promise<void> {
     await verifyResultPreview(root);
     await verifyRowNavigation(root);
     await verifyWindowPreferences();
+    await verifyRememberLastSearch(root);
     await verifyEverythingPreferences();
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
@@ -189,6 +190,72 @@ async function verifyWindowPreferences(): Promise<void> {
     await hide();
   } finally {
     modal.dispose();
+    for (const [index, key] of settings.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);
+  }
+}
+
+async function verifyRememberLastSearch(root: vscode.Uri): Promise<void> {
+  const config = vscode.workspace.getConfiguration('searchPlusPlus');
+  assert.equal(config.inspect('rememberLastSearch')?.defaultValue, false, 'Remember Last Search is registered and off by default');
+  const settings = ['rememberLastSearch', 'whenSearchOpens'];
+  const previous = settings.map(key => config.inspect(key)?.workspaceValue);
+  const first = vscode.Uri.joinPath(root, 'remember-search-a.txt');
+  const chosen = vscode.Uri.joinPath(root, 'remember-search-b.txt');
+  for (const uri of [first, chosen]) await vscode.workspace.fs.writeFile(uri, Buffer.from('one\ntwo\nthree\nfour\n'));
+  const queries: string[] = [];
+  const hiddenEvents = new vscode.EventEmitter<void>();
+  const provider: SearchProvider = { mode: SearchMode.File, search(query, _options, publish) {
+    queries.push(query);
+    publish([first, chosen].map(uri => ({ label: uri.path.split('/').at(-1)!, mode: SearchMode.File, uri, alwaysShow: true })));
+    return { dispose() {} };
+  } };
+  let picker!: vscode.QuickPick<SearchResult>;
+  const modal = new SearchModal({ state: 'ready', onDidChangeState: () => ({ dispose() {} }) } as any,
+    { getRecentItems: () => [], addOpened: () => {} } as any, new Map([[SearchMode.File, provider]]),
+    () => {
+      picker = vscode.window.createQuickPick<SearchResult>();
+      // Observe hide before the modal disposes the picker and its remaining listeners.
+      picker.onDidHide(() => hiddenEvents.fire());
+      return picker;
+    });
+  try {
+    await config.update('rememberLastSearch', true, vscode.ConfigurationTarget.Workspace);
+    await config.update('whenSearchOpens', 'everywhere', vscode.ConfigurationTarget.Workspace);
+    modal.show(SearchMode.File);
+    const results = nextEvent(picker.onDidChangeValue, value => value === 'remember-search:3:2');
+    const populated = nextEvent(picker.onDidChangeActive, items => items[0]?.uri?.toString() === first.toString());
+    picker.value = 'remember-search:3:2';
+    await results;
+    await populated;
+    assert.equal(picker.items.length, 2);
+    const selected = nextEvent(picker.onDidChangeActive, items => items[0]?.uri?.toString() === chosen.toString());
+    await vscode.commands.executeCommand('workbench.action.quickOpenSelectNext');
+    await selected;
+    const hidden = nextEvent(hiddenEvents.event, () => true);
+    const opened = nextEvent(vscode.window.onDidChangeTextEditorSelection, event =>
+      event.textEditor.document.uri.toString() === chosen.toString()
+      && event.selections[0].active.isEqual(new vscode.Position(2, 1)));
+    await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem');
+    await hidden;
+    await opened;
+    const searches = queries.length;
+    modal.show();
+    assert.equal(picker.value, 'remember-search:3:2', 'accepting, closing and reopening retain the raw query');
+    assert.ok(picker.placeholder?.startsWith('Search files...'), 'the last search takes precedence over the opening tab');
+    assert.equal(queries.length, searches + 1, 'reopening refreshes the results');
+    assert.equal(queries.at(-1), 'remember-search', 'the restored line and column are parsed for the provider');
+    assert.equal(picker.activeItems[0]?.uri?.toString(), chosen.toString(), 'the selected result is restored by its identity');
+    const dismissed = nextEvent(hiddenEvents.event, () => true);
+    await vscode.commands.executeCommand('workbench.action.closeQuickOpen'); await dismissed;
+    await config.update('rememberLastSearch', false, vscode.ConfigurationTarget.Workspace);
+    modal.show();
+    assert.equal(picker.value, '', 'turning the setting off opens a fresh native popup');
+    assert.equal(picker.placeholder, 'Search everywhere...');
+    const closed = nextEvent(hiddenEvents.event, () => true);
+    await vscode.commands.executeCommand('workbench.action.closeQuickOpen'); await closed;
+  } finally {
+    modal.dispose();
+    hiddenEvents.dispose();
     for (const [index, key] of settings.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);
   }
 }
@@ -359,9 +426,10 @@ async function verifyRowNavigation(root: vscode.Uri): Promise<void> {
 function nextEvent<T>(event: vscode.Event<T>, matches: (value: T) => boolean): Promise<T> {
   let subscription: vscode.Disposable;
   let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Error('Expected popup state transition did not occur');
   return new Promise<T>((resolve, reject) => {
     subscription = event(value => { if (matches(value)) resolve(value); });
-    timer = setTimeout(() => reject(new Error('Expected popup state transition did not occur')), 5000);
+    timer = setTimeout(() => reject(timeout), 5000);
   }).finally(() => { clearTimeout(timer); subscription.dispose(); });
 }
 
