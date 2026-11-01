@@ -344,8 +344,9 @@ try {
   const settingSelector = '[role="checkbox"][aria-label="searchPlusPlus.rememberLastSearch"]';
   await waitFor(() => controlState(settingSelector), 'Remember Last Search checkbox');
   await clickSelector(settingSelector);
+  // The saved value is authoritative; VS Code's Settings page can lag in redrawing its own checkbox.
   if (temporary) await waitFor(async () => JSON.parse(await readFile(path.join(temporary, 'configuration.json'), 'utf8')).rememberLastSearch === true, 'the setting to reach the extension host');
-  await waitFor(async () => (await controlState(settingSelector))?.checked === 'true', 'the enabled checkbox to render');
+  else await waitFor(async () => (await controlState(settingSelector))?.checked === 'true', 'the enabled checkbox to render');
   await closeSettings();
   await key('p', 'KeyP', 80, modifier); await waitFor(async () => (await popup()).visible, 'Files after changing settings');
   await replaceQuery('audit-search'); await expectText('audit-search.txt');
@@ -360,7 +361,7 @@ try {
   await waitFor(() => controlState(settingSelector), 'the remembered-search checkbox again');
   await clickSelector(settingSelector);
   if (temporary) await waitFor(async () => JSON.parse(await readFile(path.join(temporary, 'configuration.json'), 'utf8')).rememberLastSearch === false, 'the disabled setting to reach the extension host');
-  await waitFor(async () => (await controlState(settingSelector))?.checked === 'false', 'the disabled checkbox to render');
+  else await waitFor(async () => (await controlState(settingSelector))?.checked === 'false', 'the disabled checkbox to render');
   await closeSettings();
   await key('p', 'KeyP', 80, modifier); await waitFor(async () => (await popup()).visible, 'a fresh Files search');
   assert.equal((await popup()).value, '');

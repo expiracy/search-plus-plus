@@ -1,0 +1,40 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:03.000
+search++: search everything in VS Code from one popup
+
+00:00:03.907 --> 00:00:08.137
+Double-tap Shift to search everything (⇧ ⇧)
+
+00:00:08.137 --> 00:00:09.772
+Tab switches mode and keeps your query (Tab)
+
+00:00:09.772 --> 00:00:13.836
+Right Arrow previews while search stays open (→)
+
+00:00:13.836 --> 00:00:20.776
+Search file contents, powered by ripgrep (Tab)
+
+00:00:20.776 --> 00:00:23.868
+Find functions and classes from your language servers (Tab)
+
+00:00:23.868 --> 00:00:26.400
+List every usage without leaving the popup (⌘ Return; Ctrl+Enter on Windows and Linux)
+
+00:00:26.400 --> 00:00:30.344
+Type to filter usages, then preview one
+
+00:00:30.344 --> 00:00:33.731
+Back restores your previous search
+
+00:00:33.731 --> 00:00:37.712
+Find commands in the same popup (Tab)
+
+00:00:37.712 --> 00:00:43.570
+Jump straight to a file and line (⇧ ⇧)
+
+00:00:43.570 --> 00:00:49.082
+Choose your tabs, order and shortcuts in Settings
+
+00:00:49.082 --> 00:00:53.082
+Install free from the VS Code Marketplace: expiracy.search-plus-plus
