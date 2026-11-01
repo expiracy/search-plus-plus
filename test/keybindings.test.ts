@@ -12,15 +12,12 @@ test('Right Arrow previews only at the input end, while Cmd/Ctrl+Right stays ava
   expect(manifest.contributes.commands.some(command => command.command === 'searchPlusPlus.preview')).toBe(true);
 });
 
-test('Shift+Enter and Cmd/Ctrl+Enter show usages for symbols in Symbols and Everything', () => {
+test('Cmd/Ctrl+Enter is the only Enter binding for symbol usages', () => {
   expect(manifest.contributes.keybindings).toContainEqual({
     command: 'searchPlusPlus.findUsages', key: 'ctrl+enter', mac: 'cmd+enter',
     when: 'searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)',
   });
-  expect(manifest.contributes.keybindings).toContainEqual({
-    command: 'searchPlusPlus.findUsages', key: 'shift+enter',
-    when: 'searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)',
-  });
+  expect(manifest.contributes.keybindings.filter(binding => binding.command === 'searchPlusPlus.findUsages' && binding.key.endsWith('enter'))).toHaveLength(1);
 });
 
 test('Ctrl+Enter does not conflict with preview or path autofill', () => {

@@ -11,7 +11,7 @@ export function shortcutLabels(platform: NodeJS.Platform = process.platform, ver
     enter,
     alt: mac ? 'Option' : 'Alt',
     usages,
-    usagesHint: legacy ? usages : `${usages}, Shift+${enter} or Shift+F12`,
+    usagesHint: legacy ? usages : `${usages} or Shift+F12`,
     preview: `Right Arrow at query end or ${mac ? 'Cmd' : 'Ctrl'}+Right`,
   };
 }

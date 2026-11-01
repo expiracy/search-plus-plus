@@ -181,11 +181,6 @@
         "when": "searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)"
       },
       {
-        "command": "searchPlusPlus.findUsages",
-        "key": "shift+enter",
-        "when": "searchPlusPlusModalOpen && inQuickOpen && (searchPlusPlusSymbolTab || searchPlusPlusSymbolSelected)"
-      },
-      {
         "command": "searchPlusPlus.preview",
         "key": "ctrl+right",
         "mac": "cmd+right",

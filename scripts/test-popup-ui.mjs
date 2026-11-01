@@ -298,12 +298,6 @@ try {
   await clickSelector('.quick-input-widget .codicon-quick-input-back');
   await expectText('Symbols'); await expectFocused('Back restores typing focus');
   assert.equal((await popup()).value, 'greet');
-  if (Number(hostVersion.split('.')[1]) >= 109) {
-    await key('Enter', 'Enter', 13, 8); await expectText('Usages of greet');
-    console.log(`PASS: Shift+Enter opens usages on VS Code ${hostVersion}`);
-    await clickSelector('.quick-input-widget .codicon-quick-input-back');
-    await expectText('Symbols'); await expectFocused('Back after Shift+Enter restores typing focus');
-  }
   if (Number(hostVersion.split('.')[1]) < 109) await key('F12', 'F12', 123, 8);
   else await key('Enter', 'Enter', 13, modifier);
   await expectText('Usages of greet');
@@ -317,12 +311,10 @@ try {
   }
   assert.ok(await evaluate(`!!document.querySelector('.quick-input-widget .monaco-list-row.focused .codicon-symbol-function')`), 'a symbol is selected in Everything');
   if (Number(hostVersion.split('.')[1]) >= 109) {
-    for (const modifiers of [8, modifier]) {
-      await key('Enter', 'Enter', 13, modifiers); await expectText('Usages of greet');
-      await clickSelector('.quick-input-widget .codicon-quick-input-back');
-      await waitFor(async () => (await popup()).title?.startsWith('Everything'), 'Back to restore Everything');
-    }
-    console.log('PASS: both Enter aliases find usages from Everything symbols');
+    await key('Enter', 'Enter', 13, modifier); await expectText('Usages of greet');
+    await clickSelector('.quick-input-widget .codicon-quick-input-back');
+    await waitFor(async () => (await popup()).title?.startsWith('Everything'), 'Back to restore Everything');
+    console.log('PASS: Cmd/Ctrl+Enter finds usages from Everything symbols');
   } else {
     await click('Find Usages (Shift+F12)'); await expectText('Usages of greet');
     await clickSelector('.quick-input-widget .codicon-quick-input-back');
