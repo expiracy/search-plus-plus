@@ -16,9 +16,21 @@ interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.Quick
   sortByLabel: boolean;
 }
 
+interface ParentSearch {
+  mode: SearchMode;
+  query: string;
+  results?: SearchResult[];
+  items: readonly SearchResult[];
+  activeItems: readonly SearchResult[];
+  options: SearchOptions;
+  title?: string;
+  gotoLine?: number;
+  gotoColumn?: number;
+}
+
 /** Stable identity key for a SearchResult, used to preserve active item across qp.items replacements. */
-function getItemKey(item: SearchResult): string | undefined {
-  if (item.kind === vscode.QuickPickItemKind.Separator) return undefined;
+function getItemKey(item: SearchResult | undefined): string | undefined {
+  if (!item || item.kind === vscode.QuickPickItemKind.Separator) return undefined;
   if (item.commandId) return `cmd:${item.commandId}`;
   if (item.uri) {
     const base = `${item.mode}:${item.uri.toString()}`;
@@ -93,23 +105,20 @@ export class SearchModal implements vscode.Disposable {
   private fullResults: SearchResult[] = [];
   private activeQuickPick: vscode.QuickPick<SearchResult> | undefined;
   private symbolSelected?: boolean;
+  private lastSearch?: {
+    mode: SearchMode;
+    query: string;
+    activeItemKey?: string;
+    usageTarget?: UsageTarget;
+    usageParent?: ParentSearch;
+  };
 
   // Stored so keyboard shortcut commands can trigger re-search
   private triggerSearch: (() => void) | undefined;
 
   // Parent query and selected symbol for the nested Usages view.
   private usageTarget?: UsageTarget;
-  private usageParent?: {
-    mode: SearchMode;
-    query: string;
-    results?: SearchResult[];
-    items: readonly SearchResult[];
-    activeItems: readonly SearchResult[];
-    options: SearchOptions;
-    title?: string;
-    gotoLine?: number;
-    gotoColumn?: number;
-  };
+  private usageParent?: ParentSearch;
   private ignoredInputValue?: string;
   // file:line:col goto target from current input
   private gotoLine?: number;
@@ -133,6 +142,10 @@ export class SearchModal implements vscode.Disposable {
     this.excludeGitIgnored = getResultSetting(config, 'gitIgnoreRules', true);
     this.excludeSearchIgnored = getResultSetting(config, 'searchIgnoreRules', true);
     this.configurationListener = vscode.workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration('searchPlusPlus.rememberLastSearch')
+        && !vscode.workspace.getConfiguration('searchPlusPlus').get<boolean>('rememberLastSearch', false)) {
+        this.lastSearch = undefined;
+      }
       let filtersChanged = false;
       for (const [key, property] of [['gitIgnoreRules', 'excludeGitIgnored'], ['searchIgnoreRules', 'excludeSearchIgnored']] as const) {
         if (event.affectsConfiguration(`searchPlusPlus.${key}`) || event.affectsConfiguration(`searchPlusPlus.${property}`)) {
@@ -271,10 +284,16 @@ export class SearchModal implements vscode.Disposable {
     const savedMode = preferences.opening === 'last'
       ? this.workspaceState?.get<unknown>('searchPlusPlus.lastSearchMode') : undefined;
     const visibleTabs = preferences.tabs;
+    const previous = config.get<boolean>('rememberLastSearch', false) ? this.lastSearch : undefined;
+    const remembered = previous && visibleTabs.includes(getTabMode(previous.mode))
+      && (!initialMode || initialMode === previous.mode) ? previous : undefined;
+    let restoredItemKey = remembered?.activeItemKey;
     const savedTab = getTabMode(savedMode as SearchMode);
     const defaultTab = preferences.opening === 'last' ? visibleTabs[0] : preferences.opening;
-    this.activeTab = initialMode ?? (visibleTabs.includes(savedTab) ? savedTab
+    this.activeTab = remembered?.mode ?? initialMode ?? (visibleTabs.includes(savedTab) ? savedTab
       : visibleTabs.includes(defaultTab) ? defaultTab : visibleTabs[0]);
+    this.usageTarget = remembered?.usageTarget;
+    this.usageParent = remembered?.usageParent;
     qp.placeholder = this.placeholder();
     qp.matchOnDescription = false;
     qp.matchOnDetail = false;
@@ -366,6 +385,12 @@ export class SearchModal implements vscode.Disposable {
         showNoResults();
       } else {
         this.filterAndDisplay();
+        const restored = restoredItemKey && qp.items.find(item => getItemKey(item) === restoredItemKey);
+        if (restored) {
+          qp.activeItems = [restored];
+          restoredItemKey = undefined;
+          this.updateSymbolSelectionContext();
+        }
       }
 
       if (this.activeTab === SearchMode.Everywhere) {
@@ -420,6 +445,7 @@ export class SearchModal implements vscode.Disposable {
 
     // Main search dispatcher
     const executeSearchForCurrentTab = () => {
+      if (this.activeTab !== remembered?.mode || qp.value !== remembered.query) restoredItemKey = undefined;
       const rawValue = this.activeTab === SearchMode.Text ? qp.value : qp.value.trim();
       if (this.activeTab === SearchMode.Usages && this.usageTarget) {
         this.gotoLine = undefined;
@@ -472,6 +498,7 @@ export class SearchModal implements vscode.Disposable {
     const inputDisposable = qp.onDidChangeValue(value => {
       if (value === this.ignoredInputValue) { this.ignoredInputValue = undefined; return; }
       this.ignoredInputValue = undefined;
+      restoredItemKey = undefined;
       if (!qp.value.trim() && this.usageTarget) {
         this.clearUsageTarget();
         this.activeTab = SearchMode.Symbol;
@@ -490,6 +517,13 @@ export class SearchModal implements vscode.Disposable {
 
     // Cleanup on hide
     const hideDisposable = qp.onDidHide(() => {
+      this.lastSearch = qp.value.trim() && vscode.workspace.getConfiguration('searchPlusPlus').get<boolean>('rememberLastSearch', false)
+        ? {
+          mode: this.activeTab, query: qp.value,
+          activeItemKey: getItemKey(qp.activeItems[0] ?? qp.selectedItems[0]),
+          usageTarget: this.usageTarget, usageParent: this.usageParent,
+        }
+        : undefined;
       if (getSearchConfiguration(vscode.workspace.getConfiguration('searchPlusPlus')).opening === 'last') {
         void this.workspaceState?.update('searchPlusPlus.lastSearchMode', getTabMode(this.activeTab)).then(undefined, () => {});
       }
@@ -519,7 +553,9 @@ export class SearchModal implements vscode.Disposable {
 
     vscode.commands.executeCommand('setContext', 'searchPlusPlusModalOpen', true);
     this.updateTabContexts();
+    if (remembered) this.setInputValue(qp, remembered.query);
     qp.show();
+    if (remembered) executeSearchForCurrentTab();
   }
 
   // --- Absolute path handling ---
