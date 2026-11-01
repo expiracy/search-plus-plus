@@ -33,7 +33,8 @@
   commands share one popup. Press **Tab** to change mode without losing your query.
 - **Everything at a glance.** The Everything tab groups the best matches from each
   source, so you can find a file, a line of text, or a command from one place.
-- **Browse results without leaving the popup.** Press **Right Arrow**, or click
+- **Browse results without leaving the popup.** Press **Right Arrow** at the end
+  of your query, or click
   a result's eye button, to preview a result in a reusable editor tab. The matched
   line appears at the top, and the
   popup keeps focus.
@@ -55,7 +56,7 @@
 3. Start typing. All six mode icons stay visible; click one or press **Tab** to
    cycle between search modes.
 
-search++ requires VS Code 1.96 or a newer compatible release. See the
+search++ requires VS Code 1.109 or a newer compatible release. See the
 [changelog](CHANGELOG.md) for release notes and upgrade changes.
 
 ## Six Search Modes
@@ -127,8 +128,8 @@ references.
 
 ### Preview a Result
 
-Press **Right Arrow** on a file, text,
-symbol, or usage result to preview its file
+With the query caret at the end and no text selected, press **Right Arrow** on a
+file, text, symbol, or usage result to preview its file
 while the popup keeps focus. Text matches jump to their line and column, with the
 matched line at the top of the editor viewport where scrolling permits. Use the
 Up/Down keys to select another result and the preview shortcut to view it in the same
@@ -138,6 +139,8 @@ Press **Return** on macOS or **Enter** on Windows/Linux to open the selected res
 with its matching line at the top.
 Folders, commands, and informational rows have no file preview.
 **Cmd+Right** on macOS and **Ctrl+Right** on Windows/Linux also preview results.
+Elsewhere in the query, plain Right Arrow moves the caret normally. If text is
+selected, the first Right Arrow collapses the selection instead of previewing.
 
 Each previewable result has an **eye button**, including recent history. Hover
 over it to see the preview shortcut, or click it to preview that row.
@@ -255,7 +258,7 @@ opens the notebook. Navigation to the exact matching cell is unsupported.
 
 ## Search Coverage
 
-search++ requires VS Code 1.96 or a newer compatible release. Folder search shows
+search++ requires VS Code 1.109 or a newer compatible release. Folder search shows
 folders containing files included by the current filters; empty directories do
 not appear. Symbol and usage results depend on installed language extensions and their
 indexing state.
@@ -270,7 +273,7 @@ when ripgrep is available there. Text search in virtual workspaces is unsupporte
 |-------|-----------------|--------|---------|
 | **Shift+Shift** | **Shift+Shift** | Open search (Everything tab) | Global |
 | **Tab** | **Tab** | Next search mode | Popup open |
-| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Popup open |
+| **Right Arrow** | **Right Arrow** | Preview the selected file in one reusable tab | Query caret at the end, no selection |
 | **Cmd+Right** | **Ctrl+Right** | Preview (alternative shortcut) | Popup open |
 | **Return** | **Enter** | Open the selected result | Popup open |
 | **Cmd+Return** | **Ctrl+Enter** | Show usages of the selected symbol | Symbols or Everything |

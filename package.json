@@ -11,7 +11,7 @@
     "url": "https://github.com/expiracy/search-plus-plus"
   },
   "engines": {
-    "vscode": "^1.96.0"
+    "vscode": "^1.109.0"
   },
   "categories": [
     "Other"
@@ -189,7 +189,7 @@
       {
         "command": "searchPlusPlus.preview",
         "key": "right",
-        "when": "searchPlusPlusModalOpen && inQuickOpen"
+        "when": "searchPlusPlusModalOpen && inQuickOpen && cursorAtEndOfQuickInputBox"
       },
       {
         "command": "searchPlusPlus.openFiles",
@@ -526,7 +526,8 @@
         "properties": {
           "searchPlusPlus.resultsPerSearchType": {
             "order": 1,
-            "type": "number",
+            "type": "integer",
+            "minimum": 1,
             "default": 200,
             "markdownDescription": "Maximum results returned for each search type: Files, Folders, Text, Symbols or Commands. On Everything, each group also has its own display limit: `#searchPlusPlus.resultsPerEverythingGroup#`."
           },
@@ -718,6 +719,7 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "test": "vitest run",
     "test:host": "npm run build && node scripts/test-extension-host.mjs",
+    "test:ui": "npm run build && node scripts/test-popup-ui.mjs",
     "package": "vsce package --no-dependencies --githubBranch master --skip-license --out search-plus-plus.vsix",
     "check:release": "node scripts/check-release.mjs",
     "build:site": "node scripts/build-site.mjs",
@@ -726,7 +728,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/vscode": "^1.96.0",
+    "@types/vscode": "1.109.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "@vscode/test-electron": "3.1.0",

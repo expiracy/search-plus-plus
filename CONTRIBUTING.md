@@ -16,9 +16,18 @@ workspace into a temporary directory and checks activation, search providers,
 exclusions, real TypeScript symbol-to-reference navigation, popup commands, and
 reindexing.
 
-Set `VSCODE_VERSION=1.96.0` or `VSCODE_VERSION=stable` to download and test a specific
+Set `VSCODE_VERSION=1.109.0` or `VSCODE_VERSION=stable` to download and test a specific
 VS Code release through the official extension test runner. Linux CI runs these
 tests under `xvfb-run`.
+
+Run `npm run test:ui` for real mouse and keyboard checks in an isolated VS Code
+profile. It covers all six search modes, toolbar focus, filters, exclusions,
+preview/open navigation, semantic usages and Back, recent history, and the native
+Settings checkbox for remembering a search. It uses Chromium's local debugging
+protocol with Node.js 22's built-in WebSocket support; no browser package is
+needed. It briefly brings its test window to the foreground. The same
+`VSCODE_VERSION` and `VSCODE_EXECUTABLE_PATH` overrides select the host. Linux CI
+runs it under `xvfb-run` after the API smoke suite on both supported VS Code hosts.
 
 See the [architecture documentation](ARCHITECTURE.md) for component responsibilities,
 request flow, indexing, and backend behavior.
@@ -38,7 +47,7 @@ they are merged into `master`. The command uses `--skip-license` because this
 repository currently has no license file.
 
 Every non-master branch push and pull request runs checks on Linux, macOS, and
-Windows, plus extension-host smoke tests against VS Code 1.96.0 and current stable. Once those
+Windows, plus extension-host smoke tests against VS Code 1.109.0 and current stable. Once those
 checks pass, CI builds and retains the VSIX as the `search-plus-plus-vsix` artifact
 for 14 days.
 

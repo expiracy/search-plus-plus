@@ -1,9 +1,9 @@
-import { expect, test, vi } from 'vitest';
-vi.mock('vscode', async () => ({ ...await import('./__mocks__/vscode'), QuickInputButtonLocation: undefined }));
+import { expect, test } from 'vitest';
+import manifest from '../package.json';
+import lockfile from '../package-lock.json';
 
-test('the modal opens on hosts without the newer button location API', async () => {
-  const { SearchModal } = await import('../src/ui/searchModal');
-  const modal = new SearchModal({ state: 'ready', fileIndex: {}, textSearch: {}, gitIgnore: {}, onDidChangeState: () => ({ dispose() {} }) } as any, { getRecentItems: () => [] } as any, new Map());
-  try { expect(() => modal.show()).not.toThrow(); }
-  finally { modal.dispose(); }
+test('the manifest and lockfile enforce the verified VS Code 1.109 minimum', () => {
+  expect(manifest.engines.vscode).toBe('^1.109.0');
+  expect(lockfile.packages[''].engines.vscode).toBe(manifest.engines.vscode);
+  expect(manifest.devDependencies['@types/vscode']).toBe('1.109.0');
 });

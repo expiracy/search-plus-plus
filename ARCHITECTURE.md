@@ -68,10 +68,12 @@ File and folder searches use the same index matcher during startup and normal
 operation. They wait for the first usable snapshot when necessary. Text, symbol,
 usage, and command searches use the configured debounce delay. Usages are a
 nested view of Symbols rather than a separate top-level tab. Enter opens a
-symbol; Ctrl+Enter or Shift+F12 resolves its references. The parent search is
+symbol; Cmd+Return on macOS, Ctrl+Enter on Windows/Linux, or Shift+F12, resolves
+its references on supported hosts. The parent search is
 snapshotted before the drill-down. Back cancels references and restores the
 query, displayed results, active item, and options; programmatic input changes
-do not restart that restored search.
+do not restart that restored search. Reopening a remembered usages lookup refreshes
+references and discards its cached parent results, so Back refreshes that search too.
 The Everything tab combines providers incrementally: files and folders use the
 index, text results stream, and symbols and commands start after their debounce
 delay. Section errors appear alongside results from the other providers.
@@ -102,7 +104,8 @@ with the same User/Workspace precedence while their saved values are converted.
 
 ## Result previews
 
-Cmd+Right on macOS or Ctrl+Right on Windows/Linux previews the active resource
+Right Arrow at the end of the query with no selection, or Cmd+Right on macOS
+and Ctrl+Right on Windows/Linux, previews the active resource
 through `ResultPreview`, preserving
 QuickPick focus and the match position. The matching text editor reveals the
 selected range with `TextEditorRevealType.AtTop`, including when that range
@@ -112,8 +115,7 @@ so tab reuse works with VS Code preview editors enabled or disabled. Existing
 resource tabs are reused across editor groups; pre-existing preview tabs, edited
 documents, pinned tabs, and previews explicitly kept open are preserved.
 The same preview operation handles eye-button actions on result and history
-rows, using the clicked row rather than the active row. Plain Right Arrow keeps
-its normal text-editing behavior.
+rows, using the clicked row rather than the active row.
 
 Preview requests run serially and skip queued work superseded by a newer request.
 Closing the popup cancels queued previews. Accepting a result waits for an
@@ -194,7 +196,12 @@ replacing it filters references. Clearing the input cancels the request and
 clears the target and cached filters, returning to the symbol chooser. The
 original symbol query and reference filter have separate state so changing modes
 or choosing another symbol cannot reuse the wrong input. Closing the popup
-clears that context.
+clears that context unless Remember Last Search is enabled. Remembered queries
+and reference targets live only in the current extension session.
+
+Recent history stores each resource's complete serialized URI. Navigation,
+deduplication, removal and stale-entry checks preserve its scheme, authority and
+query. Older entries containing only a filesystem path remain readable.
 
 The usages provider calls `vscode.executeReferenceProvider`, deduplicates returned
 locations, applies exclusion rules, and reads previews from open documents. Reads
@@ -209,10 +216,10 @@ extension changes invalidate that catalog.
 
 ## Support and performance
 
-The extension targets VS Code 1.96 and newer compatible releases. Button locations
-and toggles are enabled from VS Code 1.109, when those APIs were
-[finalized](https://code.visualstudio.com/updates/v1_109#_extensions-and-api). Older
-hosts use title-bar buttons with option states in tooltips. Filesystem workspaces can be searched on a remote extension host when ripgrep is available
+The extension requires VS Code 1.109 or newer, using the stable button-location
+and toggle APIs [finalized in that release](https://code.visualstudio.com/updates/v1_109#_extensions-and-api).
+All supported hosts use native title tabs and inline filter toggles.
+Filesystem workspaces can be searched on a remote extension host when ripgrep is available
 there. Text search for virtual workspace schemes is unsupported.
 
 The path index includes ignored candidates, so large dependency trees increase
@@ -240,7 +247,7 @@ serially to keep filesystem and scalability checks from competing for resources.
 toggles, real text search, real TypeScript workspace-symbol and cross-file
 reference lookup, popup commands, preview tab counts and focus with both preview
 settings, Go to File navigation without splitting the editor, and reindexing in an isolated VS Code
-host. CI runs this smoke test on Linux against VS Code 1.96.0 and current stable,
+host. CI runs this smoke test on Linux against VS Code 1.109.0 and current stable,
 and runs the standard checks on Linux, macOS, and Windows before packaging the
 VSIX. See the [development and release procedures](README.md#development-and-validation)
 for setup, commands, and publishing requirements.

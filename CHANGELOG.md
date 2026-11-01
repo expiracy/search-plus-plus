@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+## 3.1.3 — 2026-11-01
+
+### Changed
+
+- Require **VS Code 1.109.0 or later** for consistent native popup controls and
+  shortcut behaviour across supported hosts.
+- Plain **Right Arrow** previews only when the query caret is at the end with no
+  text selected. Elsewhere it moves through the query normally. The eye button
+  and **Cmd+Right** on macOS / **Ctrl+Right** on Windows/Linux still preview.
+
+### Fixed
+
+- Clicking search tabs, filters or Back returns keyboard focus to the query, so
+  selecting or editing text cannot accidentally target the code editor.
+- Back from a remembered usages lookup refreshes the parent search instead of
+  showing symbol results cached before the popup closed.
+- Recent history preserves complete resource URIs for navigation, cleanup and
+  removal, including different authorities with the same path. Existing history
+  entries remain readable.
+- Per-source result limits are positive whole numbers; invalid saved limits use a bounded
+  fallback rather than giving providers inconsistent budgets.
+
 ## 3.1.2 — 2026-11-01
 
 ### Added

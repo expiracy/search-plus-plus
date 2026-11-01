@@ -8,8 +8,13 @@ const MAX_RECENT = 20;
 interface RecentFileEntry {
   relativePath: string;
   fsPath: string;
+  uri?: string;
   lineNumber?: number;
   column?: number;
+}
+
+function entryUri(entry: RecentFileEntry): vscode.Uri {
+  return entry.uri ? vscode.Uri.parse(entry.uri) : vscode.Uri.file(entry.fsPath);
 }
 
 export class SearchHistory {
@@ -20,11 +25,11 @@ export class SearchHistory {
   async addOpened(uri: vscode.Uri, lineNumber?: number, column?: number): Promise<void> {
     const revision = ++this.revision;
     const relativePath = vscode.workspace.asRelativePath(uri);
-    const entry: RecentFileEntry = { relativePath, fsPath: uri.fsPath, lineNumber, column };
+    const entry: RecentFileEntry = { relativePath, fsPath: uri.fsPath, uri: uri.toString(), lineNumber, column };
 
     const recent = this.getRecentEntries();
     // Remove duplicate if exists
-    const filtered = recent.filter((e) => e.fsPath !== entry.fsPath || e.lineNumber !== entry.lineNumber);
+    const filtered = recent.filter((e) => entryUri(e).toString() !== entry.uri || e.lineNumber !== entry.lineNumber);
     filtered.unshift(entry);
     const updated = filtered.slice(0, MAX_RECENT);
     await this.state.update(RECENT_FILES_KEY, updated);
@@ -33,11 +38,12 @@ export class SearchHistory {
     this.pruneStaleEntries(updated, revision).catch(() => {});
   }
 
-  async removeEntry(fsPath: string, lineNumber?: number): Promise<void> {
+  async removeEntry(resource: vscode.Uri | string, lineNumber?: number): Promise<void> {
     this.revision++;
     const recent = this.getRecentEntries();
     const filtered = recent.filter(
-      (e) => !(e.fsPath === fsPath && e.lineNumber === lineNumber),
+      (e) => !((typeof resource === 'string' ? e.fsPath === resource : entryUri(e).toString() === resource.toString())
+        && e.lineNumber === lineNumber),
     );
     await this.state.update(RECENT_FILES_KEY, filtered);
   }
@@ -46,7 +52,7 @@ export class SearchHistory {
     const valid: RecentFileEntry[] = [];
     for (const entry of entries) {
       try {
-        await vscode.workspace.fs.stat(vscode.Uri.file(entry.fsPath));
+        await vscode.workspace.fs.stat(entryUri(entry));
         valid.push(entry);
       } catch {
         // File no longer exists — skip it
@@ -61,7 +67,7 @@ export class SearchHistory {
   getRecentItems(): SearchResult[] {
     const entries = this.getRecentEntries();
     return entries.map((entry) => {
-      const uri = vscode.Uri.file(entry.fsPath);
+      const uri = entryUri(entry);
       const presentation = filePresentation(entry.relativePath, uri);
 
       return {

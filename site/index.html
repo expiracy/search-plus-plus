@@ -56,7 +56,7 @@
           </div>
         </div>
         <p class="small">
-          Version {{version}}. Works on macOS, Windows, and Linux with VS Code 1.96 or later.
+          Version {{version}}. Works on macOS, Windows, and Linux with VS Code 1.109 or later.
           <a href="https://github.com/expiracy/search-plus-plus">Source on GitHub</a>
         </p>
         <a class="zoom" href="media/demo.gif"><img class="shot demo" src="media/demo.gif" width="1200" height="808"
@@ -122,8 +122,11 @@
 
         <div class="panel" role="tabpanel" id="panel-preview" aria-labelledby="tab-preview">
           <p>
-            Press <kbd>→</kbd> on a result to show it in the editor while the popup
-            stays open. The editor scrolls to the matching line. Previews reuse one
+            Press <kbd>→</kbd> with the query caret at the end and no text selected
+            to show a result in the editor while the popup stays open. Elsewhere,
+            the arrow moves through the query. The eye button and <kbd>Cmd</kbd>+<kbd>→</kbd>
+            on Mac or <kbd>Ctrl</kbd>+<kbd>→</kbd> on Windows/Linux always preview.
+            The editor scrolls to the matching line. Previews reuse one
             editor tab. <kbd>Return</kbd> on Mac or <kbd>Enter</kbd> on Windows/Linux opens the result normally.
           </p>
           <a class="zoom" href="media/preview.png"><img class="shot" src="media/preview.png" width="1600" height="1000" loading="lazy" alt="Previewing a text match: the editor shows the matched line while the popup stays open"></a>

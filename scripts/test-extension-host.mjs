@@ -30,7 +30,7 @@ try {
     });
   } else {
     const executable = process.env.VSCODE_EXECUTABLE_PATH ?? (process.platform === 'darwin'
-      ? '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code' : 'code');
+      ? '/Applications/Visual Studio Code.app/Contents/MacOS/Code' : 'code');
     const child = spawn(executable, [
       '--new-window', '--wait', ...launchArgs,
       `--extensionDevelopmentPath=${root}`, `--extensionTestsPath=${path.join(root, 'dist/extensionHost.cjs')}`, workspace,

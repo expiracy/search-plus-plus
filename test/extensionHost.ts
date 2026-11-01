@@ -7,6 +7,7 @@ import { TextSearch, type TextMatch } from '../src/index/textSearch';
 import { FileProvider } from '../src/providers/fileProvider';
 import { UsagesProvider } from '../src/providers/usagesProvider';
 import { SearchModal } from '../src/ui/searchModal';
+import { SearchHistory } from '../src/history';
 import { ResultPreview } from '../src/ui/resultPreview';
 import { SymbolProvider } from '../src/providers/symbolProvider';
 import { FolderProvider } from '../src/providers/folderProvider';
@@ -80,6 +81,7 @@ export async function run(): Promise<void> {
     await verifyRowNavigation(root);
     await verifyWindowPreferences();
     await verifyRememberLastSearch(root);
+    await verifyHistoryResources();
     await verifyEverythingPreferences();
     const commands = await vscode.commands.getCommands();
     assert.ok(commands.includes('searchPlusPlus.open'));
@@ -258,6 +260,32 @@ async function verifyRememberLastSearch(root: vscode.Uri): Promise<void> {
     hiddenEvents.dispose();
     for (const [index, key] of settings.entries()) await config.update(key, previous[index], vscode.ConfigurationTarget.Workspace);
   }
+}
+
+async function verifyHistoryResources(): Promise<void> {
+  const changes = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+  const content = Buffer.from('virtual history resource\n');
+  const readonly = () => { throw vscode.FileSystemError.NoPermissions(); };
+  const registration = vscode.workspace.registerFileSystemProvider('searchpp-history-test', {
+    onDidChangeFile: changes.event, watch: () => ({ dispose() {} }),
+    stat: () => ({ type: vscode.FileType.File, ctime: 1, mtime: 1, size: content.length }),
+    readFile: () => content, readDirectory: () => [],
+    createDirectory: readonly, writeFile: readonly, delete: readonly, rename: readonly,
+  }, { isCaseSensitive: true, isReadonly: true });
+  let entries: unknown[] = [];
+  const history = new SearchHistory({ get: () => entries, update: async (_key: string, value: unknown[]) => { entries = value; } } as any);
+  const first = vscode.Uri.parse('searchpp-history-test://alpha/src/a%20file.ts?revision=one');
+  const second = vscode.Uri.parse('searchpp-history-test://beta/src/a%20file.ts?revision=two');
+  try {
+    await history.addOpened(first); await history.addOpened(second);
+    const recent = history.getRecentItems();
+    assert.deepEqual(recent.map(item => item.uri?.toString()), [second.toString(), first.toString()], 'history preserves schemes, authorities, escaped paths and queries');
+    const document = await vscode.workspace.openTextDocument(recent[0].uri!);
+    assert.equal(document.uri.toString(), second.toString(), 'a recent virtual resource opens through its original filesystem provider');
+    assert.equal(document.getText(), content.toString());
+    await history.removeEntry(first);
+    assert.deepEqual(history.getRecentItems().map(item => item.uri?.toString()), [second.toString()], 'removing one authority preserves a different resource with the same path');
+  } finally { registration.dispose(); changes.dispose(); }
 }
 
 async function verifyTypeScriptUsages(root: vscode.Uri, rules: GitIgnoreManager): Promise<void> {

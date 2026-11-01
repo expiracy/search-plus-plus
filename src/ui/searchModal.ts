@@ -14,6 +14,8 @@ import { shortcutLabels } from './shortcutLabels';
 /** Extends QuickPick with the proposed `sortByLabel` API (quickPickSortByLabel). */
 interface SortableQuickPick<T extends vscode.QuickPickItem> extends vscode.QuickPick<T> {
   sortByLabel: boolean;
+  /** Shared with InputBox by supported hosts, but omitted from the QuickPick typings. */
+  valueSelection?: readonly [number, number];
 }
 
 interface ParentSearch {
@@ -72,7 +74,7 @@ const goToSymbolButton: vscode.QuickInputButton = {
 
 const findUsagesButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('references'),
-  get tooltip() { return `Find Usages (${shortcutLabels().usages} or Shift+F12)`; },
+  get tooltip() { return `Find Usages (${shortcutLabels().usagesHint})`; },
 };
 
 const removeFromHistoryButton: vscode.QuickInputButton = {
@@ -87,7 +89,6 @@ export class SearchModal implements vscode.Disposable {
     iconPath: new vscode.ThemeIcon('eye'),
     get tooltip() { return `Preview (${shortcutLabels().preview})`; },
   };
-  private modernButtons: boolean;
   private readonly configurationListener: vscode.Disposable;
 
   // Search option toggles
@@ -105,6 +106,7 @@ export class SearchModal implements vscode.Disposable {
   private fullResults: SearchResult[] = [];
   private activeQuickPick: vscode.QuickPick<SearchResult> | undefined;
   private symbolSelected?: boolean;
+  private selectionToRestore?: { mode: SearchMode; query: string; key: string };
   private lastSearch?: {
     mode: SearchMode;
     query: string;
@@ -135,9 +137,6 @@ export class SearchModal implements vscode.Disposable {
     private createPicker: () => vscode.QuickPick<SearchResult> = () => vscode.window.createQuickPick<SearchResult>(),
     private workspaceState?: vscode.Memento,
   ) {
-    // Location and toggle controls became stable in VS Code 1.109.
-    const [major, minor] = (vscode.version ?? '').split('.').map(Number);
-    this.modernButtons = !!vscode.QuickInputButtonLocation && (major > 1 || (major === 1 && minor >= 109));
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     this.excludeGitIgnored = getResultSetting(config, 'gitIgnoreRules', true);
     this.excludeSearchIgnored = getResultSetting(config, 'searchIgnoreRules', true);
@@ -287,13 +286,15 @@ export class SearchModal implements vscode.Disposable {
     const previous = config.get<boolean>('rememberLastSearch', false) ? this.lastSearch : undefined;
     const remembered = previous && visibleTabs.includes(getTabMode(previous.mode))
       && (!initialMode || initialMode === previous.mode) ? previous : undefined;
-    let restoredItemKey = remembered?.activeItemKey;
+    this.selectionToRestore = remembered?.activeItemKey
+      ? { mode: remembered.mode, query: remembered.query, key: remembered.activeItemKey } : undefined;
     const savedTab = getTabMode(savedMode as SearchMode);
     const defaultTab = preferences.opening === 'last' ? visibleTabs[0] : preferences.opening;
     this.activeTab = remembered?.mode ?? initialMode ?? (visibleTabs.includes(savedTab) ? savedTab
       : visibleTabs.includes(defaultTab) ? defaultTab : visibleTabs[0]);
     this.usageTarget = remembered?.usageTarget;
-    this.usageParent = remembered?.usageParent;
+    this.usageParent = remembered?.usageParent
+      ? { ...remembered.usageParent, results: undefined, items: [] } : undefined;
     qp.placeholder = this.placeholder();
     qp.matchOnDescription = false;
     qp.matchOnDetail = false;
@@ -308,7 +309,7 @@ export class SearchModal implements vscode.Disposable {
     const buildEmptyQueryItems = (): SearchResult[] => {
       if (this.activeTab === SearchMode.Symbol) return [{
         label: '$(symbol-method) Search for a symbol',
-        description: `${shortcutLabels().enter} opens the symbol; ${shortcutLabels().usages} or Shift+F12 shows usages`,
+        description: `${shortcutLabels().enter} opens the symbol; ${shortcutLabels().usagesHint} shows usages`,
         mode: SearchMode.Symbol,
         alwaysShow: true,
       }];
@@ -385,10 +386,11 @@ export class SearchModal implements vscode.Disposable {
         showNoResults();
       } else {
         this.filterAndDisplay();
-        const restored = restoredItemKey && qp.items.find(item => getItemKey(item) === restoredItemKey);
+        const key = this.selectionToRestore?.key;
+        const restored = key && qp.items.find(item => getItemKey(item) === key);
         if (restored) {
           qp.activeItems = [restored];
-          restoredItemKey = undefined;
+          this.selectionToRestore = undefined;
           this.updateSymbolSelectionContext();
         }
       }
@@ -445,7 +447,8 @@ export class SearchModal implements vscode.Disposable {
 
     // Main search dispatcher
     const executeSearchForCurrentTab = () => {
-      if (this.activeTab !== remembered?.mode || qp.value !== remembered.query) restoredItemKey = undefined;
+      const selection = this.selectionToRestore;
+      if (selection && (this.activeTab !== selection.mode || qp.value !== selection.query)) this.selectionToRestore = undefined;
       const rawValue = this.activeTab === SearchMode.Text ? qp.value : qp.value.trim();
       if (this.activeTab === SearchMode.Usages && this.usageTarget) {
         this.gotoLine = undefined;
@@ -498,7 +501,7 @@ export class SearchModal implements vscode.Disposable {
     const inputDisposable = qp.onDidChangeValue(value => {
       if (value === this.ignoredInputValue) { this.ignoredInputValue = undefined; return; }
       this.ignoredInputValue = undefined;
-      restoredItemKey = undefined;
+      this.selectionToRestore = undefined;
       if (!qp.value.trim() && this.usageTarget) {
         this.clearUsageTarget();
         this.activeTab = SearchMode.Symbol;
@@ -536,6 +539,7 @@ export class SearchModal implements vscode.Disposable {
       vscode.commands.executeCommand('setContext', 'searchPlusPlusSymbolTab', false);
       this.searchSession.cancel();
       this.activeQuickPick = undefined;
+      this.selectionToRestore = undefined;
       this.updateSymbolSelectionContext();
       this.triggerSearch = undefined;
       this.clearUsageTarget();
@@ -656,7 +660,7 @@ export class SearchModal implements vscode.Disposable {
     const settingsBtn: vscode.QuickInputButton = {
       iconPath: new vscode.ThemeIcon('gear'),
       tooltip: 'Open search++ Settings',
-      ...(this.modernButtons ? { location: vscode.QuickInputButtonLocation.Inline } : {}),
+      location: vscode.QuickInputButtonLocation.Inline,
     };
 
     // Tab buttons (title bar)
@@ -669,17 +673,17 @@ export class SearchModal implements vscode.Disposable {
 
     // Option toggle buttons (inline)
     const gitIgnoreBtn = this.toggle('source-control', `Exclude Git Ignored (${this.altKey}+G)`, this.excludeGitIgnored,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const searchIgnoreBtn = this.toggle('eye-closed', `Exclude Search Ignored (${this.altKey}+S)`, this.excludeSearchIgnored,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const caseSensitiveBtn = this.toggle('case-sensitive', `Case Sensitive (${this.altKey}+C)`, this.caseSensitive,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const regexBtn = this.toggle('regex', `Regex (${this.altKey}+R)`, this.useRegex,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const wholeWordBtn = this.toggle('whole-word', `Match Whole Word (${this.altKey}+W)`, this.matchWholeWord,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const fuzzyBtn = this.toggle('sparkle', `Fuzzy Search (${this.altKey}+F)`, this.fuzzySearch,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
 
     const tabButtons: Record<SearchMode, vscode.QuickInputButton> = {
       [SearchMode.Everywhere]: everywhereBtn, [SearchMode.File]: fileBtn,
@@ -722,13 +726,14 @@ export class SearchModal implements vscode.Disposable {
     return {
       iconPath: new vscode.ThemeIcon(icon),
       tooltip,
-      ...(this.modernButtons ? { location: vscode.QuickInputButtonLocation.Title, toggle: { checked: getTabMode(this.activeTab) === mode } } : {}),
+      location: vscode.QuickInputButtonLocation.Title,
+      toggle: { checked: getTabMode(this.activeTab) === mode },
     };
   }
 
-  private toggle(icon: string, tooltip: string, checked: boolean, location?: vscode.QuickInputButtonLocation): vscode.QuickInputButton {
-    return { iconPath: new vscode.ThemeIcon(icon), tooltip: this.modernButtons ? tooltip : `${tooltip}: ${checked ? 'on' : 'off'}`,
-      ...(this.modernButtons ? { location, toggle: { checked } } : {}),
+  private toggle(icon: string, tooltip: string, checked: boolean, location: vscode.QuickInputButtonLocation): vscode.QuickInputButton {
+    return { iconPath: new vscode.ThemeIcon(icon), tooltip,
+      location, toggle: { checked },
     };
   }
 
@@ -880,7 +885,7 @@ export class SearchModal implements vscode.Disposable {
       if (e.button === this.previewButton) { void this.previewSelectedResult(item); return; }
 
       if (e.button === removeFromHistoryButton) {
-        this.history.removeEntry(uri.fsPath, item.lineNumber);
+        this.history.removeEntry(uri, item.lineNumber);
         qp.items = buildEmptyQueryItems();
         return;
       }
@@ -918,6 +923,11 @@ export class SearchModal implements vscode.Disposable {
         this.rebuildButtons(qp);
         executeSearchForCurrentTab();
       }
+      if (this.activeQuickPick === qp) {
+        const input = qp as SortableQuickPick<SearchResult>;
+        if ('valueSelection' in input) input.valueSelection = [qp.value.length, qp.value.length];
+        else void vscode.commands.executeCommand('workbench.action.focusQuickOpen');
+      }
     });
   }
 
@@ -949,6 +959,7 @@ export class SearchModal implements vscode.Disposable {
     this.searchSession.cancel();
     this.preview.cancel();
     this.clearUsageTarget();
+    this.selectionToRestore = undefined;
     this.activeTab = parent.mode;
     this.excludeGitIgnored = parent.options.excludeGitIgnored;
     this.excludeSearchIgnored = parent.options.excludeSearchIgnored;
@@ -967,7 +978,11 @@ export class SearchModal implements vscode.Disposable {
     qp.placeholder = this.placeholder();
     this.rebuildButtons(qp);
     this.updateTabContexts();
-    if (!parent.results) this.triggerSearch?.();
+    if (!parent.results) {
+      const key = getItemKey(parent.activeItems[0]);
+      if (key) this.selectionToRestore = { mode: parent.mode, query: parent.query, key };
+      this.triggerSearch?.();
+    }
   }
 
   private tabTitle(): string {
