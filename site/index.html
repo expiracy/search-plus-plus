@@ -6,7 +6,7 @@
   <title>search++ for VS Code</title>
   <meta name="description" content="Search Everywhere for VS Code. Press Shift twice to search files, folders, text, symbols, usages, and commands from one popup.">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#0d1117">
+  <meta name="theme-color" content="#080c16">
   <meta property="og:type" content="website">
   <meta property="og:title" content="search++ for VS Code">
   <meta property="og:description" content="Search everything in VS Code from one popup. Press Shift twice.">
@@ -17,36 +17,42 @@
   <link rel="apple-touch-icon" href="media/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Show Windows/Linux key names on non-Apple platforms before the page paints.
+    if (!/Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '')) {
+      document.documentElement.dataset.os = 'win';
+    }
+  </script>
 </head>
 <body>
   <header class="top">
     <div class="wrap top-inner">
       <a class="brand" href="./">
-        <img src="media/logo.svg" alt="" width="26" height="26">
+        <img src="media/logo.svg" alt="" width="28" height="28">
         search++
       </a>
-      <nav aria-label="Project links">
+      <nav aria-label="Site">
+        <a class="hide-sm" href="#modes">Modes</a>
+        <a class="hide-sm" href="#features">Features</a>
+        <a class="hide-sm" href="#shortcuts">Shortcuts</a>
         <a href="https://github.com/expiracy/search-plus-plus">GitHub</a>
-        <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Marketplace</a>
-        <a href="https://ko-fi.com/expiracy">Ko-fi</a>
+        <a class="button button-sm" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Install</a>
       </nav>
     </div>
   </header>
 
   <main>
     <section class="hero">
-      <div class="wrap">
-        <h1>Search everything in VS&nbsp;Code from one popup.</h1>
+      <div class="glow" aria-hidden="true"></div>
+      <div class="wrap center">
+        <p class="eyebrow"><span class="dot"></span> Version {{version}} · Free for VS Code</p>
+        <h1>Search <span class="grad">everything</span> in VS&nbsp;Code.</h1>
         <p class="lede">
-          Miss <em>Search Everywhere</em> from IntelliJ, WebStorm, or PyCharm?
-          search++ brings it to VS Code. Press <kbd>Shift</kbd> <kbd>Shift</kbd>
-          and type to find files, folders, text, symbols, usages, and commands.
-        </p>
-        <p class="stats" hidden>
-          <a class="rating" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus&amp;ssr=false#review-details"></a>
-          <span class="installs"></span>
+          Press <kbd>Shift</kbd> <kbd>Shift</kbd> to find files, folders, text, symbols,
+          usages, and commands from one popup, like <em>Search Everywhere</em> in
+          JetBrains IDEs.
         </p>
         <div class="install">
           <a class="button" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Install from the Marketplace</a>
@@ -55,19 +61,41 @@
             <button type="button" class="copy-button" aria-label="Copy install command">Copy</button>
           </div>
         </div>
-        <p class="small">
-          Version {{version}}. Works on macOS, Windows, and Linux with VS Code 1.109 or later.
-          <a href="https://github.com/expiracy/search-plus-plus">Source on GitHub</a>
-        </p>
-        <a class="zoom" href="media/demo.gif"><img class="shot demo" src="media/demo.gif" width="1200" height="808"
-             alt="search++ demo: searching everything, files with a line number, text with previews, symbols, usages, and commands"></a>
+        <div class="meta">
+          <p class="stats" hidden>
+            <a class="rating" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus&amp;ssr=false#review-details"></a>
+            <span class="installs"></span>
+          </p>
+          <p class="small">macOS, Windows, Linux · VS Code 1.109+</p>
+          <a class="watch" href="#walkthrough">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>
+            Full walkthrough
+          </a>
+          <a class="kofi" href="https://ko-fi.com/expiracy">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3.5 7h13v6a5 5 0 0 1-5 5h-3a5 5 0 0 1-5-5z" fill="#fff"/>
+              <path d="M16.5 9h1.5a2.5 2.5 0 0 1 0 5h-1.5" fill="none" stroke="#fff" stroke-width="2"/>
+              <path d="M10 15l-2.4-2.3a1.45 1.45 0 0 1 2.1-2l.3.3.3-.3a1.45 1.45 0 0 1 2.1 2z" fill="#ff5e5b"/>
+            </svg>
+            Support on Ko-fi
+          </a>
+        </div>
+
+        <figure class="frame hero-video">
+          <video class="advert" autoplay muted loop playsinline preload="auto" poster="media/advert-poster.jpg" width="1920" height="1080"
+                 aria-label="search++ in action: search everything, preview a result, find every usage, and jump to a file and line">
+            <source src="media/advert.mp4" type="video/mp4">
+          </video>
+        </figure>
       </div>
     </section>
 
-    <section class="modes">
+    <section id="modes" class="modes">
       <div class="wrap">
-        <h2>Search modes</h2>
-        <p class="intro">Click a mode or press <kbd>Tab</kbd> to switch. Your query stays in the search box.</p>
+        <div class="head center">
+          <h2>Six search modes</h2>
+          <p>Click a mode or press <kbd>Tab</kbd> to switch. Your query stays in the search box.</p>
+        </div>
         <div class="tabs" role="tablist" aria-label="Search modes">
           <button role="tab" id="tab-everything" aria-controls="panel-everything" aria-selected="true">Everything</button>
           <button role="tab" id="tab-files" aria-controls="panel-files" aria-selected="false" tabindex="-1">Files</button>
@@ -78,119 +106,144 @@
           <button role="tab" id="tab-commands" aria-controls="panel-commands" aria-selected="false" tabindex="-1">Commands</button>
         </div>
 
-        <div class="panel" role="tabpanel" id="panel-everything" aria-labelledby="tab-everything">
-          <p>Files, folders, text, symbols, and commands, shown in grouped sections.</p>
-          <a class="zoom" href="media/everywhere.png"><img class="shot" src="media/everywhere.png" width="1445" height="818" alt="Everything tab showing grouped file, text, and symbol results for 'preview'"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-files" aria-labelledby="tab-files" hidden>
-          <p>File names and paths across your workspace. Add <code>:42</code> or <code>:42:5</code> to open a file at a line and column.</p>
-          <a class="zoom" href="media/files.png"><img class="shot" src="media/files.png" width="1445" height="280" loading="lazy" alt="Files tab matching searchModal.ts for the query 'modal'"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-folders" aria-labelledby="tab-folders" hidden>
-          <p>Folders in your workspace. Pick one to reveal it in the Explorer.</p>
-          <a class="zoom" href="media/folders.png"><img class="shot" src="media/folders.png" width="1445" height="698" loading="lazy" alt="Folders tab listing matching workspace folders"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-text" aria-labelledby="tab-text" hidden>
-          <p>Text across every file, with the matching line shown under each result. Supports regex, case, and whole-word matching.</p>
-          <a class="zoom" href="media/text.png"><img class="shot" src="media/text.png" width="1445" height="818" loading="lazy" alt="Text tab showing matches with line previews"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-symbols" aria-labelledby="tab-symbols" hidden>
-          <p>Classes, functions, and variables from your installed language extensions. Show usages with <kbd>Cmd</kbd>+<kbd>Return</kbd> on Mac or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> on Windows/Linux. <kbd>Shift</kbd>+<kbd>F12</kbd> also works inside the popup.</p>
-          <a class="zoom" href="media/symbols.png"><img class="shot" src="media/symbols.png" width="1445" height="818" loading="lazy" alt="Symbols tab listing classes, methods, and variables"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-usages" aria-labelledby="tab-usages" hidden>
-          <p>Select a symbol to list its references. Type over the name to filter by text or file.</p>
-          <a class="zoom" href="media/usages.png"><img class="shot" src="media/usages.png" width="1445" height="818" loading="lazy" alt="Usages tab listing references to a selected symbol"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-commands" aria-labelledby="tab-commands" hidden>
-          <p>All VS Code commands, built in and from extensions.</p>
-          <a class="zoom" href="media/commands.png"><img class="shot" src="media/commands.png" width="1445" height="818" loading="lazy" alt="Commands tab listing VS Code commands"></a>
+        <div class="scrolly">
+          <div class="steps">
+            <div class="panel step is-active" role="tabpanel" id="panel-everything" aria-labelledby="tab-everything">
+              <h3>Everything</h3>
+              <p>The best matching files, folders, text, symbols, and commands, grouped in one list.</p>
+              <a class="frame zoom step-media" href="media/everywhere.png"><img src="media/everywhere.png" width="1360" height="972" alt="Everything tab for 'checkout' grouping files, a folder, text matches, and symbols"></a>
+            </div>
+            <div class="panel step" role="tabpanel" id="panel-files" aria-labelledby="tab-files" hidden>
+              <h3>Files</h3>
+              <p>File names and paths across your workspace, from an in-memory index with fzf matching.</p>
+              <a class="frame zoom step-media" href="media/files.png"><img src="media/files.png" width="1360" height="478" loading="lazy" alt="Files tab for 'checkout' listing matching files with their folders"></a>
+            </div>
+            <div class="panel step" role="tabpanel" id="panel-folders" aria-labelledby="tab-folders" hidden>
+              <h3>Folders</h3>
+              <p>Folders with searchable files. Open one to reveal it in the Explorer.</p>
+              <a class="frame zoom step-media" href="media/folders.png"><img src="media/folders.png" width="1360" height="528" loading="lazy" alt="Folders tab listing matching workspace folders"></a>
+            </div>
+            <div class="panel step" role="tabpanel" id="panel-text" aria-labelledby="tab-text" hidden>
+              <h3>Text</h3>
+              <p>File contents, including notebook cells, streamed from ripgrep with the matching line under each result.</p>
+              <a class="frame zoom step-media" href="media/text.png"><img src="media/text.png" width="1360" height="1085" loading="lazy" alt="Text tab for 'calculateTotal(' showing matches with line previews"></a>
+            </div>
+            <div class="panel step" role="tabpanel" id="panel-symbols" aria-labelledby="tab-symbols" hidden>
+              <h3>Symbols</h3>
+              <p>Classes, functions, and variables from your language extensions.</p>
+              <a class="frame zoom step-media" href="media/symbols.png"><img src="media/symbols.png" width="1360" height="379" loading="lazy" alt="Symbols tab for 'check' listing a class, a variable, and functions"></a>
+            </div>
+            <div class="panel step" role="tabpanel" id="panel-usages" aria-labelledby="tab-usages" hidden>
+              <h3>Usages</h3>
+              <p>Every reference to the selected symbol. Press <kbd><span class="mac">Cmd+Return</span><span class="win">Ctrl+Enter</span></kbd> on a symbol to get here.</p>
+              <a class="frame zoom step-media" href="media/usages.png"><img src="media/usages.png" width="1360" height="923" loading="lazy" alt="Usages of calculateTotal listing references across source and test files"></a>
+            </div>
+            <div class="panel step" role="tabpanel" id="panel-commands" aria-labelledby="tab-commands" hidden>
+              <h3>Commands</h3>
+              <p>Every VS Code command, built in and from your extensions.</p>
+              <a class="frame zoom step-media" href="media/commands.png"><img src="media/commands.png" width="1360" height="1072" loading="lazy" alt="Commands tab for 'search++' listing the extension's commands"></a>
+            </div>
+          </div>
+          <!-- Wide screens: one pinned frame that swaps screenshots as each mode scrolls past. -->
+          <div class="stage" aria-hidden="true">
+            <div class="frame stage-frame">
+              <img class="is-active" src="media/everywhere.png" width="1360" height="972" loading="lazy" alt="">
+              <img src="media/files.png" width="1360" height="478" loading="lazy" alt="">
+              <img src="media/folders.png" width="1360" height="528" loading="lazy" alt="">
+              <img src="media/text.png" width="1360" height="1085" loading="lazy" alt="">
+              <img src="media/symbols.png" width="1360" height="379" loading="lazy" alt="">
+              <img src="media/usages.png" width="1360" height="923" loading="lazy" alt="">
+              <img src="media/commands.png" width="1360" height="1072" loading="lazy" alt="">
+            </div>
+            <div class="stage-dots"><span class="is-active"></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="more">
+    <section id="features" class="details">
       <div class="wrap">
-        <h2>Key features</h2>
-        <div class="tabs" role="tablist" aria-label="Key features">
-          <button role="tab" id="tab-preview" aria-controls="panel-preview" aria-selected="true">Preview results</button>
-          <button role="tab" id="tab-find-usages" aria-controls="panel-find-usages" aria-selected="false" tabindex="-1">Find usages</button>
-          <button role="tab" id="tab-go-to-line" aria-controls="panel-go-to-line" aria-selected="false" tabindex="-1">Go to line</button>
-          <button role="tab" id="tab-fuzzy" aria-controls="panel-fuzzy" aria-selected="false" tabindex="-1">Fuzzy search</button>
-          <button role="tab" id="tab-ignored" aria-controls="panel-ignored" aria-selected="false" tabindex="-1">Ignored files</button>
+        <div class="head center">
+          <h2>More features</h2>
         </div>
-
-        <div class="panel" role="tabpanel" id="panel-preview" aria-labelledby="tab-preview">
-          <p>
-            Press <kbd>→</kbd> with the query caret at the end and no text selected
-            to show a result in the editor while the popup stays open. Elsewhere,
-            the arrow moves through the query. The eye button and <kbd>Cmd</kbd>+<kbd>→</kbd>
-            on Mac or <kbd>Ctrl</kbd>+<kbd>→</kbd> on Windows/Linux always preview.
-            The editor scrolls to the matching line. Previews reuse one
-            editor tab. <kbd>Return</kbd> on Mac or <kbd>Enter</kbd> on Windows/Linux opens the result normally.
-          </p>
-          <a class="zoom" href="media/preview.png"><img class="shot" src="media/preview.png" width="1600" height="1000" loading="lazy" alt="Previewing a text match: the editor shows the matched line while the popup stays open"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-find-usages" aria-labelledby="tab-find-usages" hidden>
-          <p>
-            References come from VS Code's language providers, so they are semantic
-            references rather than text matches. Type over the symbol name to filter
-            the list by text or file name.
-          </p>
-          <a class="zoom" href="media/usages-filter.png"><img class="shot" src="media/usages-filter.png" width="1445" height="818" loading="lazy" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-go-to-line" aria-labelledby="tab-go-to-line" hidden>
-          <p>
-            Add <code>:line</code> or <code>:line:column</code> after a file name to
-            open the file at that position. Absolute paths to files outside the
-            workspace also work.
-          </p>
-          <a class="zoom" href="media/go-to-line.png"><img class="shot" src="media/go-to-line.png" width="1600" height="1000" loading="lazy" alt="Typing modal:222 in Files mode and previewing line 222 of searchModal.ts"></a>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-fuzzy" aria-labelledby="tab-fuzzy" hidden>
-          <p>
-            Press <kbd>Alt</kbd>+<kbd>F</kbd> (<kbd>⌥</kbd>+<kbd>F</kbd> on Mac) or click
-            the sparkle button to turn on fuzzy matching for files, folders, symbols,
-            usages, and commands. A result matches when the letters you type appear in
-            its name or path in order, so a few characters are enough to find a long
-            path. Case-sensitive and whole-word toggles sit next to it, plus regex for
-            text search.
-          </p>
-        </div>
-        <div class="panel" role="tabpanel" id="panel-ignored" aria-labelledby="tab-ignored" hidden>
-          <p>
-            Files matched by <code>.gitignore</code> are excluded by default, and a
-            <code>.searchignore</code> file can exclude more. File search uses an
-            in-memory index with <a href="https://github.com/junegunn/fzf">fzf</a>
-            matching. Text search uses <a href="https://github.com/BurntSushi/ripgrep">ripgrep</a>.
-          </p>
-        </div>
+        <dl class="list">
+          <div><dt>Preview</dt><dd>Press <kbd>→</kbd> at the end of your query, or click a row's eye button, to show a result in the editor while the popup keeps focus.</dd></div>
+          <div><dt>Find usages</dt><dd>Press <kbd><span class="mac">Cmd+Return</span><span class="win">Ctrl+Enter</span></kbd> on a symbol to list its references. Type to filter them; Back returns to your search.</dd></div>
+          <div><dt>Go to line</dt><dd>Type <code>file.ts:14</code> or <code>file.ts:14:5</code> to open a file at a line and column. Full paths work outside the workspace.</dd></div>
+          <div><dt>Recent history</dt><dd>An empty search lists your last 20 files and locations. Turn on <code>rememberLastSearch</code> to reopen with your last query instead.</dd></div>
+          <div><dt>Search options</dt><dd>Case sensitive, regex, whole word, and fuzzy matching, each on a toggle and a shortcut.</dd></div>
+          <div><dt>Ignore files</dt><dd><code>.gitignore</code>, <code>.searchignore</code>, and excluded globs keep generated and vendored files out.</dd></div>
+          <div><dt>Your layout</dt><dd>Reorder or hide tabs, pick the starting tab, and add VS Code or IntelliJ style shortcuts.</dd></div>
+          <div><dt>Fast on big repos</dt><dd>Files come from an in-memory index; text streams from ripgrep as you type.</dd></div>
+          <div><dt>Remote workspaces</dt><dd>Text search runs on the remote extension host when ripgrep is available there.</dd></div>
+        </dl>
       </div>
     </section>
 
-    <section class="end">
-      <div class="wrap"><div class="narrow">
-        <h2>Documentation and feedback</h2>
-        <p>
-          The <a href="https://github.com/expiracy/search-plus-plus#readme">README on GitHub</a>
-          lists every shortcut, command, and setting.
+    <section id="shortcuts" class="shortcuts">
+      <div class="wrap">
+        <div class="head center">
+          <h2>Keyboard shortcuts</h2>
+          <div class="os-switch" role="group" aria-label="Keyboard layout">
+            <button type="button" data-os="mac">macOS</button>
+            <button type="button" data-os="win">Windows / Linux</button>
+          </div>
+        </div>
+        <dl class="keys">
+          <div><dt><kbd>Shift</kbd> <kbd>Shift</kbd></dt><dd>Open search</dd></div>
+          <div><dt><kbd>Tab</kbd></dt><dd>Next mode</dd></div>
+          <div><dt><kbd class="mac">Return</kbd><kbd class="win">Enter</kbd></dt><dd>Open at the matched line</dd></div>
+          <div><dt><kbd>→</kbd> <span class="or">or</span> <kbd class="mac">Cmd</kbd><kbd class="win">Ctrl</kbd> <kbd>→</kbd></dt><dd>Preview</dd></div>
+          <div><dt><kbd class="mac">Cmd</kbd><kbd class="win">Ctrl</kbd> <kbd class="mac">Return</kbd><kbd class="win">Enter</kbd></dt><dd>Find usages</dd></div>
+          <div><dt><kbd>Shift</kbd> <kbd>F12</kbd></dt><dd>Find usages</dd></div>
+          <div><dt><kbd class="mac">Option</kbd><kbd class="win">Alt</kbd> <kbd>C</kbd> <kbd>R</kbd> <kbd>W</kbd> <kbd>F</kbd></dt><dd>Case, regex, word, fuzzy</dd></div>
+          <div><dt><kbd class="mac">Option</kbd><kbd class="win">Alt</kbd> <kbd>G</kbd> <kbd>S</kbd></dt><dd>Ignore rules</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section id="walkthrough" class="walkthrough">
+      <div class="wrap">
+        <div class="head center">
+          <h2>Walkthrough</h2>
+          <p>53 seconds, with captions.</p>
+        </div>
+        <figure class="frame">
+          <video controls muted playsinline preload="none" poster="media/demo-poster.png" width="1600" height="1080"
+                 aria-label="search++ walkthrough: search everything, preview results, find text, symbols and usages, jump to a line, and open settings">
+            <source src="media/demo.mp4" type="video/mp4">
+            <track src="media/demo.vtt" kind="captions" srclang="en" label="English">
+            <a href="media/demo.gif">Watch the search++ walkthrough</a>
+          </video>
+        </figure>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="wrap center">
+        <img src="media/logo.svg" alt="" width="72" height="72">
+        <h2>Install search++</h2>
+        <p class="lede">Free on the VS Code Marketplace. The source is on GitHub.</p>
+        <div class="install">
+          <a class="button" href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Install from the Marketplace</a>
+          <a class="button ghost" href="https://github.com/expiracy/search-plus-plus#readme">Read the README</a>
+        </div>
+        <p class="small">
+          Report bugs and request features in <a href="https://github.com/expiracy/search-plus-plus/issues">GitHub issues</a>.
+          You can support development on <a href="https://ko-fi.com/expiracy">Ko-fi</a>.
         </p>
-        <p>
-          Report bugs and request features in
-          <a href="https://github.com/expiracy/search-plus-plus/issues">GitHub issues</a>.
-          Pull requests are welcome.
-        </p>
-        <p>
-          If search++ saves you time, you can support its development on
-          <a href="https://ko-fi.com/expiracy">Ko-fi</a>.
-        </p>
-      </div></div>
+      </div>
     </section>
   </main>
 
   <footer class="wrap foot">
     <span>search++ {{version}}</span>
-    <a href="https://github.com/expiracy/search-plus-plus/blob/master/CHANGELOG.md">Changelog</a>
+    <nav aria-label="Footer">
+      <a href="https://github.com/expiracy/search-plus-plus/blob/master/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/expiracy/search-plus-plus">GitHub</a>
+      <a href="https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus">Marketplace</a>
+    </nav>
   </footer>
 
   <script>
@@ -202,11 +255,67 @@
         copy.textContent = 'Copied';
       } catch {
         getSelection().selectAllChildren(command);
-        const modifier = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') ? 'Cmd' : 'Ctrl';
-        copy.textContent = `Press ${modifier}+C`;
+        copy.textContent = document.documentElement.dataset.os === 'win' ? 'Press Ctrl+C' : 'Press Cmd+C';
       }
       setTimeout(() => { copy.textContent = 'Copy'; }, 1600);
     });
+
+    // Keyboard layout switch; the initial value comes from the platform check in <head>.
+    const osButtons = document.querySelectorAll('.os-switch button');
+    const showOs = (os) => {
+      document.documentElement.dataset.os = os;
+      for (const b of osButtons) b.setAttribute('aria-pressed', String(b.dataset.os === os));
+    };
+    for (const b of osButtons) b.addEventListener('click', () => showOs(b.dataset.os));
+    showOs(document.documentElement.dataset.os ?? 'mac');
+
+    // Pin the mode screenshot on wide screens and swap it as each mode reaches the middle of the viewport.
+    const scrolly = document.querySelector('.scrolly');
+    const stepList = scrolly.querySelector('.steps');
+    const steps = [...scrolly.querySelectorAll('.step')];
+    const stage = scrolly.querySelector('.stage');
+    const stageFrame = stage.querySelector('.stage-frame');
+    const stageImages = [...stageFrame.querySelectorAll('img')];
+    const stageDots = stage.querySelectorAll('.stage-dots span');
+    const header = 64;
+    let active = 0;
+    // Height the frame takes for a screenshot, from its width/height attributes and the frame's padding.
+    const frameHeight = (img) => (stageFrame.clientWidth - 12) * img.getAttribute('height') / img.getAttribute('width') + 12;
+    const layoutStage = () => {
+      if (getComputedStyle(stage).display === 'none') return;
+      const stepHeight = steps[0].offsetHeight;
+      const first = frameHeight(stageImages[0]);
+      const last = frameHeight(stageImages.at(-1));
+      // Centre the first and last text on the screenshot beside them, and the pinned frame in the viewport.
+      scrolly.style.setProperty('--steps-pad-top', `${Math.max(0, (first - stepHeight) / 2)}px`);
+      // The stage ends with the dots, so the last frame sits that much higher than the stage's bottom.
+      const dots = stage.offsetHeight - stageFrame.offsetHeight;
+      scrolly.style.setProperty('--steps-pad-bottom', `${Math.max(0, (last + 2 * dots - stepHeight) / 2)}px`);
+      scrolly.style.setProperty('--stage-offset', `${Math.max(0, (stepHeight - first) / 2)}px`);
+      scrolly.style.setProperty('--stage-top', `${Math.max(header + 16, (innerHeight + header - frameHeight(stageImages[active])) / 2)}px`);
+    };
+    const showStep = (index) => {
+      active = index;
+      steps.forEach((step, i) => step.classList.toggle('is-active', i === index));
+      stageImages.forEach((img, i) => img.classList.toggle('is-active', i === index));
+      stageDots.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
+      layoutStage();
+    };
+    // A thin band through the centre of the area below the header decides the active mode.
+    const stepObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) if (entry.isIntersecting) showStep(steps.indexOf(entry.target));
+    }, { rootMargin: '-53% 0px -46% 0px' });
+    for (const step of steps) stepObserver.observe(step);
+    addEventListener('resize', layoutStage);
+    layoutStage();
+
+    // Respect reduced motion: no autoplaying advert, but keep it playable.
+    const advert = document.querySelector('.advert');
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      advert.pause();
+      advert.removeAttribute('autoplay');
+      advert.controls = true;
+    }
 
     // Live install count and rating from the Marketplace. The line stays hidden if the request fails.
     (async () => {
