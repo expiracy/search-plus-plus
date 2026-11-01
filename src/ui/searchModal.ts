@@ -89,7 +89,6 @@ export class SearchModal implements vscode.Disposable {
     iconPath: new vscode.ThemeIcon('eye'),
     get tooltip() { return `Preview (${shortcutLabels().preview})`; },
   };
-  private modernButtons: boolean;
   private readonly configurationListener: vscode.Disposable;
 
   // Search option toggles
@@ -138,9 +137,6 @@ export class SearchModal implements vscode.Disposable {
     private createPicker: () => vscode.QuickPick<SearchResult> = () => vscode.window.createQuickPick<SearchResult>(),
     private workspaceState?: vscode.Memento,
   ) {
-    // Location and toggle controls became stable in VS Code 1.109.
-    const [major, minor] = (vscode.version ?? '').split('.').map(Number);
-    this.modernButtons = !!vscode.QuickInputButtonLocation && (major > 1 || (major === 1 && minor >= 109));
     const config = vscode.workspace.getConfiguration('searchPlusPlus');
     this.excludeGitIgnored = getResultSetting(config, 'gitIgnoreRules', true);
     this.excludeSearchIgnored = getResultSetting(config, 'searchIgnoreRules', true);
@@ -664,7 +660,7 @@ export class SearchModal implements vscode.Disposable {
     const settingsBtn: vscode.QuickInputButton = {
       iconPath: new vscode.ThemeIcon('gear'),
       tooltip: 'Open search++ Settings',
-      ...(this.modernButtons ? { location: vscode.QuickInputButtonLocation.Inline } : {}),
+      location: vscode.QuickInputButtonLocation.Inline,
     };
 
     // Tab buttons (title bar)
@@ -677,17 +673,17 @@ export class SearchModal implements vscode.Disposable {
 
     // Option toggle buttons (inline)
     const gitIgnoreBtn = this.toggle('source-control', `Exclude Git Ignored (${this.altKey}+G)`, this.excludeGitIgnored,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const searchIgnoreBtn = this.toggle('eye-closed', `Exclude Search Ignored (${this.altKey}+S)`, this.excludeSearchIgnored,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const caseSensitiveBtn = this.toggle('case-sensitive', `Case Sensitive (${this.altKey}+C)`, this.caseSensitive,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const regexBtn = this.toggle('regex', `Regex (${this.altKey}+R)`, this.useRegex,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const wholeWordBtn = this.toggle('whole-word', `Match Whole Word (${this.altKey}+W)`, this.matchWholeWord,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
     const fuzzyBtn = this.toggle('sparkle', `Fuzzy Search (${this.altKey}+F)`, this.fuzzySearch,
-      vscode.QuickInputButtonLocation?.Inline);
+      vscode.QuickInputButtonLocation.Inline);
 
     const tabButtons: Record<SearchMode, vscode.QuickInputButton> = {
       [SearchMode.Everywhere]: everywhereBtn, [SearchMode.File]: fileBtn,
@@ -730,13 +726,14 @@ export class SearchModal implements vscode.Disposable {
     return {
       iconPath: new vscode.ThemeIcon(icon),
       tooltip,
-      ...(this.modernButtons ? { location: vscode.QuickInputButtonLocation.Title, toggle: { checked: getTabMode(this.activeTab) === mode } } : {}),
+      location: vscode.QuickInputButtonLocation.Title,
+      toggle: { checked: getTabMode(this.activeTab) === mode },
     };
   }
 
-  private toggle(icon: string, tooltip: string, checked: boolean, location?: vscode.QuickInputButtonLocation): vscode.QuickInputButton {
-    return { iconPath: new vscode.ThemeIcon(icon), tooltip: this.modernButtons ? tooltip : `${tooltip}: ${checked ? 'on' : 'off'}`,
-      ...(this.modernButtons ? { location, toggle: { checked } } : {}),
+  private toggle(icon: string, tooltip: string, checked: boolean, location: vscode.QuickInputButtonLocation): vscode.QuickInputButton {
+    return { iconPath: new vscode.ThemeIcon(icon), tooltip,
+      location, toggle: { checked },
     };
   }
 

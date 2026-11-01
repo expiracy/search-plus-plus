@@ -157,7 +157,7 @@ async function launch() {
   const extensions = path.join(temporary, 'extensions');
   const helper = path.join(extensions, 'local.popup-test-0.0.1');
   await mkdir(helper, { recursive: true });
-  await writeFile(path.join(helper, 'package.json'), JSON.stringify({ name: 'popup-test', publisher: 'local', version: '0.0.1', engines: { vscode: '^1.96.0' }, main: 'extension.js', activationEvents: ['onStartupFinished'],
+  await writeFile(path.join(helper, 'package.json'), JSON.stringify({ name: 'popup-test', publisher: 'local', version: '0.0.1', engines: { vscode: '^1.109.0' }, main: 'extension.js', activationEvents: ['onStartupFinished'],
     contributes: { commands: [{ command: 'searchppAudit.confirmCommand', title: 'UI Audit Command' }] },
   }));
   await writeFile(path.join(helper, 'extension.js'), `const vscode = require('vscode'); const fs = require('fs');
@@ -303,8 +303,7 @@ try {
   await clickSelector('.quick-input-widget .codicon-quick-input-back');
   await expectText('Symbols'); await expectFocused('Back restores typing focus');
   assert.equal((await popup()).value, 'greet');
-  if (Number(hostVersion.split('.')[1]) < 109) await key('F12', 'F12', 123, 8);
-  else await key('Enter', 'Enter', 13, modifier);
+  await key('Enter', 'Enter', 13, modifier);
   await expectText('Usages of greet');
   await replaceQuery(''); await expectText('Search for a symbol');
   console.log('PASS: folders, real TypeScript symbols, usages, filtering, Back, Shift+F12 and clearing');
@@ -315,17 +314,10 @@ try {
     await key('ArrowDown', 'ArrowDown', 40); await pause(100);
   }
   assert.ok(await evaluate(`!!document.querySelector('.quick-input-widget .monaco-list-row.focused .codicon-symbol-function')`), 'a symbol is selected in Everything');
-  if (Number(hostVersion.split('.')[1]) >= 109) {
-    await key('Enter', 'Enter', 13, modifier); await expectText('Usages of greet');
-    await clickSelector('.quick-input-widget .codicon-quick-input-back');
-    await waitFor(async () => (await popup()).title?.startsWith('Everything'), 'Back to restore Everything');
-    console.log('PASS: Cmd/Ctrl+Enter finds usages from Everything symbols');
-  } else {
-    await click('Find Usages (Shift+F12)'); await expectText('Usages of greet');
-    await clickSelector('.quick-input-widget .codicon-quick-input-back');
-    await waitFor(async () => (await popup()).title?.startsWith('Everything'), 'Back to restore Everything');
-    console.log('PASS: legacy Everything symbol action finds usages');
-  }
+  await key('Enter', 'Enter', 13, modifier); await expectText('Usages of greet');
+  await clickSelector('.quick-input-widget .codicon-quick-input-back');
+  await waitFor(async () => (await popup()).title?.startsWith('Everything'), 'Back to restore Everything');
+  console.log('PASS: Cmd/Ctrl+Enter finds usages from Everything symbols');
 
   await click('Commands'); await replaceQuery('search++'); await expectText('search++: Reindex Workspace');
   await expectFocused('Commands keeps input focus');

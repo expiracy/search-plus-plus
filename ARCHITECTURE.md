@@ -216,10 +216,10 @@ extension changes invalidate that catalog.
 
 ## Support and performance
 
-The extension targets VS Code 1.96 and newer compatible releases. Button locations
-and toggles are enabled from VS Code 1.109, when those APIs were
-[finalized](https://code.visualstudio.com/updates/v1_109#_extensions-and-api). Older
-hosts use title-bar buttons with option states in tooltips. Filesystem workspaces can be searched on a remote extension host when ripgrep is available
+The extension requires VS Code 1.109 or newer, using the stable button-location
+and toggle APIs [finalized in that release](https://code.visualstudio.com/updates/v1_109#_extensions-and-api).
+All supported hosts use native title tabs and inline filter toggles.
+Filesystem workspaces can be searched on a remote extension host when ripgrep is available
 there. Text search for virtual workspace schemes is unsupported.
 
 The path index includes ignored candidates, so large dependency trees increase
@@ -247,7 +247,7 @@ serially to keep filesystem and scalability checks from competing for resources.
 toggles, real text search, real TypeScript workspace-symbol and cross-file
 reference lookup, popup commands, preview tab counts and focus with both preview
 settings, Go to File navigation without splitting the editor, and reindexing in an isolated VS Code
-host. CI runs this smoke test on Linux against VS Code 1.96.0 and current stable,
+host. CI runs this smoke test on Linux against VS Code 1.109.0 and current stable,
 and runs the standard checks on Linux, macOS, and Windows before packaging the
 VSIX. See the [development and release procedures](README.md#development-and-validation)
 for setup, commands, and publishing requirements.

@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Require **VS Code 1.109.0 or later** for consistent native popup controls and
+  shortcut behaviour across supported hosts.
 - Plain **Right Arrow** previews only when the query caret is at the end with no
   text selected. Elsewhere it moves through the query normally. The eye button
   and **Cmd+Right** on macOS / **Ctrl+Right** on Windows/Linux still preview.
@@ -19,9 +21,6 @@
   entries remain readable.
 - Per-source result limits are positive whole numbers; invalid saved limits use a bounded
   fallback rather than giving providers inconsistent budgets.
-- Legacy picker hints show Shift+F12 for usages where the host intercepts
-  modified Enter. Modern hosts retain Cmd+Return on macOS / Ctrl+Enter on
-  Windows/Linux, with Shift+F12 also available.
 
 ## 3.1.2 — 2026-11-01
 

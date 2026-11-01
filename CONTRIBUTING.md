@@ -16,7 +16,7 @@ workspace into a temporary directory and checks activation, search providers,
 exclusions, real TypeScript symbol-to-reference navigation, popup commands, and
 reindexing.
 
-Set `VSCODE_VERSION=1.96.0` or `VSCODE_VERSION=stable` to download and test a specific
+Set `VSCODE_VERSION=1.109.0` or `VSCODE_VERSION=stable` to download and test a specific
 VS Code release through the official extension test runner. Linux CI runs these
 tests under `xvfb-run`.
 
@@ -47,7 +47,7 @@ they are merged into `master`. The command uses `--skip-license` because this
 repository currently has no license file.
 
 Every non-master branch push and pull request runs checks on Linux, macOS, and
-Windows, plus extension-host smoke tests against VS Code 1.96.0 and current stable. Once those
+Windows, plus extension-host smoke tests against VS Code 1.109.0 and current stable. Once those
 checks pass, CI builds and retains the VSIX as the `search-plus-plus-vsix` artifact
 for 14 days.
 

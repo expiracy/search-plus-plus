@@ -56,7 +56,7 @@
 3. Start typing. All six mode icons stay visible; click one or press **Tab** to
    cycle between search modes.
 
-search++ requires VS Code 1.96 or a newer compatible release. See the
+search++ requires VS Code 1.109 or a newer compatible release. See the
 [changelog](CHANGELOG.md) for release notes and upgrade changes.
 
 ## Six Search Modes
@@ -99,10 +99,6 @@ and use the same shortcut or click its **Find Usages** button. Hovering the butt
 shows your platform's usages shortcut and **Shift+F12** as an alternative.
 In code editors, **Shift+F12** keeps VS Code's
 built-in Find All References action.
-
-Older native pickers (before VS Code 1.109) can intercept **Cmd+Return** on macOS
-or **Ctrl+Enter** on Windows/Linux. Use **Shift+F12** or the **Find Usages** button
-there; the popup's hints show that fallback.
 
 <p align="center">
   <img src="media/usages-filter.png" alt="Usages of SearchMode filtered to references whose text or path contains 'providers'" width="720">
@@ -262,7 +258,7 @@ opens the notebook. Navigation to the exact matching cell is unsupported.
 
 ## Search Coverage
 
-search++ requires VS Code 1.96 or a newer compatible release. Folder search shows
+search++ requires VS Code 1.109 or a newer compatible release. Folder search shows
 folders containing files included by the current filters; empty directories do
 not appear. Symbol and usage results depend on installed language extensions and their
 indexing state.
