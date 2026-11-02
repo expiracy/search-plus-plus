@@ -94,7 +94,7 @@
       <div class="wrap">
         <div class="head center">
           <h2>Six search modes</h2>
-          <p>Click a mode or press <kbd>Tab</kbd> to switch. Your query stays in the search box.</p>
+          <p>Click a tab or press <kbd>Tab</kbd> to switch search modes.</p>
         </div>
         <div class="tabs" role="tablist" aria-label="Search modes">
           <button role="tab" id="tab-everything" aria-controls="panel-everything" aria-selected="true">Everything</button>
@@ -110,12 +110,12 @@
           <div class="steps">
             <div class="panel step is-active" role="tabpanel" id="panel-everything" aria-labelledby="tab-everything">
               <h3>Everything</h3>
-              <p>The best matching files, folders, text, symbols, and commands, grouped in one list.</p>
+              <p>Files, folders, text, symbols, and commands, grouped by source.</p>
               <a class="frame zoom step-media" href="media/everywhere.png"><img src="media/everywhere.png" width="1360" height="972" alt="Everything tab for 'checkout' grouping files, a folder, text matches, and symbols"></a>
             </div>
             <div class="panel step" role="tabpanel" id="panel-files" aria-labelledby="tab-files" hidden>
               <h3>Files</h3>
-              <p>File names and paths across your workspace, from an in-memory index with fzf matching.</p>
+              <p>File names and paths across your workspace.</p>
               <a class="frame zoom step-media" href="media/files.png"><img src="media/files.png" width="1360" height="478" loading="lazy" alt="Files tab for 'checkout' listing matching files with their folders"></a>
             </div>
             <div class="panel step" role="tabpanel" id="panel-folders" aria-labelledby="tab-folders" hidden>
@@ -125,7 +125,7 @@
             </div>
             <div class="panel step" role="tabpanel" id="panel-text" aria-labelledby="tab-text" hidden>
               <h3>Text</h3>
-              <p>File contents, including notebook cells, streamed from ripgrep with the matching line under each result.</p>
+              <p>File contents, including notebook cells, with matching lines shown in the results.</p>
               <a class="frame zoom step-media" href="media/text.png"><img src="media/text.png" width="1360" height="1085" loading="lazy" alt="Text tab for 'calculateTotal(' showing matches with line previews"></a>
             </div>
             <div class="panel step" role="tabpanel" id="panel-symbols" aria-labelledby="tab-symbols" hidden>
@@ -167,14 +167,14 @@
           <h2>More features</h2>
         </div>
         <dl class="list">
-          <div><dt>Preview</dt><dd>Press <kbd>→</kbd> at the end of your query, or click a row's eye button, to show a result in the editor while the popup keeps focus.</dd></div>
+          <div><dt>Preview</dt><dd>Press <kbd>→</kbd> at the end of your query, or click a row's eye button, to preview a result without closing the popup.</dd></div>
           <div><dt>Find usages</dt><dd>Press <kbd><span class="mac">Cmd+Return</span><span class="win">Ctrl+Enter</span></kbd> on a symbol to list its references. Type to filter them; Back returns to your search.</dd></div>
           <div><dt>Go to line</dt><dd>Type <code>file.ts:14</code> or <code>file.ts:14:5</code> to open a file at a line and column. Full paths work outside the workspace.</dd></div>
-          <div><dt>Recent history</dt><dd>An empty search lists your last 20 files and locations. Turn on <code>rememberLastSearch</code> to reopen with your last query instead.</dd></div>
+          <div><dt>Recent history</dt><dd>Reopen recent files and locations. Enable <code>rememberLastSearch</code> to restore your previous search.</dd></div>
           <div><dt>Search options</dt><dd>Case sensitive, regex, whole word, and fuzzy matching, each on a toggle and a shortcut.</dd></div>
-          <div><dt>Ignore files</dt><dd><code>.gitignore</code>, <code>.searchignore</code>, and excluded globs keep generated and vendored files out.</dd></div>
-          <div><dt>Your layout</dt><dd>Reorder or hide tabs, pick the starting tab, and add VS Code or IntelliJ style shortcuts.</dd></div>
-          <div><dt>Fast on big repos</dt><dd>Files come from an in-memory index; text streams from ripgrep as you type.</dd></div>
+          <div><dt>Ignore files</dt><dd><code>.gitignore</code>, <code>.searchignore</code>, and custom path exclusions control which files appear in results.</dd></div>
+          <div><dt>Layout</dt><dd>Reorder or hide tabs, choose the starting tab, and add VS Code or IntelliJ style shortcuts.</dd></div>
+          <div><dt>File index</dt><dd>The status bar shows indexing progress and the file count. Click it to reindex.</dd></div>
           <div><dt>Remote workspaces</dt><dd>Text search runs on the remote extension host when ripgrep is available there.</dd></div>
         </dl>
       </div>

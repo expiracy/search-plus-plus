@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 3.1.5 — 2026-11-02
+
+### Changed
+
+- Move the README demo GIF directly below the banner and remove the repeated
+  Everything and preview screenshots.
+- Simplify the README and website wording.
+
 ## 3.1.4 — 2026-11-01
 
 ### Changed

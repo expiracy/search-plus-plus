@@ -3,6 +3,12 @@
 </p>
 
 <p align="center">
+  <img src="media/advert.gif" alt="search++ in action: Double Shift searches everything for 'checkout', Right Arrow previews a file, Cmd+Return lists every usage of calculateTotal, and calculateTotal.ts:14 jumps to that line" width="900">
+  <br>
+  <sub><a href="https://expiracy.github.io/search-plus-plus/">Watch the full captioned walkthrough</a></sub>
+</p>
+
+<p align="center">
   <b>Search everything in VS Code from one popup.</b><br>
   Press <kbd>Shift</kbd> <kbd>Shift</kbd> to find files, folders, text, symbols, usages, and commands.<br>
   Inspired by Search Everywhere in JetBrains IDEs.
@@ -15,67 +21,49 @@
   <a href="https://ko-fi.com/expiracy"><img src="https://img.shields.io/badge/Ko--fi-Support%20search%2B%2B-FF5E5B?logo=ko-fi&logoColor=white" alt="Support search++ on Ko-fi"></a>
 </p>
 
-<p align="center">
-  <img src="media/advert.gif" alt="search++ in action: Double Shift searches everything for 'checkout', Right Arrow previews a file, Cmd+Return lists every usage of calculateTotal, and calculateTotal.ts:14 jumps to that line" width="900">
-  <br>
-  <sub><a href="https://expiracy.github.io/search-plus-plus/">Watch the full captioned walkthrough</a></sub>
-</p>
-
 ## Getting Started
 
 Install from the
 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=expiracy.search-plus-plus)
-(VS Code 1.109+), press **Shift+Shift**, and type. Press **Tab** to switch mode;
-your query comes with you.
+(VS Code 1.109+). Press **Shift+Shift** to search and **Tab** to switch tabs.
 
 | Mode | Searches |
 |------|----------|
-| **Everything** | The best matches from every other mode, in groups |
+| **Everything** | Files, folders, text, symbols, and commands, grouped by source |
 | **Files** | File names and paths |
 | **Folders** | Folders with searchable files; opening one reveals it in the Explorer |
-| **Text** | File contents, including notebook cells, with [ripgrep](https://github.com/BurntSushi/ripgrep) |
+| **Text** | File contents, including notebook cells |
 | **Symbols** | Functions, classes, and variables from your language extensions |
 | **Commands** | VS Code commands, built in and from extensions |
 
-<p align="center">
-  <img src="media/everywhere.png" alt="Everything tab for 'checkout' grouping three files, the checkout folder, text matches, and symbols such as CheckoutService" width="720">
-</p>
-
 ## Features
 
-- **Recent history:** with the box empty, your last 20 files and locations in
-  this workspace appear; **×** removes one. Turn on `rememberLastSearch` to
-  reopen with your last query instead.
+- **Recent history:** reopen recent files and locations. Enable
+  `rememberLastSearch` to restore your previous search.
 - **Preview:** press **Right Arrow** at the end of your query, or click a row's
-  eye button, to show the result in one reusable editor tab while the popup
-  keeps focus.
+  eye button, to preview a result without closing the popup.
 - **Find usages:** select a symbol and press **Cmd+Return** (**Ctrl+Enter**) or
   click its Find Usages button. Type to filter the references; **Back**
   restores your search. In an editor, **Find Usages** in the right-click menu
   works on the word at the cursor.
 - **Go to line:** on Files or Everything, type `calculateTotal.ts:14` or
   `calculateTotal.ts:14:5`. **search++: Autofill File Path** fills in the
-  selected file's path, ready for a line number.
+  selected file's path.
 - **Absolute paths:** type a full path to open a file or folder, even outside
   the workspace.
 - **Search options:** toggle case sensitivity, regex, whole word, and fuzzy
   matching in the popup.
 - **Ignore files:** `.gitignore`, [`.searchignore`](#searchignore), and
-  `excludedPaths` keep noise out. The popup's toggles switch the ignore files
-  off temporarily.
-- **Your layout:** reorder or hide tabs, pick the starting tab, and add keys
+  `excludedPaths` control which files appear in results. Use the popup's toggles
+  to include ignored files temporarily.
+- **Layout:** reorder or hide tabs, choose the starting tab, and add keys
   that open a mode directly with a [shortcut preset](#keyboard-shortcuts).
 - **File index:** the status bar item shows indexing progress and the file
   count; click it to reindex.
 
-<p align="center">
-  <img src="media/preview.png" alt="Text tab for 'discounted' with the second match selected and calculateTotal.ts previewed at line 14 behind the popup" width="900">
-</p>
-
 ### `.searchignore`
 
-Hide files from search++ without touching `.gitignore`. A `.searchignore` uses
-the same syntax, can sit in any folder, and applies as soon as you save it:
+Use `.searchignore` to exclude files from search++. It uses `.gitignore` syntax:
 
 ```
 # Generated docs and fixtures
@@ -107,10 +95,6 @@ test/fixtures/**/*.json
 | Text | Cmd/Ctrl+Shift+F | Cmd/Ctrl+Shift+F |
 | Commands | Cmd/Ctrl+Shift+P | Cmd/Ctrl+Shift+A |
 
-For custom keybindings, the `when` context keys are `searchPlusPlusModalOpen`,
-`searchPlusPlusFileTab`, `searchPlusPlusEverythingTab`,
-`searchPlusPlusSymbolTab`, and `searchPlusPlusSymbolSelected`.
-
 ## Settings
 
 Click the popup's cog to open search++ settings.
@@ -129,15 +113,13 @@ Click the popup's cog to open search++ settings.
 | `gitIgnoreRules` / `searchIgnoreRules` | `true` | Respect `.gitignore` / `.searchignore` |
 | `excludedPaths` | `[]` | Globs to always hide, such as `**/dist/**` |
 
-All settings are under `searchPlusPlus.`. Settings from older versions are
-migrated automatically.
+All settings are under `searchPlusPlus.`.
 
 ## Limitations
 
-- Symbols and usages are only as good as your language extensions.
+- Symbols and usages depend on your installed language extensions.
 - Text search doesn't work in virtual workspaces; remote workspaces are fine.
-- Commands without a declared title, including many of VS Code's own, show
-  their ID.
+- Commands without a title show their ID.
 
 ## Contributing
 
